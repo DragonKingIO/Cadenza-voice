@@ -377,7 +377,10 @@ struct MainSettingsView: View {
         NavigationSplitView {
             List(selection: $model.tab) {
                 ForEach(MainTab.visible(showDeveloper: model.showDeveloper)) { tab in
-                    Label(tab.title,systemImage:tab.icon).tag(tab).badge(tab == .about && UpdateChecker.shared.available != nil ? Text("●") : nil)
+                    // A dot inside the label, not .badge(): a badge on these rows stopped the sidebar from selecting anything when clicked.
+                    Label {
+                        HStack { Text(tab.title); if tab == .about && UpdateChecker.shared.available != nil { Spacer(); Text("●").foregroundStyle(.tint).accessibilityLabel(L10n.format("update.available",UpdateChecker.shared.available?.version ?? "")) } }
+                    } icon: { Image(systemName: tab.icon) }.tag(tab)
                 }
             }
             .navigationSplitViewColumnWidth(min: 170, ideal: 190, max: 220)
