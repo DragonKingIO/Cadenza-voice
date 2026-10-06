@@ -289,7 +289,7 @@ struct BridgeConfig: Codable {
 
 enum AppPaths {
     static let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("Yansui", isDirectory: true)   // compatibility path: existing settings and models live here
+        .appendingPathComponent("Cadenza", isDirectory: true)   // settings, models and logs; the old folder is moved here once by LegacyMigration
     static let configFile = supportDir.appendingPathComponent("config.json")
     static let logFile = supportDir.appendingPathComponent("log.txt")
     static let testField = supportDir.appendingPathComponent("test-field.html")

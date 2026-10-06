@@ -731,8 +731,8 @@ enum LocalModelFixtures {
         func line(_ ok: Bool?, _ name: String) { print("[local-model-real] \(ok == nil ? "SKIP" : ok! ? "PASS" : "FAIL"): \(name)") }
         guard LocalTranscriberLoader.supported else { line(nil, "当前构建不含推理库"); return 0 }
         let entry = LocalModelCatalog.builtin[0]
-        let dir = ProcessInfo.processInfo.environment["YANSUI_LOCAL_MODEL_DIR"].map { URL(fileURLWithPath: $0) } ?? LocalModelCenter.shared.modelDir(entry.id)
-        guard let dir, FileManager.default.fileExists(atPath: dir.appendingPathComponent("model.int8.onnx").path) else { line(nil, "没有安装本地模型（先在设置 → 识别引擎 → 本地 下载，或用 YANSUI_LOCAL_MODEL_DIR 指定目录）"); return 0 }
+        let dir = ProcessInfo.processInfo.environment["CADENZA_LOCAL_MODEL_DIR"].map { URL(fileURLWithPath: $0) } ?? LocalModelCenter.shared.modelDir(entry.id)
+        guard let dir, FileManager.default.fileExists(atPath: dir.appendingPathComponent("model.int8.onnx").path) else { line(nil, "没有安装本地模型（先在设置 → 识别引擎 → 本地 下载，或用 CADENZA_LOCAL_MODEL_DIR 指定目录）"); return 0 }
         var failures = 0
         func check(_ name: String, _ ok: Bool) { line(ok, name); if !ok { failures += 1 } }
         let t0 = ProcessInfo.processInfo.systemUptime
@@ -784,7 +784,7 @@ enum LocalModelFixtures {
                 rec.end()
                 check("本地录音会话交付最终文字", wait(20) { final != nil } && final! != nil && final!!.lowercased().contains("hello"))
                 print("[local-model-real] session partials=\(partials) final=\(final.flatMap { $0 } ?? "nil")")
-            } else { line(nil, "本地录音会话需要通过应用安装的模型（YANSUI_LOCAL_MODEL_DIR 模式跳过）") }
+            } else { line(nil, "本地录音会话需要通过应用安装的模型（CADENZA_LOCAL_MODEL_DIR 模式跳过）") }
         }
         print("[local-model-real] done failures=\(failures)")
         return failures == 0 ? 0 : 1

@@ -24,10 +24,10 @@ cleanup_stage() {
 }
 trap cleanup_stage EXIT
 APP="$STAGE_DIR/随言.app"
-BIN="$APP/Contents/MacOS/Yansui"
+BIN="$APP/Contents/MacOS/Cadenza"
 
 mkdir -p build
-if [ "$STAGE_ONLY" = false ]; then mkdir -p "$HOME/Library/Application Support/Yansui"; fi
+if [ "$STAGE_ONLY" = false ]; then mkdir -p "$HOME/Library/Application Support/Cadenza"; fi
 # Build a fresh bundle; never inherit obsolete resources from an installed app.
 mkdir -p "$APP/Contents/MacOS"
 
@@ -73,9 +73,9 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <key>CFBundleLocalizations</key><array><string>en</string><string>zh-Hans</string></array>
     <key>CFBundleName</key><string>Cadenza</string>
     <key>CFBundleDisplayName</key><string>Cadenza</string>
-    <key>CFBundleIdentifier</key><string>local.yansui.app</string>
+    <key>CFBundleIdentifier</key><string>local.cadenza.app</string>
     <key>CFBundleIconFile</key><string>Cadenza</string>
-    <key>CFBundleExecutable</key><string>Yansui</string>
+    <key>CFBundleExecutable</key><string>Cadenza</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>1.0.0</string>
     <key>CFBundleVersion</key><string>1</string>
@@ -111,7 +111,7 @@ for LANGUAGE in en zh-Hans; do
 done
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
-if [ "$STAGE_ONLY" = false ]; then cp test-field.html "$HOME/Library/Application Support/Yansui/test-field.html"; fi
+if [ "$STAGE_ONLY" = false ]; then cp test-field.html "$HOME/Library/Application Support/Cadenza/test-field.html"; fi
 # 安装目录在非同步位置，但仍然防御性清理并重试签名；签名后必须通过严格校验
 # 签名身份跨重建保持。证书缺失时停止，不替换 TCC 身份。
 # Contributors do not have the maintainer's certificate. A staged package (--stage-only) may be signed ad hoc, which is
@@ -170,8 +170,12 @@ if [ "$SELFTEST_RC" -ne 0 ]; then
     cat build/selftest.log
     exit "$SELFTEST_RC"
 fi
-ditto "$APP" "$INSTALL_APP"
-# Remove the executable that earlier installs under a retired name left inside the bundle.
-rm -f "$INSTALL_APP/Contents/MacOS/VoiceBridge"
+# Replace the whole bundle instead of merging into it, so renamed or removed files never linger and break the seal.
+INSTALL_NEW="$INSTALL_APP.installing"
+rm -rf "$INSTALL_NEW"
+ditto "$APP" "$INSTALL_NEW"
+codesign --verify --strict "$INSTALL_NEW"
+rm -rf "$INSTALL_APP"
+mv "$INSTALL_NEW" "$INSTALL_APP"
 codesign --verify --strict "$INSTALL_APP"
 echo "installed: $INSTALL_APP"

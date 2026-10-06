@@ -31,6 +31,7 @@ enum SelfTest {
         LocalAPIAudioFixtures.run(check)
         CharacterFixtures.run(check)
         PrivacyFixtures.run(check)
+        LegacyMigrationFixtures.run(check)
         testConfigValidation()
         testCustomShortcuts()
         testOnboardingReadiness()

@@ -82,7 +82,7 @@ final class ScreenshotController {
             canvas.directMode = launch == .directOCR
             canvas.onSelectionBegan = { [weak self] c in self?.selectionBegan(on: c) }
             canvas.onSelectionChanged = { [weak self] c, finished in self?.selectionChanged(c, finished: finished) }
-            canvas.onObjectsChanged = { [weak self] in self?.syncHistoryState(); self?.scheduleLayout() }
+            canvas.onObjectsChanged = { [weak self] in self?.syncHistoryState() }
             canvas.onObjectSelected = { [weak self] object in self?.objectSelected(object) }
             canvas.onKeyCommand = { [weak self] command in self?.handle(command) }
             canvas.onColorFormatChanged = { [weak self] value in self?.onColorFormatChange(value) }
@@ -169,7 +169,7 @@ final class ScreenshotController {
         model.onSelectTool = { [weak self] tool in self?.applyTool(tool) }
         model.onStyleChanged = { [weak self] in
             guard let self, let canvas = self.active else { return }
-            canvas.style = self.model.style; canvas.applyStyleToSelected(); self.scheduleLayout()
+            canvas.style = self.model.style; canvas.applyStyleToSelected()
         }
         model.onUndo = { [weak self] in self?.active?.undo() }
         model.onRedo = { [weak self] in self?.active?.redo() }

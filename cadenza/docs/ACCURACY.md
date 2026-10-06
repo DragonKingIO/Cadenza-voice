@@ -5,7 +5,7 @@ several conditions and scores every engine with the character error rate (CER). 
 Arabic numerals equal Chinese numerals ("3点" = "三点"), and English is case-insensitive.
 
 ```
-Yansui --accuracy-benchmark [--bench-quick] [--bench-voices=Tingting,...] [--bench-conditions=clean,quiet,...]
+Cadenza --accuracy-benchmark [--bench-quick] [--bench-voices=Tingting,...] [--bench-conditions=clean,quiet,...]
        [--bench-engines=<substring>] [--bench-workers=N] [--bench-cache=<dir>] [--bench-out=<json>]
        [--bench-cloud-only] --bench-cloud=iflytek,deepgram [--bench-cloud-clips=24]
        [--bench-pad=0.8] [--bench-min-speech=0.25] [--bench-min-silence=0.5] [--bench-vad=0.5] [--bench-threads=2]
