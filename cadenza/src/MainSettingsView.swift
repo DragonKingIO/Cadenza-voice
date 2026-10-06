@@ -377,7 +377,7 @@ struct MainSettingsView: View {
         NavigationSplitView {
             List(selection: $model.tab) {
                 ForEach(MainTab.visible(showDeveloper: model.showDeveloper)) { tab in
-                    Label(tab.title,systemImage:tab.icon).tag(tab)
+                    Label(tab.title,systemImage:tab.icon).tag(tab).badge(tab == .about && UpdateChecker.shared.available != nil ? Text("●") : nil)
                 }
             }
             .navigationSplitViewColumnWidth(min: 170, ideal: 190, max: 220)

@@ -1314,3 +1314,11 @@
 "ocr.privacy.row.cloud" = "会把所选区域上传到 %@";
 "compare.time" = "平均 %.1f 秒/句";
 "compare.noPunct" = "不输出标点，文字需要自己断句";
+"update.noRelease" = "项目还没有发布版本。";
+"update.locked" = "“永不联网”已开启，所以不会检查更新。到 设置 → 语音识别 关闭它后才能检查。";
+"update.skip" = "跳过这个版本";
+"update.notesTitle" = "更新内容";
+"update.publishedOn" = "发布于 %@";
+"menu.update" = "有新版本：%@";
+"onboard.updates.toggle" = "有新版本时告诉我";
+"onboard.updates.detail" = "每周读取一次 GitHub 的公开发布页，并在菜单里提示，不会安装任何东西。不勾选的话，随言不会自己建立任何连接。";

@@ -29,7 +29,9 @@ enum BrandPreview {
         controller.showSwift(tab)
         if page == "about" {
             switch CommandLine.arguments.first(where:{$0.hasPrefix("--preview-update-state=")})?.split(separator:"=").last.map(String.init) {
-            case "available": UpdateChecker.shared.status = .available(UpdateInfo(version:"9.9.9",pageURL:URL(string:"https://github.com/")!))
+            case "available": UpdateChecker.shared.status = .available(UpdateInfo(version:"9.9.9",pageURL:URL(string:"https://github.com/")!,notes:["Faster local models","A clearer About page","Fixes for the menu bar icon"],published:"2026-10-06"))
+            case "noRelease": UpdateChecker.shared.status = .noRelease
+            case "locked": UpdateChecker.shared.status = .locked
             case "upToDate": UpdateChecker.shared.status = .upToDate("1.0.0")
             case "failed": UpdateChecker.shared.status = .failed
             case "notConfigured": UpdateChecker.shared.status = .notConfigured

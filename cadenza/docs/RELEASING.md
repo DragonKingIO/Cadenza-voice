@@ -20,8 +20,18 @@ Maintainers publish releases on GitHub. A release is a signed-ad-hoc, not notari
 4. Create the GitHub Release for the tag, attach both files, and paste notes from the template below.
 5. **Do not mark it as a pre-release or draft** if you want the in-app update check to offer it: the check reads GitHub's
    "latest release" and ignores drafts and pre-releases.
-6. After the first public release, set `AppUpdate.repository` (in `src/AppUpdate.swift`) to `DragonKingIO/Cadenza-voice`
-   so that Settings → About can check for updates, and link the release from the website.
+6. Link the release from the website: its download page reads the latest release when it is built (daily, or push a commit).
+
+## How people find out about a release
+
+`AppUpdate.repository` in `src/AppUpdate.swift` points at this repository. People who answered yes in the setup wizard (or ticked
+the box in About) are checked once a week; everyone can press **Check for updates** in About. When a newer, non-pre-release
+version exists, the app remembers it and shows a notice in the menu bar menu and on About, with a link to the release page. Nothing
+is downloaded or installed automatically, and a person can skip a version.
+
+About shows the **first section** of the release notes (up to 8 lines, plain text: headings, tables and code are dropped), so put
+the user-facing changes in the first section and the install steps after it, as in the template above. Write them so they make sense
+to someone who has not read the changelog.
 
 ## First launch of a downloaded build
 

@@ -1314,3 +1314,11 @@
 "ocr.privacy.row.cloud" = "Selected areas are uploaded to %@";
 "compare.time" = "%.1f s per sentence on average";
 "compare.noPunct" = "Writes no punctuation, so you would add it yourself";
+"update.noRelease" = "No release has been published yet.";
+"update.locked" = "\"Never go online\" is on, so Cadenza will not check. Turn it off in Settings → Speech to check.";
+"update.skip" = "Skip this version";
+"update.notesTitle" = "What's new";
+"update.publishedOn" = "Released %@";
+"menu.update" = "Update available: %@";
+"onboard.updates.toggle" = "Tell me when a new version is out";
+"onboard.updates.detail" = "Checks GitHub's public release page once a week and shows a notice in the menu. It never installs anything. Leave it off and Cadenza makes no connections of its own.";

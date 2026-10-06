@@ -123,6 +123,7 @@ struct OnboardingView: View {
     @Bindable var model: OnboardingModel
     @State private var shown: LegalDocument?
     @State private var language = AppLanguage.current
+    @State private var weeklyUpdateCheck = UpdateChecker.autoCheck
 
     var body: some View {
         VStack(spacing: 0) {
@@ -287,6 +288,13 @@ struct OnboardingView: View {
             TrialHoldButton(model: model).frame(height: 44)
             Button(L10n.tr("ui.076918e4bf6c")) { model.cancelTrial() }.disabled(!model.trialRunning)
             Label(L10n.format("onboard.ready.privacy", String(describing: Brand.name)), systemImage: "lock").font(.callout).foregroundStyle(.secondary)
+            if !LocalOnlyMode.enabled {
+                // An explicit, unticked choice: Cadenza makes no network request of its own unless the person says yes here or in About.
+                VStack(alignment: .leading, spacing: 2) {
+                    Toggle(L10n.tr("onboard.updates.toggle"), isOn: Binding(get: { weeklyUpdateCheck }, set: { weeklyUpdateCheck = $0; UpdateChecker.autoCheck = $0 })).toggleStyle(.checkbox)
+                    Text(L10n.tr("onboard.updates.detail")).font(.caption).foregroundStyle(.secondary).padding(.leading, 20).fixedSize(horizontal: false, vertical: true)
+                }
+            }
         }
     }
 }

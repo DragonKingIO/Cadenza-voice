@@ -17,6 +17,8 @@ struct StatusMenuSnapshot {
     /// 截图快捷键的显示文字；空 = 未设置
     var screenshotShortcut="",ocrShortcut=""
     var pinCount=0,pinsHidden=false,pinsClickThrough=false
+    /// A newer release the app has found and the person has not skipped; the menu offers to open its page.
+    var update:UpdateInfo? = UpdateChecker.shared.available
     var canRecord:Bool {switch phase {case .idle,.previousError,.recording:return true;default:return false}}
     var recording:Bool {if case .recording=phase{return true};return false}
     var header:String {
@@ -55,6 +57,12 @@ enum StatusMenuController {
         let header=item("status",s.header,actionable ? "resolveMenuIssue":nil,enabled:actionable)
         header.attributedTitle=NSAttributedString(string:s.header,attributes:[.foregroundColor:s.color,.font:NSFont.systemFont(ofSize:13,weight:.medium)])
         header.image=image(s);menu.addItem(header);menu.addItem(.separator())
+        if let update=s.update {
+            let i=NSMenuItem(title:L10n.format("menu.update",update.version),action:#selector(UpdateMenuAction.open(_:)),keyEquivalent:"")
+            i.identifier=NSUserInterfaceItemIdentifier("update");i.target=UpdateMenuAction.shared;i.representedObject=update.pageURL
+            i.image=NSImage(systemSymbolName:"arrow.down.circle.fill",accessibilityDescription:nil)
+            menu.addItem(i);menu.addItem(.separator())
+        }
         let recordingTitle:String
         if case .recording(let seconds)=s.phase {recordingTitle=L10n.format("menu.stop",String(format:"%02d:%02d",max(0,seconds)/60,max(0,seconds)%60))}
         else {recordingTitle=L10n.tr("menu.start")}

@@ -91,7 +91,7 @@ enum PrivacyFixtures {
         c("版本比较：v 前缀与预发布", AppVersion("v2.0.0")! > AppVersion("1.9.9")! && AppVersion("1.0.0-beta.1")! < AppVersion("1.0.0")! && AppVersion("1.0.0-beta.1")!.isPrerelease)
         c("版本无效时返回空", AppVersion("") == nil && AppVersion("abc") == nil && AppVersion("1.2.3.4.5") == nil && AppVersion("1..2") == nil && AppVersion("-1.0") == nil)
         c("更新地址：仓库名校验", AppUpdate.releasesURL(repository: "owner/repo")?.absoluteString == "https://api.github.com/repos/owner/repo/releases/latest" && AppUpdate.releasesURL(repository: "") == nil && AppUpdate.releasesURL(repository: "a/b/c") == nil && AppUpdate.releasesURL(repository: "bad name/repo") == nil && AppUpdate.releasesURL(repository: "owner/") == nil)
-        c("当前没有配置更新来源，不会发出请求", AppUpdate.repository.isEmpty)
+        c("更新来源是项目的 GitHub 仓库，只读取公开发布信息", AppUpdate.repository == "DragonKingIO/Cadenza-voice" && AppUpdate.feedURL(repository: AppUpdate.repository, override: nil)?.absoluteString == "https://api.github.com/repos/DragonKingIO/Cadenza-voice/releases/latest")
         let current = AppVersion("1.0.0")!
         func release(_ tag: String, page: String = "https://github.com/owner/repo/releases/tag/x", pre: Bool = false, draft: Bool = false) -> Data {
             try! JSONSerialization.data(withJSONObject: ["tag_name": tag, "html_url": page, "prerelease": pre, "draft": draft])
@@ -114,7 +114,11 @@ enum PrivacyFixtures {
         }
         defaults.removeObject(forKey: "autoCheckAppUpdates"); defaults.removeObject(forKey: "lastAppUpdateCheck")
         c("自动检查默认关闭", !UpdateChecker.autoCheck)
-        let checker = UpdateChecker()
+        // Each checker gets its own preference suite so remembered updates never touch the real app's settings.
+        func suite() -> UserDefaults { UserDefaults(suiteName: "cadenza.tests.update." + UUID().uuidString)! }
+        let checkerDefaults = suite()
+        let checker = UpdateChecker(defaults: checkerDefaults)
+        checker.repository = ""; checker.isLocked = { false }
         var requested: [URL] = []
         checker.currentVersion = current
         checker.fetch = { url, done in requested.append(url); done(.success(release("v1.3.0"))) }
@@ -126,7 +130,7 @@ enum PrivacyFixtures {
         c("配置后检查得到新版本并只请求一次发布地址", requested.count == 1 && requested[0].host == "api.github.com" && { if case .available = checker.status { return true }; return false }())
         c("成功检查后记录时间", checker.lastChecked != nil)
         requested = []; defaults.removeObject(forKey: "lastAppUpdateCheck")
-        let off = UpdateChecker(); off.repository = "owner/repo"; off.currentVersion = current; off.fetch = { url, done in requested.append(url); done(.success(release("v1.3.0"))) }
+        let off = UpdateChecker(defaults: suite()); off.isLocked = { false }; off.repository = "owner/repo"; off.currentVersion = current; off.fetch = { url, done in requested.append(url); done(.success(release("v1.3.0"))) }
         off.checkOnLaunchIfDue()
         c("自动检查关闭时启动不请求", requested.isEmpty && off.status == .idle)
         UpdateChecker.autoCheck = true
@@ -136,12 +140,62 @@ enum PrivacyFixtures {
         requested = []
         off.checkOnLaunchIfDue()
         c("一周内不重复自动检查", requested.isEmpty)
-        let offline = UpdateChecker(); offline.repository = "owner/repo"; offline.currentVersion = current
+        let offline = UpdateChecker(defaults: suite()); offline.isLocked = { false }; offline.repository = "owner/repo"; offline.currentVersion = current
         offline.fetch = { (_: URL, done: @escaping (Result<Data, Error>) -> Void) in done(.failure(URLError(.notConnectedToInternet))) }
         let lastBefore = offline.lastChecked
         offline.check()
         LocalAPIFixtures.spin(2) { offline.status == .failed }
         c("网络失败如实报告且不更新检查时间", offline.status == .failed && offline.lastChecked == lastBefore)
+        // Update prompts: release notes, remembered updates, skipping, "no release yet", and the offline lock
+        func releaseWith(body: String, tag: String = "v1.3.0") -> Data {
+            try! JSONSerialization.data(withJSONObject: ["tag_name": tag, "html_url": "https://github.com/owner/repo/releases/tag/" + tag, "prerelease": false, "draft": false, "published_at": "2026-10-06T08:00:00Z", "body": body])
+        }
+        c("更新说明只取第一节、去掉标记", AppUpdate.notes(from: "## What's new\n- Faster **local** models\n* Fix `x` crash\n\n## Install\n1. Download it\n") == ["Faster local models", "Fix x crash"])
+        c("更新说明忽略代码块、表格、标题和 HTML", AppUpdate.notes(from: "```\nsecret code\n```\n| a | b |\n<script>x</script>\n# Title\nA real line\n") == ["A real line"])
+        c("更新说明最多 8 行且过长的行被截断", AppUpdate.notes(from: (1...20).map { "line \($0)" }.joined(separator: "\n")).count == 8 && (AppUpdate.notes(from: String(repeating: "x", count: 400)).first?.count ?? 0) <= 160 && AppUpdate.notes(from: nil).isEmpty)
+        if case .available(let info) = AppUpdate.evaluate(releaseWith(body: "- One\n- Two"), current: current) { c("发现新版本时带上更新说明和发布日期", info.notes == ["One", "Two"] && info.published == "2026-10-06") } else { c("发现新版本时带上更新说明和发布日期", false) }
+        c("发布日期格式不对时不显示", { if case .available(let i) = AppUpdate.evaluate(try! JSONSerialization.data(withJSONObject: ["tag_name": "v1.3.0", "html_url": "https://github.com/o/r/releases/tag/v1.3.0", "published_at": "tomorrow"]), current: current) { return i.published == nil }; return false }())
+
+        let remembered = suite()
+        let finder = UpdateChecker(defaults: remembered); finder.repository = "owner/repo"; finder.currentVersion = current; finder.isLocked = { false }
+        finder.fetch = { _, done in done(.success(releaseWith(body: "- Faster models"))) }
+        finder.check(); LocalAPIFixtures.spin(2) { finder.available != nil }
+        c("找到新版本后记住它，菜单和徽标据此提示", finder.available?.version == "1.3.0" && finder.available?.notes == ["Faster models"])
+        let relaunched = UpdateChecker(defaults: remembered)
+        c("重新启动后仍然提示这个版本，不需要再联网", relaunched.available?.version == "1.3.0" && { if case .available = relaunched.status { return true }; return false }())
+        let caughtUp = UpdateChecker(defaults: remembered); caughtUp.currentVersion = AppVersion("1.3.0"); caughtUp.restore()
+        c("应用已经更新到该版本后不再提示", caughtUp.available == nil)
+        finder.fetch = { _, done in done(.success(release("v1.0.0"))) }
+        finder.check(); LocalAPIFixtures.spin(2) { finder.available == nil && finder.status != .checking }
+        c("检查发现已是最新时清除记住的提示", finder.available == nil && UpdateChecker(defaults: remembered).available == nil)
+        finder.fetch = { _, done in done(.success(releaseWith(body: "- A"))) }
+        finder.check(); LocalAPIFixtures.spin(2) { finder.available != nil }
+        finder.skipAvailable()
+        c("跳过后不再提示，重启后也不提示", finder.available == nil && UpdateChecker(defaults: remembered).available == nil)
+        finder.fetch = { _, done in done(.success(releaseWith(body: "- B", tag: "v1.4.0"))) }
+        finder.check(); LocalAPIFixtures.spin(2) { finder.available != nil }
+        c("更新的版本发布后再次提示", finder.available?.version == "1.4.0")
+        finder.fetch = { _, done in done(.failure(UpdateFetchError.noRelease)) }
+        finder.check(); LocalAPIFixtures.spin(2) { finder.status == .noRelease }
+        c("项目还没有发布版本时如实说明并清除提示", finder.status == .noRelease && finder.available == nil && finder.lastChecked != nil)
+        var lockedRequests = 0
+        let locked = UpdateChecker(defaults: suite()); locked.repository = "owner/repo"; locked.currentVersion = current; locked.isLocked = { true }
+        locked.fetch = { _, done in lockedRequests += 1; done(.success(release("v2.0.0"))) }
+        locked.check()
+        c("“永不联网”开启时不检查更新也不发请求", locked.status == .locked && lockedRequests == 0)
+        let malformed = UpdateChecker(defaults: remembered)
+        c("记住的提示若指向非 GitHub 地址则丢弃", { remembered.set(try! JSONEncoder().encode(UpdateInfo(version: "9.0.0", pageURL: URL(string: "https://evil.example/x")!)), forKey: "availableAppUpdate"); malformed.restore(); return malformed.available == nil }())
+
+        var menuSnapshot = StatusMenuSnapshot()
+        let updateMenu = NSMenu()
+        menuSnapshot.update = nil
+        StatusMenuController.rebuild(updateMenu, s: menuSnapshot, target: NSObject())
+        c("没有新版本时菜单没有更新项", !updateMenu.items.contains { $0.identifier?.rawValue == "update" })
+        menuSnapshot.update = UpdateInfo(version: "9.9.9", pageURL: URL(string: "https://github.com/owner/repo/releases/tag/v9.9.9")!)
+        StatusMenuController.rebuild(updateMenu, s: menuSnapshot, target: NSObject())
+        let updateItem = updateMenu.items.first { $0.identifier?.rawValue == "update" }
+        c("有新版本时菜单顶部显示更新项并指向发布页", updateItem?.title.contains("9.9.9") == true && (updateItem?.target as AnyObject?) === UpdateMenuAction.shared && (updateItem?.representedObject as? URL)?.host == "github.com" && updateMenu.items.first?.identifier?.rawValue == "status" && updateMenu.items.firstIndex { $0.identifier?.rawValue == "update" } == 2)
+
         c("隐私说明列出检查应用更新", (LegalDocument.privacy.text(language: "en") ?? "").contains("Checking for app updates") || Bundle.main.resourceURL?.appendingPathComponent("legal").path.isEmpty != false)
 
         // MARK: Menu bar engine list
