@@ -532,14 +532,9 @@ struct HoldToTalkButton: View {
     var isRecognizing: Bool { model.recognizing }
 
     var body: some View {
-        Group {
-            if isActive {
-                VoiceLevelBar(level: model.level, color: .white).frame(width: 44, height: 30)
-            } else {
-                Image(systemName: "mic.fill").font(.system(size: 22, weight: .medium))
-                    .symbolEffect(.variableColor.iterative, options: .repeating, isActive: pressed)
-            }
-        }
+        // The level meter above the button already shows the voice, so the button itself stays a plain microphone.
+        Image(systemName: "mic.fill").font(.system(size: 22, weight: .medium))
+            .symbolEffect(.variableColor.iterative, options: .repeating, isActive: isActive)
         .foregroundStyle(isActive ? .white : .primary)
         .frame(width: 44, height: 44)
         .glassEffect(
