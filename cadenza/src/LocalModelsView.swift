@@ -238,7 +238,7 @@ struct LocalModelRow: View {
     }
 
     static func languageList(_ codes: [String]) -> String {
-        func name(_ c: String) -> String { c == "*" ? L10n.tr("local.allLanguages") : (Locale.current.localizedString(forLanguageCode: c) ?? c) }
+        func name(_ c: String) -> String { c == "*" ? L10n.tr("local.allLanguages") : (Locale(identifier: L10n.language).localizedString(forLanguageCode: c) ?? c) }
         guard codes.count > 8 else { return codes.map(name).joined(separator: " · ") }
         return codes.prefix(4).map(name).joined(separator: " · ") + " " + L10n.format("local.languagesMore", codes.count)
     }

@@ -1,4 +1,4 @@
-# Connecting AI hardware to the voice input (plan and status)
+# Connecting AI hardware to the voice input
 
 Goal: a person with their own AI hardware (a pendant, glasses, a recorder, a DIY board) speaks into the hardware's own
 microphone and the words come back as text, or appear at the cursor on the Mac. The app stays private by default: nothing
@@ -11,10 +11,10 @@ separate permission.
 |---|---|
 | Control the Mac's microphone (start, stop, cancel), receive text | Built, loopback only |
 | One owner token, shown in Settings → Developer | Built |
-| Submit audio from another source | **Phase 1 (this change)** |
-| Per-device credentials with their own permissions | **Phase 1 (this change)** |
-| Type the text into the front app | **Phase 1 (this change), off by default** |
-| Reach the Mac from another device on the network | Phase 2, planned only |
+| Submit audio from another source | Built |
+| Per-device credentials with their own permissions | Built |
+| Type the text into the front app | Built, off by default |
+| Reach the Mac from another device on the network | Not built (design notes below) |
 
 ## How hardware reaches the app
 
@@ -26,7 +26,7 @@ The app only listens on `127.0.0.1`. A small *bridge program* on the Mac, writte
 receives audio from the device and forwards it to the app. A bridge can be a few dozen lines (see
 `examples/local-api/stream_audio.py`). This keeps the trust boundary on the Mac and needs no network exposure.
 
-## Phase 1 design
+## Design of what is built
 
 ### Credentials and permissions
 
@@ -71,7 +71,7 @@ no text field.
 The Developer page lists devices, shows connected programs, and offers "Test the interface". Revoking a device closes its
 connections. Every session start, end and refusal is logged without text or audio.
 
-## Phase 2 (planned, not built)
+## Network access from other devices (not built)
 
 Letting hardware reach the Mac directly over Wi-Fi needs a different threat model. Planned requirements:
 

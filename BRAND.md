@@ -12,10 +12,10 @@
 - The tagline describes the intended experience, not verified compatibility with every application. Documentation must state actual limitations.
 - Feature lists and release notes include only implemented behavior, clearly distinguishing integration tests from unit tests.
 
-## Rollout
+## Localization
 
-The names and taglines above are approved editorial choices. Brand and existing UI text are integrated as an independently authorized patch, ahead of the mixed-trigger UI stage. `Brand.swift` reads the localized name and tagline. The mixed-trigger coordinator remains disabled; this patch does not complete stage 2 device acceptance or start stage 3.
+The names and taglines above are approved editorial choices. `Brand.swift` reads the localized name and tagline from the language resources.
 
-English and Simplified Chinese must each have complete `Localizable.strings` and `InfoPlist.strings`. Traditional Chinese currently has only an InfoPlist draft; do not claim a complete Traditional Chinese UI.
+English and Simplified Chinese must each have complete `Localizable.strings` and `InfoPlist.strings`. There is no Traditional Chinese interface yet; do not claim one.
 
 The build must explicitly copy `.lproj` directories into `Contents/Resources`; validate the packaged strings and test both app languages after building. Finder and Dock may cache display names.

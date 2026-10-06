@@ -20,6 +20,10 @@ enum PrivacyFixtures {
         c("选择 English 后界面语言与品牌名为英文", L10n.language == "en" && Brand.name == "Cadenza")
         AppLanguage.current = .zhHans
         c("选择简体中文后界面语言与品牌名为中文", L10n.language == "zh-Hans" && Brand.name == "随言")
+        c("模型卡片的语言名跟随所选界面语言（中文）", LocalModelRow.languageList(["zh", "en"]).contains("中文") && !LocalModelRow.languageList(["zh", "en"]).contains("Chinese"))
+        AppLanguage.current = .en
+        c("模型卡片的语言名跟随所选界面语言，而不是系统语言（英文）", LocalModelRow.languageList(["zh", "en"]).contains("Chinese") && !LocalModelRow.languageList(["zh", "en"]).contains("中文"))
+        AppLanguage.current = .zhHans
         let before = notifications
         AppLanguage.current = .zhHans
         c("重复选择同一语言不重复通知", notifications == before)

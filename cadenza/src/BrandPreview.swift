@@ -61,7 +61,7 @@ enum BrandPreview {
         if page == "ocr-sheet" {controller.settingsModel?.ocrDraftFactory={p in OCRProviderDraft(provider:p,settings:ScreenshotSettings(),has:{_ in false},read:{_ in nil},write:{_,_ in true},delete:{_ in true},persist:{_,_,_,_ in true})};controller.settingsModel?.configuringOCR = .baidu}
         if let name=CommandLine.arguments.first(where:{$0.hasPrefix("--preview-engine-tab=")}).map({String($0.dropFirst("--preview-engine-tab=".count))}),let tab=EngineTab(rawValue:name) {controller.settingsModel?.requestedEngineTab=tab}
         if let window=controller.window {window.ignoresMouseEvents=true}
-        if let height=CommandLine.arguments.first(where:{$0.hasPrefix("--preview-brand-height=")}).flatMap({Double($0.dropFirst("--preview-brand-height=".count))}) {controller.window?.setContentSize(NSSize(width:720,height:height))}
+        if let height=CommandLine.arguments.first(where:{$0.hasPrefix("--preview-brand-height=")}).flatMap({Double($0.dropFirst("--preview-brand-height=".count))}) {controller.window?.setContentSize(NSSize(width:CommandLine.arguments.first(where:{$0.hasPrefix("--preview-brand-width=")}).flatMap({Double($0.dropFirst("--preview-brand-width=".count))}) ?? 720,height:height))}
         if let provider {
             controller.settingsModel?.providerDraftFactory={engine in ProviderSettingsDraft(store:store,engine:engine,busy:{false},changed:{},writer:SettingsUIFixtures.Writer(),read:{_ in nil},has:{_ in true})}
             controller.settingsModel?.configuring=provider

@@ -1,8 +1,14 @@
+<p align="center">
+  <img src="cadenza/docs/branding/social-preview/suiyan-zh.png" alt="随言：随口说，随处写" width="720">
+</p>
+
 # 随言 · Cadenza
 
 **随口说，随处写。** 在你自己的 Mac 上运行的 macOS 开源语音输入工具。
 
-[English](README.md)
+[English](README.md) · [官网与文档](https://dragonkingio.github.io/cadenza-site/zh-cn/)
+
+<!-- 介绍视频：有了之后，在这里放一张链接到视频的封面图（托管建议见 cadenza/docs/MEDIA.md）。 -->
 
 按住快捷键说话，松开，识别出的文字会写到光标所在的位置。默认用**本地模型在这台 Mac 上识别**；除非你主动选择云端服务并同意，否则不会上传任何东西。文字没法写入时，软件会保留下来，方便你复制。
 
@@ -16,6 +22,18 @@
 - **能接硬件。** 默认关闭、只监听 `127.0.0.1` 的接口，让你自己的挂件、眼镜或按钮发送音频、取回文字。见 [本地接口](cadenza/docs/LOCAL-API.md) 和 [硬件接入](cadenza/docs/HARDWARE-INTEGRATION.md)。
 - **公开、可度量。** 识别效果的改动都用可重复的基准来证明（[ACCURACY.md](cadenza/docs/ACCURACY.md)）。
 - 界面支持简体中文和英文。
+
+## 看看界面
+
+下面都是真实的设置窗口。
+
+**选择在哪里识别。** 本地模型在你的 Mac 上运行，不上传任何内容。下载好模型后，会出现“用我的声音比较模型”。
+
+<p align="center"><img src="cadenza/docs/images/settings-local-zh.png" alt="设置，本地模型标签：SenseVoice（推荐）、FireRedASR2、Parakeet" width="640"></p>
+
+**细调。** 语言、数字规整、人声检测灵敏度和 CPU 使用方式，全部在这台 Mac 上处理。
+
+<p align="center"><img src="cadenza/docs/images/settings-tuning-zh.png" alt="设置，识别设置标签" width="640"></p>
 
 ## 安装
 

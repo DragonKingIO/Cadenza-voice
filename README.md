@@ -1,8 +1,14 @@
+<p align="center">
+  <img src="cadenza/docs/branding/social-preview/cadenza-en.png" alt="Cadenza: Speak where you type" width="720">
+</p>
+
 # Cadenza · 随言
 
 **Speak where you type.** Open-source voice typing for macOS that runs on your Mac.
 
-[简体中文](README.zh-CN.md)
+[简体中文](README.zh-CN.md) · [Website and documentation](https://dragonkingio.github.io/cadenza-site/)
+
+<!-- Intro video: when it exists, put a poster image that links to it here (hosting advice: cadenza/docs/MEDIA.md). -->
 
 Hold a shortcut, speak, release. Cadenza recognizes your speech and types the text where your cursor is. By default
 recognition happens **on this Mac** with a local model; nothing is uploaded unless you choose a cloud service and agree to
@@ -26,6 +32,19 @@ it. If the text cannot be typed, the app keeps it so you can copy it.
   [hardware integration](cadenza/docs/HARDWARE-INTEGRATION.md).
 - **Open and measured.** Accuracy changes are justified with a repeatable benchmark ([ACCURACY.md](cadenza/docs/ACCURACY.md)).
 - English and Simplified Chinese interface.
+
+## See it
+
+Everything below is the real settings window.
+
+**Choose where recognition happens.** Local models run on your Mac and nothing is uploaded. "Compare models with my voice"
+appears once a model is downloaded.
+
+<p align="center"><img src="cadenza/docs/images/settings-local-en.png" alt="Settings, Local models tab: SenseVoice (recommended), FireRedASR2 and Parakeet" width="640"></p>
+
+**Tune it.** Language, number formatting, voice-detection sensitivity and CPU use, all processed on this Mac.
+
+<p align="center"><img src="cadenza/docs/images/settings-tuning-en.png" alt="Settings, Recognition settings tab" width="640"></p>
 
 ## Install
 
