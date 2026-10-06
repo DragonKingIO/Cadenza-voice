@@ -12,7 +12,7 @@ Provider names are trademarks of their respective owners. Cadenza is not affilia
 
 ## Local inference (optional build component)
 
-Builds made with `third_party/sherpa-onnx` statically link [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) v1.13.8 (Apache-2.0) and the libraries packaged with its release: ONNX Runtime (MIT), kaldi-native-fbank (Apache-2.0), kaldi-decoder (Apache-2.0), KissFFT (BSD-3-Clause), OpenFst/kaldifst and sentencepiece (Apache-2.0). Their full license texts ship with the upstream release archive named in `tools/fetch-sherpa-onnx.sh`; include them when distributing a binary. Verify these license names against the upstream archive before a public release.
+Builds made with `third_party/sherpa-onnx` statically link [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) v1.13.8 (Apache-2.0) and the code it contains: ONNX Runtime 1.28.2 (MIT, with the notices of its own dependencies), kaldi-native-fbank (Apache-2.0), KISS FFT (BSD-3-Clause), kaldi-decoder, kaldifst, OpenFst and simple-sentencepiece (Apache-2.0), Eigen (MPL-2.0), nlohmann/json (MIT) and hclust-cpp/fastcluster (BSD-2-Clause). The exact versions, sources and full license texts are in [licenses/](licenses/README.md), and every build copies that folder into the app (`Contents/Resources/Licenses`) together with this file. The list was checked against the symbols in the linked libraries.
 
 ## Downloaded models (not bundled)
 

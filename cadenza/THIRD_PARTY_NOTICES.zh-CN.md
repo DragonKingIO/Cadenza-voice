@@ -10,7 +10,7 @@ Apple Speech 使用系统 Speech 框架。
 
 ## 本地推理（可选构建组件）
 
-存在 `third_party/sherpa-onnx` 时，构建会静态链接 [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) v1.13.8（Apache-2.0）及其发布包内的库：ONNX Runtime（MIT）、kaldi-native-fbank（Apache-2.0）、kaldi-decoder（Apache-2.0）、KissFFT（BSD-3-Clause）、OpenFst/kaldifst 与 sentencepiece（Apache-2.0）。完整许可文本随 `tools/fetch-sherpa-onnx.sh` 指定的上游发布包提供，分发二进制时需一并附上；公开发布前请对照上游发布包核对这些许可名称。
+存在 `third_party/sherpa-onnx` 时，构建会静态链接 [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) v1.13.8（Apache-2.0）及其包含的代码：ONNX Runtime 1.28.2（MIT，附其依赖的声明）、kaldi-native-fbank（Apache-2.0）、KISS FFT（BSD-3-Clause）、kaldi-decoder、kaldifst、OpenFst 与 simple-sentencepiece（Apache-2.0）、Eigen（MPL-2.0）、nlohmann/json（MIT）以及 hclust-cpp/fastcluster（BSD-2-Clause）。确切版本、来源和完整许可文本见 [licenses/](licenses/README.md)，每次构建都会把这个文件夹连同本文件复制进应用（`Contents/Resources/Licenses`）。这份清单已对照链接库里的符号核对过。
 
 ## 下载的模型（不随软件打包）
 

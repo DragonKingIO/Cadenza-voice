@@ -90,6 +90,11 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 PLIST
 mkdir -p "$APP/Contents/Resources"
 cp LICENSE "$APP/Contents/Resources/LICENSE"
+# Third-party notices and the license texts of the code linked in from third_party (see licenses/README.md);
+# distributing the binary requires shipping them.
+cp THIRD_PARTY_NOTICES.md "$APP/Contents/Resources/THIRD_PARTY_NOTICES.md"
+mkdir -p "$APP/Contents/Resources/Licenses"
+cp -R licenses/. "$APP/Contents/Resources/Licenses/"
 cp resources/brand/Cadenza.icns "$APP/Contents/Resources/"
 cp resources/brand/cadenza-menubar*.png "$APP/Contents/Resources/"
 cp resources/brand/cadenza-icon-128.png "$APP/Contents/Resources/"

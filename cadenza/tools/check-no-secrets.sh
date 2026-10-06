@@ -29,7 +29,8 @@ scan "API key shaped like sk-"      'sk-[A-Za-z0-9]{24,}'
 scan "AWS access key id"            'AKIA[0-9A-Z]{16}'
 scan "app device token (cdz_...)"   'cdz_[A-Za-z0-9_-]{30,}'
 scan "absolute home path"           '/Users/[A-Za-z0-9._-]+/' '/Users/(you|name|me|example|USER|user)/'
-scan "e-mail address"               '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' 'noreply|@example\.|@localhost|@2x|@3x|git@github\.com|@users\.noreply'
+# Upstream license texts in cadenza/licenses/ must stay verbatim and name their authors, so their addresses are allowed there.
+scan "e-mail address"               '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' '^cadenza/licenses/|noreply|@example\.|@localhost|@2x|@3x|git@github\.com|@users\.noreply'
 
 if [ "$FOUND" -eq 0 ]; then echo "check-no-secrets: clean ($(printf '%s\n' "$FILES" | wc -l | tr -d ' ') files scanned)"; fi
 exit "$FOUND"
