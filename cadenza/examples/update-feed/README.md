@@ -7,7 +7,7 @@ ever sent to anyone.
 ```bash
 cd examples/update-feed
 python3 -m http.server 8765 &
-/Applications/随言.app/Contents/MacOS/Yansui --update-feed-override=http://127.0.0.1:8765/latest.json
+/Applications/随言.app/Contents/MacOS/Cadenza --update-feed-override=http://127.0.0.1:8765/latest.json
 ```
 
 Open About and press Check for updates: it reports version 9.9.9 as available. Edit `tag_name` to `v1.0.0` to see

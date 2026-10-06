@@ -14,4 +14,5 @@ TASK_TEST_LIBRARY_DIR="$TASK_DEVELOPER_DIR/Library/Developer/usr/lib"
 if [ -f "$TASK_TEST_LIBRARY_DIR/lib_TestingInterop.dylib" ]; then
     TASK_TEST_ARGS+=(-Xlinker -rpath -Xlinker "$TASK_TEST_LIBRARY_DIR")
 fi
-exec swift test --package-path "$TASK_PACKAGE_DIR" "${TASK_TEST_ARGS[@]}" "$@"
+# The ${...+...} form keeps an empty array valid under set -u in the bash 3.2 that macOS ships (CI uses full Xcode, where it is empty).
+exec swift test --package-path "$TASK_PACKAGE_DIR" ${TASK_TEST_ARGS[@]+"${TASK_TEST_ARGS[@]}"} "$@"

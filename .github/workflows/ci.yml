@@ -1,8 +1,10 @@
 name: build-and-test
 
-# NOTE: written but not yet run on GitHub. The first run decides whether the runner label and the macOS 26 toolchain are right.
+# Never use pull_request_target here: pull requests from forks must not run with this repository's secrets.
 on:
   pull_request:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -24,10 +26,16 @@ jobs:
         run: |
           T="$RUNNER_TEMP/app"; mkdir -p "$T"
           unzip -q cadenza/build/stage.noindex/Cadenza.app.zip -d "$T"
-          BIN=$(ls -d "$T"/*.app)/Contents/MacOS/Yansui
-          for suite in selftest selftest-settings-ui selftest-settings-polish selftest-status-menu selftest-asr-settings selftest-asr-entry selftest-local-model selftest-trigger-stage2; do
-            echo "== $suite"; "$BIN" --$suite 2>&1 | tee "$RUNNER_TEMP/$suite.log" | grep -a -E "FAIL|checks=" || true
-            if grep -a -q "FAIL" "$RUNNER_TEMP/$suite.log"; then echo "::error::$suite failed"; exit 1; fi
+          BIN="$(ls -d "$T"/*.app)/Contents/MacOS/Cadenza"
+          test -x "$BIN" || { echo "::error::executable not found: $BIN"; exit 1; }
+          for suite in selftest selftest-settings-ui selftest-settings-polish selftest-status-menu selftest-asr-settings selftest-asr-entry selftest-local-model selftest-trigger-stage2 selftest-screenshot; do
+            echo "== $suite"
+            LOG="$RUNNER_TEMP/$suite.log"
+            STATUS=0; "$BIN" --$suite > "$LOG" 2>&1 || STATUS=$?
+            grep -a -E "FAIL|failures=" "$LOG" || true
+            if [ "$STATUS" -ne 0 ]; then tail -n 20 "$LOG"; echo "::error::$suite exited with status $STATUS"; exit 1; fi
+            # A suite passes only when it ran to the end and reported no failures.
+            if grep -a -q "FAIL" "$LOG" || ! grep -a -q "failures=0" "$LOG"; then echo "::error::$suite failed"; exit 1; fi
           done
           "$BIN" --check-brand-resources
       - name: Trigger state machine
