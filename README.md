@@ -1,92 +1,90 @@
 <p align="center">
-  <img src="cadenza/docs/branding/social-preview/cadenza-en.png" alt="Cadenza: Speak where you type" width="720">
+  <img src="cadenza/docs/branding/social-preview/cadenza-en.png" alt="Cadenza: Speak where you type" width="640">
 </p>
 
-# Cadenza · 随言
+<p align="center">
+  <b>Speak where you type.</b><br>
+  Open-source voice input for macOS. Recognition runs on your Mac.
+</p>
 
-**Speak where you type.** Open-source voice typing for macOS that runs on your Mac.
+<p align="center">
+  <a href="https://dragonkingio.github.io/cadenza-site/">Website</a> ·
+  <a href="https://dragonkingio.github.io/cadenza-site/getting-started/">Documentation</a> ·
+  <a href="https://dragonkingio.github.io/cadenza-site/download/">Download</a> ·
+  <a href="README.zh-CN.md">简体中文</a>
+</p>
 
-[简体中文](README.zh-CN.md) · [Website and documentation](https://dragonkingio.github.io/cadenza-site/)
+<p align="center">
+  <img src="https://img.shields.io/badge/license-MIT-185c53" alt="License: MIT">
+  <img src="https://img.shields.io/badge/macOS-26%2B-185c53" alt="macOS 26 or later">
+  <img src="https://img.shields.io/badge/Apple%20silicon-only-185c53" alt="Apple silicon only">
+  <img src="https://img.shields.io/badge/status-early%20preview-3fa597" alt="Status: early preview">
+</p>
 
 https://github.com/user-attachments/assets/7a4794f5-be45-410d-828e-dcc23733d7d5
 
-Hold a shortcut, speak, release. Cadenza recognizes your speech and types the text where your cursor is. By default
-recognition happens **on this Mac** with a local model; nothing is uploaded unless you choose a cloud service and agree to
-it. If the text cannot be typed, the app keeps it so you can copy it.
+Hold a key (Left Option by default), speak, and let go: the text appears where your cursor is. Many voice input services
+upload every recording to the vendor's servers. Cadenza recognizes speech on your Mac by default, and because it is open
+source, anyone can check what leaves the machine.
 
-> **Status: early development.** It works day to day on the maintainer's Mac, but it has not been tested on many setups.
-> Compatibility with every app is not verified. Bug reports are very welcome.
+## Features
 
-## Why Cadenza
+- **Local by default.** SenseVoice (recommended), FireRedASR2 and Parakeet run on your Mac through
+  [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). Models are downloaded inside the app and checked. "Compare models
+  with my voice" shows which one understands you best.
+- **Your own cloud service, if you want one.** iFLYTEK, Volcengine, Tencent Cloud, Alibaba Cloud, Baidu and Deepgram, with
+  your own keys. Audio is sent only after you agree, provider by provider. If the network fails, a local model can take over.
+- **Screenshots and text recognition** *(new, still being tested)*. Capture an area, mark it up or pin it on screen, and copy
+  the text or QR code inside. Apple Vision reads the text on your Mac by default.
+  [More](cadenza/docs/SCREENSHOT.md)
+- **For developers and AI hardware.** An optional local API on `127.0.0.1` (off by default) lets your own programs, pendants or
+  glasses send audio and get text back, with a separate, revocable token per device.
+  [Local API](cadenza/docs/LOCAL-API.md) · [Hardware integration](cadenza/docs/HARDWARE-INTEGRATION.md)
+- **Private by design.** No account, no server, no analytics, no crash reports. Recordings and transcripts are not written to
+  disk or to logs; keys live in the macOS Keychain. A "never go online" switch hides everything that could connect.
+- **Measured.** Changes to recognition are justified with a repeatable benchmark. [Accuracy](cadenza/docs/ACCURACY.md)
 
-- **Your audio, your choice.** Many voice input services upload every recording to the vendor's servers. Cadenza is open
-  source, so you can read exactly what leaves your Mac, and you decide where recognition happens: a local model (nothing is
-  uploaded) or a cloud service of your own. No account, no server, no analytics, no crash reporting. Cloud services receive
-  audio only after your explicit consent for that provider, and their keys live in the macOS Keychain. A "never go online"
-  switch hides everything that could connect.
-- **Local models you can compare.** SenseVoice (recommended), FireRedASR2 and Parakeet run through
-  [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx), downloaded inside the app with checksum verification. "Compare
-  models with my voice" lets you pick the one that suits your voice. Recordings stay in memory.
-- **Bring your own cloud service, optionally.** iFLYTEK, Volcengine, Tencent Cloud, Alibaba Cloud, Baidu and Deepgram, with
-  your own credentials. When the network fails, recognition can continue with a local model.
-- **Screenshots and text recognition** (new, still being tested). Capture an area, mark it up or pin it on screen, and copy
-  the text or QR code inside. Apple Vision recognizes the text on your Mac by default; Baidu, Tencent Cloud and Google Cloud
-  Vision are optional, with your own keys and consent. See [Screenshot and text recognition](cadenza/docs/SCREENSHOT.md).
-- **Built for developers and AI hardware.** An optional, off-by-default API on `127.0.0.1` lets a program or your own
-  pendant, glasses, recorder or DIY board start a recording, send audio and receive text, and, if you allow it, type the
-  result into the front app. Every device gets its own revocable token with separate permissions. See
-  [Local API](cadenza/docs/LOCAL-API.md) and [hardware integration](cadenza/docs/HARDWARE-INTEGRATION.md).
-- **Open and measured.** Accuracy changes are justified with a repeatable benchmark ([ACCURACY.md](cadenza/docs/ACCURACY.md)).
-- English and Simplified Chinese interface.
+## Get started
 
-## Install
-
-There is no release yet. Build it yourself; it takes a few minutes and needs macOS 26 on Apple silicon with the Xcode
-Command Line Tools:
+There is no release yet, so build it yourself. It takes a few minutes and needs macOS 26 or later on Apple silicon, with the
+Xcode Command Line Tools (`xcode-select --install`).
 
 ```sh
 git clone https://github.com/DragonKingIO/Cadenza-voice.git && cd Cadenza-voice
-./cadenza/tools/fetch-sherpa-onnx.sh     # optional: the library for local models
+./cadenza/tools/fetch-sherpa-onnx.sh     # the library for local models
 ./cadenza/build.sh --stage-only          # creates cadenza/build/stage.noindex/Cadenza.app.zip
 ```
 
-Unzip it and open the app. A copy you built yourself opens normally. Releases you download are signed ad hoc and not
-notarized, so macOS blocks the first launch: open System Settings → Privacy & Security, scroll to the message about the app and
-choose **Open Anyway** (since macOS 15, right-click → Open no longer bypasses this). Because each ad hoc build is a new
-identity, macOS asks again for the permissions below after you rebuild or update. Full instructions:
-[Developing Cadenza](cadenza/docs/DEVELOPING.md).
-
-**Platforms:** macOS 26 or later on Apple silicon only. See [Platforms](cadenza/docs/PLATFORMS.md) for why, and what could be
-reused for a port.
+Unzip it, open the app, and allow the permissions it asks for:
 
 | Permission | Why |
 |---|---|
-| Microphone | Capture speech while you record |
-| Accessibility | Find the text field and type the result |
+| Microphone | Capture your voice while you record |
+| Accessibility | Type the result into the text field |
 | Input Monitoring | Detect the global shortcut |
-| Speech Recognition | Only if you use Apple's built-in recognition |
+| Speech Recognition | Only for Apple's built-in recognition |
 | Screen & System Audio Recording | Only for screenshots |
 
-## What is and is not verified
+A copy you built yourself opens normally. Releases will be signed ad hoc and **not notarized** (the project has no budget for an
+Apple Developer ID), so macOS blocks the first launch of a downloaded copy: open System Settings → Privacy & Security and choose
+**Open Anyway**. Next steps: [Getting started](https://dragonkingio.github.io/cadenza-site/getting-started/) ·
+[Development guide](cadenza/docs/DEVELOPING.md).
 
-Local recognition with SenseVoice is exercised with a benchmark and in daily use. Cloud providers other than iFLYTEK and
-Deepgram have only been tested with fake transports, and iFLYTEK and Deepgram only with synthesized speech. A protocol
-implementation does not promise that your account, region or plan will work. Provider names are descriptive labels, not
-endorsements, and Cadenza is not affiliated with them.
+## Status
 
-## Privacy
-
-Read the [privacy notice](cadenza/PRIVACY.md) and [terms](cadenza/TERMS.md). Logs hold state, errors and text lengths; the
-code does not write audio or transcripts to them, and you can turn logging off.
+Early preview. It is used every day on the maintainer's Mac but has not been tested on many setups, and compatibility with
+every app is not verified. Local recognition with SenseVoice is covered by the benchmark and daily use. Of the cloud providers,
+iFLYTEK and Deepgram were tested online with synthesized speech; the others only with fake transports. Provider names are
+descriptive labels, not endorsements, and Cadenza is not affiliated with them. Only macOS is supported
+([why](cadenza/docs/PLATFORMS.md)); ports are welcome as separate projects.
 
 ## Contributing
 
-Everyone is welcome: code, documentation, model evaluations on your own voice, and bug reports. Start with
-[CONTRIBUTING.md](CONTRIBUTING.md) and the [development guide](cadenza/docs/DEVELOPING.md). Please follow the
+Code, documentation, translations, model evaluations on your own voice and bug reports are all welcome. Start with
+[CONTRIBUTING.md](CONTRIBUTING.md). Every change is reviewed against the privacy contract described there. Please follow the
 [Code of Conduct](CODE_OF_CONDUCT.md), and report security problems privately as described in [SECURITY.md](SECURITY.md).
-Naming rules are in [BRAND.md](BRAND.md).
 
 ## License
 
-[MIT](cadenza/LICENSE). Third-party components and models are listed in
-[THIRD_PARTY_NOTICES.md](cadenza/THIRD_PARTY_NOTICES.md).
+[MIT](cadenza/LICENSE). Privacy notice: [PRIVACY.md](cadenza/PRIVACY.md) · Terms: [TERMS.md](cadenza/TERMS.md) ·
+Third-party components and models: [THIRD_PARTY_NOTICES.md](cadenza/THIRD_PARTY_NOTICES.md).
