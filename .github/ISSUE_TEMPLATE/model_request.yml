@@ -1,0 +1,34 @@
+name: Model request (模型建议)
+description: Propose a local speech model
+labels: ["model"]
+body:
+  - type: input
+    id: name
+    attributes: { label: Model name and link (模型名称和链接) }
+    validations: { required: true }
+  - type: input
+    id: license
+    attributes:
+      label: License (许可证)
+      description: It must allow redistribution of download links and use in a free app.
+    validations: { required: true }
+  - type: input
+    id: size
+    attributes: { label: Download size (下载大小), placeholder: "about 160 MB" }
+    validations: { required: true }
+  - type: input
+    id: runtime
+    attributes:
+      label: Runs through sherpa-onnx? (是否能通过 sherpa-onnx 运行)
+      placeholder: "yes, offline transducer / CTC / other"
+    validations: { required: true }
+  - type: input
+    id: languages
+    attributes: { label: Languages (支持的语言) }
+    validations: { required: true }
+  - type: textarea
+    id: benchmark
+    attributes:
+      label: Accuracy and speed (准确度和速度)
+      description: Run `--accuracy-benchmark` (see cadenza/docs/ACCURACY.md) against the recommended model and paste the table. Also say whether it writes punctuation and how fast it is.
+    validations: { required: true }

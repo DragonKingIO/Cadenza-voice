@@ -1,0 +1,6 @@
+build/
+build-run.log
+.DS_Store
+third_party/
+# Optional character artwork: third-party, license not yet confirmed
+resources/character/

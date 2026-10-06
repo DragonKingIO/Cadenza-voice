@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security problem (请私下报告安全问题)
+    url: https://github.com/DragonKingIO/Cadenza-voice/security/advisories/new
+    about: Report vulnerabilities privately. Do not open a public issue.

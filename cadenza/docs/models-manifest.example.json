@@ -1,0 +1,185 @@
+{
+  "_comment": "Example update list for LocalModelCenter. Host it over HTTPS, sign it with tools/manifest-tool.swift and publish the .sig next to it. Entries with a kind this app version cannot run are shown as 'needs a newer app'.",
+  "schema": 1,
+  "models": [
+    {
+      "id": "sensevoice-multilingual-int8",
+      "version": "1.0.0",
+      "display_name": {
+        "en": "East Asian languages (SenseVoice)",
+        "zh-Hans": "东亚语言（SenseVoice）"
+      },
+      "summary": {
+        "en": "Chinese, English, Japanese, Korean and Cantonese with automatic language detection, punctuation and number formatting. Runs fully on this Mac.",
+        "zh-Hans": "中文、英文、日文、韩文、粤语，自动判断语种，自带标点与数字规整，完全在本机运行。"
+      },
+      "kind": "sensevoice",
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "yue"
+      ],
+      "download_size": 163646737,
+      "installed_size": 238100000,
+      "min_app_version": "1.0.0",
+      "license": "See LICENSE in the model package",
+      "changelog": "sherpa-onnx SenseVoice small int8 (2024-07-17), Silero VAD.",
+      "files": [
+        {
+          "name": "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2",
+          "urls": [
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2"
+          ],
+          "sha256": "7d1efa2138a65b0b488df37f8b89e3d91a60676e416f515b952358d83dfd347e",
+          "size": 163002883,
+          "extract": true
+        },
+        {
+          "name": "silero_vad.onnx",
+          "urls": [
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"
+          ],
+          "sha256": "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6",
+          "size": 643854
+        }
+      ],
+      "required_files": [
+        "model.int8.onnx",
+        "tokens.txt",
+        "silero_vad.onnx"
+      ],
+      "platforms": [
+        "macos",
+        "windows"
+      ]
+    },
+    {
+      "id": "parakeet-tdt-v3-int8",
+      "version": "1.0.0",
+      "display_name": {
+        "en": "European languages (Parakeet TDT v3) · experimental",
+        "zh-Hans": "欧洲语言（Parakeet TDT v3）· 实验性"
+      },
+      "summary": {
+        "en": "25 European languages (English, French, German, Spanish, Italian, Portuguese, Russian, Polish and more) with automatic language detection, punctuation and capitalization. Runs fully on this Mac.",
+        "zh-Hans": "25 种欧洲语言（英、法、德、西、意、葡、俄、波兰语等），自动判断语种，自带标点与大小写，完全在本机运行。"
+      },
+      "kind": "parakeet-tdt",
+      "languages": [
+        "bg",
+        "hr",
+        "cs",
+        "da",
+        "nl",
+        "en",
+        "et",
+        "fi",
+        "fr",
+        "de",
+        "el",
+        "hu",
+        "it",
+        "lv",
+        "lt",
+        "mt",
+        "pl",
+        "pt",
+        "ro",
+        "sk",
+        "sl",
+        "es",
+        "sv",
+        "ru",
+        "uk"
+      ],
+      "download_size": 487813909,
+      "installed_size": 700000000,
+      "min_app_version": "1.0.0",
+      "license": "See LICENSE in the model package",
+      "changelog": "sherpa-onnx NeMo Parakeet TDT 0.6B v3 int8 (ONNX, CPU), Silero VAD.",
+      "files": [
+        {
+          "name": "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2",
+          "urls": [
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2"
+          ],
+          "sha256": "5793d0fd397c5778d2cf2126994d58e9d56b1be7c04d13c7a15bb1b4eafb16bf",
+          "size": 487170055,
+          "extract": true
+        },
+        {
+          "name": "silero_vad.onnx",
+          "urls": [
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"
+          ],
+          "sha256": "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6",
+          "size": 643854
+        }
+      ],
+      "required_files": [
+        "encoder.int8.onnx",
+        "decoder.int8.onnx",
+        "joiner.int8.onnx",
+        "tokens.txt",
+        "silero_vad.onnx"
+      ],
+      "platforms": [
+        "macos",
+        "windows"
+      ]
+    },
+    {
+      "id": "fire-red-asr2-ctc-int8",
+      "version": "1.0.0",
+      "display_name": {
+        "en": "High-accuracy Chinese (FireRedASR2) · experimental",
+        "zh-Hans": "高精度中文（FireRedASR2）· 实验性"
+      },
+      "summary": {
+        "en": "Mandarin and English. In our tests its accuracy matched the recommended model, but it writes no punctuation, does not format numbers, and is about four times slower. Runs fully on this Mac.",
+        "zh-Hans": "普通话和英文。我们的测试里准确度和推荐模型相当，但不输出标点、不规整数字，速度约慢 4 倍。完全在本机运行。"
+      },
+      "kind": "fire-red-ctc",
+      "languages": [
+        "zh",
+        "en"
+      ],
+      "download_size": 521160132,
+      "installed_size": 800000000,
+      "min_app_version": "1.0.0",
+      "license": "See LICENSE in the model package",
+      "changelog": "sherpa-onnx FireRedASR2 CTC zh+en int8 (2026-02-25), Silero VAD.",
+      "files": [
+        {
+          "name": "sherpa-onnx-fire-red-asr2-ctc-zh_en-int8-2026-02-25.tar.bz2",
+          "urls": [
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-fire-red-asr2-ctc-zh_en-int8-2026-02-25.tar.bz2"
+          ],
+          "sha256": "1da8b737ecc5e29f36759a4460c754863e7c919a4ba325aea187331fbfc83274",
+          "size": 520516278,
+          "extract": true
+        },
+        {
+          "name": "silero_vad.onnx",
+          "urls": [
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"
+          ],
+          "sha256": "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6",
+          "size": 643854
+        }
+      ],
+      "required_files": [
+        "model.int8.onnx",
+        "tokens.txt",
+        "silero_vad.onnx"
+      ],
+      "platforms": [
+        "macos",
+        "windows"
+      ]
+    }
+  ],
+  "_note_whisper": "Whisper large-v3-turbo is intentionally not listed yet: add it after its package file names and SHA-256 are confirmed (tools/manifest-tool.swift hash) and a runner exists."
+}

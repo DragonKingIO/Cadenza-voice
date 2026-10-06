@@ -1,0 +1,21 @@
+# Naming
+
+- English UI and documents: **Cadenza** (capital C only). Simplified Chinese: **随言**. Traditional Chinese: **隨言**.
+- Never show both product names in one UI. Exceptions: copyright lines and repository URLs.
+- English tagline: **Speak where you type.** Chinese tagline: **随口说，随处写。**
+- English subtitle: **Open-source voice typing for macOS.** Chinese subtitle: **在光标所在的地方，开口就是输入。**
+- English UI must contain no Chinese, including provider names, permission prompts, errors, tooltips, and accessibility announcements.
+- Use provider names as text; never use provider logos or imply endorsement.
+- User-visible product names in code must come from `Brand.name`; sentences use localized `%@` placeholders. Names belong in localization resources, not Swift literals.
+- New technical identifiers must be brand-neutral. Existing Bundle ID, signing identity, Keychain identifiers, configuration paths, executable name, and installed path are compatibility identities: freeze them even where they contain a historical name. Do not rename them during localization or branding.
+- Localized display names may change; technical identities must not change with the language.
+- The tagline describes the intended experience, not verified compatibility with every application. Documentation must state actual limitations.
+- Feature lists and release notes include only implemented behavior, clearly distinguishing integration tests from unit tests.
+
+## Rollout
+
+The names and taglines above are approved editorial choices. Brand and existing UI text are integrated as an independently authorized patch, ahead of the mixed-trigger UI stage. `Brand.swift` reads the localized name and tagline. The mixed-trigger coordinator remains disabled; this patch does not complete stage 2 device acceptance or start stage 3.
+
+English and Simplified Chinese must each have complete `Localizable.strings` and `InfoPlist.strings`. Traditional Chinese currently has only an InfoPlist draft; do not claim a complete Traditional Chinese UI.
+
+The build must explicitly copy `.lproj` directories into `Contents/Resources`; validate the packaged strings and test both app languages after building. Finder and Dock may cache display names.

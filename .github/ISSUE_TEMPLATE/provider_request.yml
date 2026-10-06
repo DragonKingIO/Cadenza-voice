@@ -1,0 +1,26 @@
+name: Cloud provider (云端服务适配)
+description: Propose or improve a cloud speech service
+labels: ["provider"]
+body:
+  - type: input
+    id: provider
+    attributes: { label: Service name and API documentation link (服务商和接口文档) }
+    validations: { required: true }
+  - type: textarea
+    id: contract
+    attributes:
+      label: Streaming contract (流式接口说明)
+      description: Transport (WebSocket or HTTP), audio format, authentication, how partial and final results arrive, and how a recording is ended.
+    validations: { required: true }
+  - type: textarea
+    id: consent
+    attributes:
+      label: What the user must agree to (用户需要同意什么)
+      description: Where the audio goes, retention if the provider documents it, and what cancelling can and cannot undo.
+  - type: checkboxes
+    id: account
+    attributes:
+      label: Testing (测试)
+      options:
+        - label: I have a real account and can test it end to end.
+        - label: I can only test with a fake transport.

@@ -1,0 +1,20 @@
+name: Add a language (添加界面语言)
+description: Offer to translate the app
+labels: ["translation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Adding a third language still needs some code work (see cadenza/docs/DEVELOPING.md). Opening this issue lets us coordinate.
+  - type: input
+    id: language
+    attributes: { label: Language and region (语言和地区), placeholder: "French (France)" }
+    validations: { required: true }
+  - type: checkboxes
+    id: maintain
+    attributes:
+      label: Commitment (参与方式)
+      options:
+        - label: I can translate the interface strings.
+        - label: I can also translate the privacy notice and terms.
+        - label: I can review future changes to this language.

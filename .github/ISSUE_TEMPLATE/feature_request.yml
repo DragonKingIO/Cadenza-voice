@@ -1,0 +1,25 @@
+name: Feature request (功能建议)
+description: Suggest an improvement
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve? (想解决什么问题)
+    validations: { required: true }
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like to happen? (期望的做法)
+    validations: { required: true }
+  - type: textarea
+    id: privacy
+    attributes:
+      label: Privacy impact (隐私影响)
+      description: Does it need the network, new permissions, or to store anything? Cadenza only goes online when the user asks it to.
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Can you help? (能一起做吗)
+      options:
+        - label: I would like to work on this myself.

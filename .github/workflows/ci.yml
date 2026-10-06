@@ -1,0 +1,34 @@
+name: build-and-test
+
+# NOTE: written but not yet run on GitHub. The first run decides whether the runner label and the macOS 26 toolchain are right.
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./cadenza/tools/check-no-secrets.sh
+
+  build-and-test:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the inference library
+        run: ./cadenza/tools/fetch-sherpa-onnx.sh
+      - name: Build (ad hoc signed package)
+        run: ./cadenza/build.sh --stage-only
+      - name: Self-tests
+        run: |
+          T="$RUNNER_TEMP/app"; mkdir -p "$T"
+          unzip -q cadenza/build/stage.noindex/Cadenza.app.zip -d "$T"
+          BIN=$(ls -d "$T"/*.app)/Contents/MacOS/Yansui
+          for suite in selftest selftest-settings-ui selftest-settings-polish selftest-status-menu selftest-asr-settings selftest-asr-entry selftest-local-model selftest-trigger-stage2; do
+            echo "== $suite"; "$BIN" --$suite 2>&1 | tee "$RUNNER_TEMP/$suite.log" | grep -a -E "FAIL|checks=" || true
+            if grep -a -q "FAIL" "$RUNNER_TEMP/$suite.log"; then echo "::error::$suite failed"; exit 1; fi
+          done
+          "$BIN" --check-brand-resources
+      - name: Trigger state machine
+        run: ./cadenza/trigger-state-machine/run-tests.sh

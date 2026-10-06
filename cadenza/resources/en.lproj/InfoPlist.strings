@@ -1,0 +1,4 @@
+"CFBundleName" = "Cadenza";
+"CFBundleDisplayName" = "Cadenza";
+"NSMicrophoneUsageDescription" = "Cadenza uses the microphone to turn your speech into text.";
+"NSSpeechRecognitionUsageDescription" = "Cadenza uses speech recognition to turn your speech into text.";

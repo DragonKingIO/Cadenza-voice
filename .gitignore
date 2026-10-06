@@ -1,0 +1,8 @@
+.DS_Store
+**/.build/
+**/build/
+# compiled helper binaries and their empty build logs; sources sit next to them
+cadenza/tools/isw
+cadenza/tools/panel-probe
+cadenza/tools/tiny-menubar
+cadenza/tools/*.log
