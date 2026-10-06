@@ -8,7 +8,7 @@
 
 [简体中文](README.zh-CN.md) · [Website and documentation](https://dragonkingio.github.io/cadenza-site/)
 
-<!-- Intro video (15 s, English): put the GitHub-hosted video URL on its own line here. Never commit the MP4 (cadenza/docs/MEDIA.md). -->
+https://github.com/user-attachments/assets/7a4794f5-be45-410d-828e-dcc23733d7d5
 
 Hold a shortcut, speak, release. Cadenza recognizes your speech and types the text where your cursor is. By default
 recognition happens **on this Mac** with a local model; nothing is uploaded unless you choose a cloud service and agree to

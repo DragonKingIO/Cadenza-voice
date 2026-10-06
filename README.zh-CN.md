@@ -8,7 +8,7 @@
 
 [English](README.md) · [官网与文档](https://dragonkingio.github.io/cadenza-site/zh-cn/)
 
-<!-- 介绍视频（15 秒，中文版）：把 GitHub 托管的视频链接单独放一行在这里。不要把 MP4 提交进仓库（见 cadenza/docs/MEDIA.md）。 -->
+https://github.com/user-attachments/assets/a60e81d9-32d2-4f48-a59d-9e9d79568d2f
 
 按住快捷键说话，松开，识别出的文字会写到光标所在的位置。默认用**本地模型在这台 Mac 上识别**；除非你主动选择云端服务并同意，否则不会上传任何东西。文字没法写入时，软件会保留下来，方便你复制。
 
