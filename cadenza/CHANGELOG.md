@@ -12,5 +12,6 @@ This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). No p
 
 ### Changed
 
+- The executable, Bundle ID, Keychain service and support folder now use the Cadenza name instead of the old internal name. First launch moves the old folder, preferences and saved credentials across; macOS permissions need to be granted once more.
 - The settings tab "Engines" is now "Speech" (语音识别) so it is not confused with "Text Recognition" (文字识别).
 - Documentation distinguishes implemented provider protocols from live-service acceptance, and records consent and privacy verification limits.

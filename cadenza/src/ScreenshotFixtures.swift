@@ -14,7 +14,7 @@ enum ScreenshotFixtures {
 
     /// 画一张测试底图（像素尺寸 w×h）：左半蓝、右半绿，左上角有 20×20 的红块（用来检验上下方向没有翻转）
     static func baseImage(_ w: Int, _ h: Int) -> CGImage {
-        let ctx = bitmapContext(w, h)
+        let ctx = ScreenshotFixtures.bitmapContext(w, h)
         ctx.setFillColor(CGColor(srgbRed: 0, green: 0, blue: 1, alpha: 1)); ctx.fill(CGRect(x: 0, y: 0, width: w / 2, height: h))
         ctx.setFillColor(CGColor(srgbRed: 0, green: 1, blue: 0, alpha: 1)); ctx.fill(CGRect(x: w / 2, y: 0, width: w - w / 2, height: h))
         ctx.setFillColor(CGColor(srgbRed: 1, green: 0, blue: 0, alpha: 1)); ctx.fill(CGRect(x: 0, y: h - 20, width: 20, height: 20))   // CG 是 y 向上：这是左上角
@@ -23,21 +23,21 @@ enum ScreenshotFixtures {
 
     /// 黑白逐像素交替的棋盘，用来验证马赛克确实把细节抹平
     static func checkerImage(_ w: Int, _ h: Int) -> CGImage {
-        let ctx = bitmapContext(w, h)
+        let ctx = ScreenshotFixtures.bitmapContext(w, h)
         for y in 0..<h { for x in 0..<w { ctx.setFillColor(CGColor(gray: (x + y) % 2 == 0 ? 0 : 1, alpha: 1)); ctx.fill(CGRect(x: x, y: y, width: 1, height: 1)) } }
         return ctx.makeImage()!
     }
 
     /// 水平渐变（灰度随 x 增加）：用来测量马赛克色块的宽度
     static func rampImage(_ w: Int, _ h: Int) -> CGImage {
-        let ctx = bitmapContext(w, h)
+        let ctx = ScreenshotFixtures.bitmapContext(w, h)
         for x in 0..<w { ctx.setFillColor(CGColor(gray: CGFloat(x) / CGFloat(w - 1), alpha: 1)); ctx.fill(CGRect(x: x, y: 0, width: 1, height: h)) }
         return ctx.makeImage()!
     }
 
     /// 左半黑、右半白：用来验证模糊在分界线上产生渐变
     static func splitImage(_ w: Int, _ h: Int) -> CGImage {
-        let ctx = bitmapContext(w, h)
+        let ctx = ScreenshotFixtures.bitmapContext(w, h)
         ctx.setFillColor(CGColor(gray: 0, alpha: 1)); ctx.fill(CGRect(x: 0, y: 0, width: w / 2, height: h))
         ctx.setFillColor(CGColor(gray: 1, alpha: 1)); ctx.fill(CGRect(x: w / 2, y: 0, width: w - w / 2, height: h))
         return ctx.makeImage()!
@@ -390,6 +390,29 @@ enum ScreenshotFixtures {
         c("画布：文字工具生成文字标注并带上样式", cv.objects.last?.textValue == "备注 note" && cv.objects.last?.textStyle == .filled)
         cv.testTypeText("   ", at: CGPoint(x: 300, y: 330))
         c("画布：只有空格的文字不会生成标注", cv.objects.last?.textValue == "备注 note")
+        cv.testTypeText("选中 test", at: CGPoint(x: 300, y: 200))
+        let textID = cv.objects.last?.id
+        c("文字：写完后保持选中，随后换颜色会作用在它上面", cv.selectedID == textID)
+        cv.style.color = .blue; cv.applyStyleToSelected()
+        c("文字：写完后点颜色，文字立刻变色", cv.objects.last?.color == .blue)
+        rig.click(CGPoint(x: 310, y: 208))
+        c("文字：文字工具下再点一下已写好的文字，重新进入编辑", cv.isEditingText && cv.objects.last?.id == textID)
+        cv.style.color = .green
+        c("文字：输入时换颜色，输入框同步变色", cv.editorTextColorForTest == NSColor(cgColor: ScreenshotColor.green.cgColor))
+        cv.commitEditor()
+        c("文字：编辑完成后文字内容不变、数量不变", cv.objects.last?.textValue == "选中 test" && cv.objects.filter { $0.textValue != nil }.count == 2)
+        cv.tool = nil
+        rig.click(CGPoint(x: 310, y: 208), count: 2)
+        c("文字：选择工具下双击文字，重新进入编辑", cv.isEditingText)
+        cv.commitEditor(cancel: true)
+        cv.tool = nil
+        rig.click(CGPoint(x: 310, y: 208))
+        c("文字：选择工具下，已选中的文字再单击一下就能编辑", cv.isEditingText)
+        cv.commitEditor()
+        rig.click(CGPoint(x: 600, y: 90))                    // 点空白处取消选中
+        rig.click(CGPoint(x: 310, y: 208))
+        c("文字：没选中的文字单击只是选中，不会误进入编辑", !cv.isEditingText && cv.selectedID == textID)
+        cv.tool = .text
 
         // 区域微调
         cv.tool = nil
@@ -874,6 +897,29 @@ enum ScreenshotPreview {
         do { try data.write(to: URL(fileURLWithPath: output)) } catch { return 5 }
         print("screenshot-preview written \(output) \(w)x\(h)")
         return 0
+    }
+
+    /// 三种文字样式 × 全部颜色的对照图，叠在浅色 / 深色两块底上，检查每种样式换色后是否都看得出
+    static func renderTextStyles(output: String) -> Int32 {
+        let w = 1040, h = 560, scale: CGFloat = 2
+        let ctx = ScreenshotFixtures.bitmapContext(w, h)
+        ctx.setFillColor(CGColor(srgbRed: 0.93, green: 0.93, blue: 0.94, alpha: 1)); ctx.fill(CGRect(x: 0, y: 0, width: w, height: h / 2))
+        ctx.setFillColor(CGColor(srgbRed: 0.12, green: 0.13, blue: 0.16, alpha: 1)); ctx.fill(CGRect(x: 0, y: h / 2, width: w, height: h - h / 2))
+        guard let base = ctx.makeImage() else { return 3 }
+        var objects: [AnnotationObject] = []
+        for (row, style) in [TextStyle.plain, .filled, .outlined].enumerated() {
+            for (i, color) in ScreenshotColor.palette.enumerated() {
+                for (band, y0) in [0, 140].enumerated() {
+                    objects.append(AnnotationObject(shape: .text("Aa 字", CGPoint(x: 16 + CGFloat(i) * 62, y: CGFloat(y0 + 20 + row * 40))), color: color, level: 1, textStyle: style))
+                    _ = band
+                }
+            }
+        }
+        let size = CGSize(width: CGFloat(w) / scale, height: CGFloat(h) / scale)
+        guard let image = ScreenshotRenderer.render(display: base, effects: ScreenshotEffects(image: base, scale: scale), selection: CGRect(origin: .zero, size: size), scale: scale, objects: objects),
+              let data = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]) else { return 4 }
+        do { try data.write(to: URL(fileURLWithPath: output)) } catch { return 5 }
+        print("text-styles written \(output)"); return 0
     }
 
     /// 所有图标的图样表（按网格排列，放大显示，便于检查造型）

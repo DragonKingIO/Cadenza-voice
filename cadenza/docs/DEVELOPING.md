@@ -25,27 +25,25 @@ directory, use it, then delete it:
 
 ```sh
 T=$(mktemp -d) && unzip -q cadenza/build/stage.noindex/Cadenza.app.zip -d "$T"
-"$T"/*.app/Contents/MacOS/Yansui --selftest
+"$T"/*.app/Contents/MacOS/Cadenza --selftest
 ```
-
-(`Yansui` is the executable's compatibility name and stays as it is.)
 
 ### Names you will see in the code
 
 The product is **Cadenza** (English) and **随言** (Simplified Chinese); user-visible names always come from `Brand.name`.
-A few identifiers from before the rename remain on purpose, because changing them would make existing installs lose their
-permissions, saved credentials and settings. Please do not rename them in a "cleanup" pull request:
-
-- the Bundle ID `local.yansui.app` and the executable name `Yansui`;
-- the Keychain service name `Yansui` and the support folder `~/Library/Application Support/Yansui`;
-- the code that recognises Keychain labels written under retired product names (`Capsule.swift`).
+The executable, Bundle ID (`local.cadenza.app`), Keychain service and support folder (`~/Library/Application Support/Cadenza`)
+all use the current name. Installs from before the rename keep working: `LegacyMigration.swift` moves the old folder,
+preferences and saved credentials once (macOS may ask once to allow access to the old Keychain items; choose Always Allow).
+The permissions the app needs (microphone, accessibility, input monitoring, screen recording) are granted again once, because
+macOS ties them to the Bundle ID. The code that recognises Keychain labels written under retired product names (`Capsule.swift`)
+also stays.
 
 ## Test
 
 Run every suite before a pull request. Each prints `failures=0` when it passes:
 
 ```sh
-BIN="$T"/*.app/Contents/MacOS/Yansui
+BIN="$T"/*.app/Contents/MacOS/Cadenza
 "$BIN" --selftest                      # main suite
 "$BIN" --selftest-settings-ui
 "$BIN" --selftest-settings-polish

@@ -8,7 +8,7 @@ Scope: **microphone control, audio submission from other sources (hardware), tex
 
 - **Off by default.** Turn it on in Settings → Developer.
 - **Loopback only.** It listens on `127.0.0.1` and is not reachable from other devices. There is no option to open it to the network.
-- **Bearer token.** Every request needs `Authorization: Bearer <token>`: the owner token, or a device token (below). The owner token is created on first use and stored in `~/Library/Application Support/Yansui/local-api-token` (mode `0600`, readable only by your account). Regenerating it in Settings invalidates the old one for new requests.
+- **Bearer token.** Every request needs `Authorization: Bearer <token>`: the owner token, or a device token (below). The owner token is created on first use and stored in `~/Library/Application Support/Cadenza/local-api-token` (mode `0600`, readable only by your account). Regenerating it in Settings invalidates the old one for new requests.
 - **Browsers are refused.** A request carrying an `Origin` header, or a `Host` other than `127.0.0.1:<port>` / `localhost:<port>`, gets `403`. A web page cannot read the token, so it cannot call the API, and DNS rebinding is blocked.
 - **Text only.** Results are returned to the caller and are not typed into any app. Service keys are never returned.
 - **Visible.** The normal recording indicator is shown while an API session records.
@@ -118,7 +118,7 @@ Privacy: submitted audio is handled like a recording. With a local model nothing
 - `push_to_talk_button.py`: hold-to-talk or tap-to-toggle button. Replace the two functions `pressed()` / `released()` with your hardware's callbacks.
 
 ```bash
-curl -H "Authorization: Bearer $(cat ~/Library/Application\ Support/Yansui/local-api-token)" \
+curl -H "Authorization: Bearer $(cat ~/Library/Application\ Support/Cadenza/local-api-token)" \
      http://127.0.0.1:17420/v1/capabilities
 ```
 

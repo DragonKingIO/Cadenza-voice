@@ -71,9 +71,9 @@ When adding features keep it that way: design from our own concept, never from a
 ## Tests
 
 ```bash
-Yansui --selftest-screenshot                         # 250 checks: geometry, pixels, annotations, history, OCR parsing and signing, routing, pins, icons, hotkeys, menu
-Yansui --preview-screenshot-output=out.png [--preview-screenshot-tool=rectangle] [--preview-screenshot-dark] [--preview-screenshot-recognition]
-Yansui --preview-screenshot-icons=icons.png [--preview-screenshot-dark]
+Cadenza --selftest-screenshot                         # 250 checks: geometry, pixels, annotations, history, OCR parsing and signing, routing, pins, icons, hotkeys, menu
+Cadenza --preview-screenshot-output=out.png [--preview-screenshot-tool=rectangle] [--preview-screenshot-dark] [--preview-screenshot-recognition]
+Cadenza --preview-screenshot-icons=icons.png [--preview-screenshot-dark]
 ```
 The previews draw a synthetic desktop offscreen; they open no window and capture nothing. Cloud engines are tested against recorded request / response shapes, not live accounts (the Tencent signature is checked against an independent implementation).
 

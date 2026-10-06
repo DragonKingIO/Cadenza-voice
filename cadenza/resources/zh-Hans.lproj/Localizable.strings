@@ -1322,3 +1322,5 @@
 "menu.update" = "有新版本：%@";
 "onboard.updates.toggle" = "有新版本时告诉我";
 "onboard.updates.detail" = "每周读取一次 GitHub 的公开发布页，并在菜单里提示，不会安装任何东西。不勾选的话，随言不会自己建立任何连接。";
+"shortcut.loneModifier.unsupported" = "单独的修饰键只支持左 Option 和右 Option。请再加一个按键，或改用功能键。";
+"screenshot.shortcut.loneModifier" = "截图快捷键不能只用一个修饰键，请再加一个字母键或功能键。";

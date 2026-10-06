@@ -4,11 +4,15 @@ import Carbon.HIToolbox
 /// Conservative protection plus the current system's assignments. App-specific conflicts remain unknown.
 enum ShortcutPolicy {
     static let functionKeys: Set<UInt32> = [122,120,99,118,96,97,98,100,101,109,103,111,105,107,113,106,64,79,80,90]
+    /// Modifier keys that may be the whole shortcut: Left and Right Option. Command, Shift and Control are excluded because
+    /// they are pressed all the time as part of other shortcuts, so holding one alone would start recordings by accident.
+    static let standaloneModifiers: Set<UInt32> = [58, 61]
     static let navigational: Set<UInt32> = [36,48,49,51,53,71,76,114,115,116,117,119,121,123,124,125,126]
     static func basicReason(_ s: HotkeySpec, standardFunctionKeys: Bool = false) -> String? {
         if s == BridgeConfig.default().trigger { return nil }
         if s.keyCode == 63 { return L10n.tr("ui.be1ca2ee706d") }
-        if ListenTrigger.modifierKeyFlags[s.keyCode] != nil { return L10n.tr("ui.ba173a6d84f1") }
+        if standaloneModifiers.contains(s.keyCode), HotkeySpecDisplay.isLoneModifierSpec(s), s.modifierKeyCodes == nil || s.modifierKeyCodes == [s.keyCode] { return nil }
+        if ListenTrigger.modifierKeyFlags[s.keyCode] != nil { return L10n.tr("shortcut.loneModifier.unsupported") }
         if navigational.contains(s.keyCode) { return L10n.tr("ui.8a35987401bf") }
         if s.keyCode > 126 || !functionKeys.contains(s.keyCode) && !HotkeySpecDisplay.printableKeys.keys.contains(s.keyCode) { return L10n.tr("ui.1e86164926a6") }
         let c=UInt32(controlKey),o=UInt32(optionKey),m=UInt32(cmdKey),h=UInt32(shiftKey)

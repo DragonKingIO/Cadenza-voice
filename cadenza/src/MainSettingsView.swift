@@ -469,7 +469,7 @@ struct TryCard: View {
         switch model.pageState {
         case .listening:
             VStack(spacing: 6) {
-                VoiceLevelBar(level: model.level)
+                LiveRecordingIndicator(level: model.level)
                 Text(L10n.format("ui.25c7831d1e7d", String(describing: Int(model.elapsed)))).font(.caption).foregroundStyle(.secondary)
             }
         case .recognizing:
@@ -531,7 +531,7 @@ struct HoldToTalkButton: View {
     var body: some View {
         Group {
             if isActive {
-                VoiceLevelBar(level: model.level).frame(width: 44, height: 30)
+                VoiceLevelBar(level: model.level, color: .white).frame(width: 44, height: 30)
             } else {
                 Image(systemName: "mic.fill").font(.system(size: 22, weight: .medium))
                     .symbolEffect(.variableColor.iterative, options: .repeating, isActive: pressed)
@@ -561,13 +561,14 @@ struct HoldToTalkButton: View {
 
 struct VoiceLevelBar: View {
     var level: Float
+    var color: Color = Color(nsColor: .controlAccentColor)
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         HStack(spacing: 3) {
             ForEach(0..<7, id: \.self) { i in
                 let amp: CGFloat = 22 + CGFloat(i % 3) * 7
                 let h = 4 + CGFloat(WaveformAppearance.displayLevel(level)) * amp
-                Capsule().fill(Color(nsColor:.controlAccentColor))
+                Capsule().fill(color)
                     .frame(width: 4, height: h)
             }
         }

@@ -140,8 +140,9 @@ enum ScreenshotRenderer {
             ctx.setFillColor(color.contrast.cgColor(alpha: 0.92))
             ctx.addPath(CGPath(roundedRect: box, cornerWidth: 5, cornerHeight: 5, transform: nil)); ctx.fillPath()
         case .outlined:
-            attributes[.strokeColor] = NSColor(cgColor: color.contrast.cgColor) ?? .white
-            attributes[.strokeWidth] = -4        // 负值：描边同时保留填充
+            // 先画一圈反差色的外描边，再把所选颜色实心填在上面：描边只在字的外侧，不会盖住颜色
+            let halo: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: ns, .strokeColor: NSColor(cgColor: color.contrast.cgColor) ?? .white, .strokeWidth: 14]
+            withText(ctx) { (string as NSString).draw(at: origin, withAttributes: halo) }
         }
         withText(ctx) { (string as NSString).draw(at: origin, withAttributes: attributes) }
     }

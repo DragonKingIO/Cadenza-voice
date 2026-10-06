@@ -7,7 +7,7 @@
 - English UI must contain no Chinese, including provider names, permission prompts, errors, tooltips, and accessibility announcements.
 - Use provider names as text; never use provider logos or imply endorsement.
 - User-visible product names in code must come from `Brand.name`; sentences use localized `%@` placeholders. Names belong in localization resources, not Swift literals.
-- New technical identifiers must be brand-neutral. Existing Bundle ID, signing identity, Keychain identifiers, configuration paths, executable name, and installed path are compatibility identities: freeze them even where they contain a historical name. Do not rename them during localization or branding.
+- New technical identifiers must be brand-neutral. The Bundle ID (`local.cadenza.app`), executable (`Cadenza`), Keychain service (`Cadenza`) and support folder (`~/Library/Application Support/Cadenza`) were renamed from the historical name on 2026-10-06 at the maintainer's request; `LegacyMigration` carries existing data across. These, the signing identity, and the installed path are compatibility identities again from now on: freeze them. Do not rename them during localization or branding.
 - Localized display names may change; technical identities must not change with the language.
 - The tagline describes the intended experience, not verified compatibility with every application. Documentation must state actual limitations.
 - Feature lists and release notes include only implemented behavior, clearly distinguishing integration tests from unit tests.

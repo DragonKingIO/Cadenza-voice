@@ -43,8 +43,8 @@ enum DesignTokens {
 // MARK: - 钥匙串存储（凭据不入配置文件/日志）
 
 enum KeychainStore {
-    // Compatibility identifier: existing users' saved credentials live under this Keychain service. Do not rename it.
-    private static let service = "Yansui"
+    /// Saved credentials live under this Keychain service. Items saved before the rename are moved by `LegacyMigration`.
+    static let service = "Cadenza"
     private(set) static var lastStatus: OSStatus = errSecSuccess
 
     @discardableResult

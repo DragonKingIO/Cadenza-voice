@@ -81,6 +81,9 @@ if CommandLine.arguments.contains("--selftest-asr-settings") {
 }
 
 if CommandLine.arguments.contains("--verify-local-models") {exit(LocalModelAcceptance.run(download:CommandLine.arguments.contains("--download-models")))}
+if let flag=CommandLine.arguments.first(where:{$0.hasPrefix("--preview-screenshot-textstyles=")}) {
+    exit(ScreenshotPreview.renderTextStyles(output:String(flag.dropFirst("--preview-screenshot-textstyles=".count))))
+}
 if let flag=CommandLine.arguments.first(where:{$0.hasPrefix("--preview-screenshot-icons=")}) {
     exit(ScreenshotPreview.renderIcons(output:String(flag.dropFirst("--preview-screenshot-icons=".count)),dark:CommandLine.arguments.contains("--preview-screenshot-dark")))
 }
@@ -402,6 +405,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         if !LaunchMode.probe && !LaunchMode.probeGlobal && !LaunchMode.targetAXDiagnostic { NSApp.activate(ignoringOtherApps: true) }
         startLocalModels()
         startScreenshotSupport()
+        LegacyMigration.migrateKeychainInBackground()
     }
 
     private func startScreenshotSupport() {
@@ -785,6 +789,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
 }
 
 // MARK: - 程序引导
+LegacyMigration.runFileAndPreferenceMigration()   // 必须在读取设置之前：把改名前的文件夹和偏好设置搬过来
 let configStore = ConfigStore()
 let input = InputSourceController()
 let hotkey = HotkeyCenter()

@@ -654,7 +654,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             if e.type == .keyDown && e.keyCode == 53 { self.cancelShortcut(); return nil }
             if e.type == .keyDown && !e.isARepeat || e.type == .flagsChanged && (ListenTrigger.modifierKeyFlags[UInt32(e.keyCode)] != nil || e.keyCode == 63) && CGEventSource.keyState(.combinedSessionState, key: CGKeyCode(e.keyCode)) {
                 let sides = ListenTrigger.downKeys().filter { ListenTrigger.modifierKeyFlags[$0] != nil }.sorted()
-                let spec = HotkeySpec(keyCode: UInt32(e.keyCode), modifiers: ShortcutPolicy.carbon(e.modifierFlags), modifierKeyCodes: e.keyCode == 58 ? nil : sides)
+                let mods = ShortcutPolicy.carbon(e.modifierFlags)
+                let alone = ListenTrigger.modifierKeyFlags[UInt32(e.keyCode)] == mods
+                let spec = HotkeySpec(keyCode: UInt32(e.keyCode), modifiers: mods, modifierKeyCodes: alone ? nil : sides)
                 self.candidate = spec
                 self.shortcutError = self.candidateReason(spec)
                 if CGEventSource.keyState(.combinedSessionState, key: 63) { self.shortcutError = L10n.tr("ui.823af38d5dff") }

@@ -21,7 +21,7 @@ Users download, select and delete models in **Settings → Speech → Local**. M
 ## On disk
 
 ```
-~/Library/Application Support/Yansui/models/
+~/Library/Application Support/Cadenza/models/
   installed.json                      id → {version, previous, installedAt}
   remote-manifest.json                last verified update list (cache)
   <id>-<version>/                     one directory per version; current + previous are kept
@@ -50,10 +50,10 @@ Update checking downloads only this small list. A new version appears as an **Up
 ## Tests
 
 ```bash
-"/Applications/随言.app/Contents/MacOS/Yansui" --selftest-local-model
-"/Applications/随言.app/Contents/MacOS/Yansui" --verify-local-models
+"/Applications/随言.app/Contents/MacOS/Cadenza" --selftest-local-model
+"/Applications/随言.app/Contents/MacOS/Cadenza" --verify-local-models
 # Explicit download acceptance (uses the same production downloader and installer):
-"/Applications/随言.app/Contents/MacOS/Yansui" --verify-local-models --download-models
+"/Applications/随言.app/Contents/MacOS/Cadenza" --verify-local-models --download-models
 ```
 The fixture suite uses a loopback HTTP server with Range and fault injection, generated archives and fake recorders. Acceptance downloads only when explicitly requested, verifies the pinned size and SHA-256, loads both real models, and measures generated speech recognition (WER/CER), quiet generated speech, long paused speech, silence and synthetic noise. A missing model or failed synthesis is a failure, not a passing skip. Acceptance uses no microphone, Keychain credential, cloud audio request, insertion or clipboard. Generated samples are temporary and removed afterward. The English UI model test is a smaller smoke test, not comprehensive microphone acceptance.
 
@@ -86,4 +86,4 @@ The pipeline gives bounded extra time to local final decoding for long recording
 
 Automatic selection never depends on install order: among installed models for the language, the recommended one wins.
 A model the user picked explicitly ("Use") is always honoured. To compare models on the same sentences, run
-`Yansui --local-accuracy-probe` (developer tool; uses the system voice, so it isolates the model, not the microphone).
+`Cadenza --local-accuracy-probe` (developer tool; uses the system voice, so it isolates the model, not the microphone).

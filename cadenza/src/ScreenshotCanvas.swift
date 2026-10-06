@@ -50,7 +50,7 @@ final class ScreenshotCanvasView: NSView, NSTextFieldDelegate {
             window?.invalidateCursorRects(for: self); needsDisplay = true
         }
     }
-    var style = ScreenshotStyle()
+    var style = ScreenshotStyle() { didSet { restyleEditor() } }
     /// 另一块屏幕正在选区时，本屏只显示暗色，不响应鼠标
     var locked = false { didSet { needsDisplay = true } }
     /// 直接识字模式：框选完成即交给控制器，不出现标注工具
@@ -83,6 +83,8 @@ final class ScreenshotCanvasView: NSView, NSTextFieldDelegate {
     private var editingID: UUID?
     private var pendingBefore: [AnnotationObject]?
     private var lastMouse: CGPoint?
+    /// 点在一段已选中的文字上：松开时如果没拖动，就进入编辑
+    private var reeditCandidate: (id: UUID, at: CGPoint)?
     private var sampler: PixelSampler?
     private var toast: (text: String, until: TimeInterval)?
     private lazy var effects = ScreenshotEffects(image: display.image, scale: display.scale)
@@ -155,7 +157,10 @@ final class ScreenshotCanvasView: NSView, NSTextFieldDelegate {
         default: break
         }
         guard updated != objects[index] else { return }
-        mutate { $0[index] = updated }
+        // 只重画这个标注附近：整屏重画在大屏上会让换色有明显延迟
+        let dirty = objects[index].bounds.union(updated.bounds).insetBy(dx: -24, dy: -24)
+        history.record(objects); objects[index] = updated
+        setNeedsDisplay(dirty); onObjectsChanged?()
     }
 
     func resetSelection() {
@@ -388,7 +393,7 @@ final class ScreenshotCanvasView: NSView, NSTextFieldDelegate {
     func handleMouseDown(_ p: CGPoint, clickCount: Int = 1, shift: Bool = false) {
         guard !locked else { return }
         commitEditor()
-        lastMouse = p
+        lastMouse = p; reeditCandidate = nil
         if recognition != nil { recognitionToggle(at: p); mode = .picking; return }
         guard let sel = selection else {
             onSelectionBegan?(self)
@@ -400,8 +405,10 @@ final class ScreenshotCanvasView: NSView, NSTextFieldDelegate {
         switch tool {
         case nil:
             if let o = topObject(at: p) {
+                let wasSelected = selectedID == o.id
                 setSelected(o.id)
                 if clickCount >= 2, o.textValue != nil { beginEditText(o); return }
+                if wasSelected, o.textValue != nil { reeditCandidate = (o.id, p) }
                 pendingBefore = objects; mode = .movingObject(p, o)
             } else { setSelected(nil); mode = .moving(p, sel); NSCursor.closedHand.set() }
         case .eraser?:
@@ -497,6 +504,7 @@ final class ScreenshotCanvasView: NSView, NSTextFieldDelegate {
         case .movingObject, .resizingObject:
             if let before = pendingBefore, before != objects { history.record(before); changed() }
             pendingBefore = nil
+            if let c = reeditCandidate, hypot(p.x - c.at.x, p.y - c.at.y) < 3, let o = objects.first(where: { $0.id == c.id }) { reeditCandidate = nil; beginEditText(o) }
         case .drawing:
             if let d = draft, isMeaningful(d) { mutate { $0.append(d) }; setSelected(nil) }
             draft = nil; penPoints = []; needsDisplay = true
@@ -590,9 +598,10 @@ final class ScreenshotCanvasView: NSView, NSTextFieldDelegate {
 
     // MARK: 文字标注
 
-    private func beginText(at p: CGPoint) { startEditor(at: p, text: "", editing: nil) }
+    private func beginText(at p: CGPoint) { setSelected(nil); startEditor(at: p, text: "", editing: nil) }
     private func beginEditText(_ o: AnnotationObject) {
         guard case .text(let s, let origin) = o.shape else { return }
+        setSelected(o.id)      // 编辑期间换颜色 / 样式，作用在这段文字上
         startEditor(at: origin, text: s, editing: o)
     }
 
@@ -630,7 +639,19 @@ final class ScreenshotCanvasView: NSView, NSTextFieldDelegate {
         guard !cancel, !trimmed.isEmpty else { return }
         let o = AnnotationObject(shape: .text(text, editorOrigin), color: style.color, level: style.level, textStyle: style.textStyle)
         mutate { $0.append(o) }
+        setSelected(o.id)      // 写完保持选中：随后点颜色 / 样式会作用在它上面，再点一次可重新编辑
     }
+
+    /// 正在输入时换颜色或字号：输入框同步变化，所见即所得
+    private func restyleEditor() {
+        guard let field = editor else { return }
+        let size = ScreenshotMetrics.fontSizes[ScreenshotMetrics.clamp(style.level)]
+        field.textColor = NSColor(cgColor: style.color.cgColor)
+        field.font = .systemFont(ofSize: size, weight: .medium)
+        field.frame.size.height = size * 1.5
+    }
+    var isEditingText: Bool { editor != nil }
+    var editorTextColorForTest: NSColor? { editor?.textColor }
 
     /// 自检专用：模拟在文字框里输入并提交
     func testTypeText(_ text: String, at p: CGPoint) {

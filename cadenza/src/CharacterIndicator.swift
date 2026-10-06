@@ -176,7 +176,7 @@ final class CharacterView: NSView {
 
 // MARK: - Settings
 
-private struct CharacterPreview: NSViewRepresentable {
+struct CharacterPreview: NSViewRepresentable {
     var revision: Int
     func makeNSView(context: Context) -> CharacterView { CharacterView(frame: NSRect(x: 0, y: 0, width: 44, height: 44)) }
     func updateNSView(_ view: CharacterView, context: Context) { view.play(.write) }
@@ -228,6 +228,34 @@ private struct WaveformPreview: NSViewRepresentable {
         context.coordinator.update(view, animated: !reduceMotion)
     }
     static func dismantleNSView(_ view: WaveformView, coordinator: Coordinator) { coordinator.stop() }
+}
+
+/// Draws the real recording-HUD waveform from a live microphone level (the "try" card uses it while you speak).
+private struct LiveWaveform: NSViewRepresentable {
+    var level: Float
+    func makeNSView(context: Context) -> WaveformView {
+        let view = WaveformView(frame: NSRect(x: 0, y: 0, width: 96, height: 22))
+        view.setAccessibilityElement(true)
+        view.setAccessibilityLabel(L10n.tr("indicator.waveform"))
+        return view
+    }
+    func updateNSView(_ view: WaveformView, context: Context) { view.push(CGFloat(WaveformAppearance.displayLevel(level))) }
+}
+
+/// The same indicator as the recording HUD and the General settings preview (waveform capsule, or the character when that
+/// style is chosen), driven by the live microphone level.
+struct LiveRecordingIndicator: View {
+    var level: Float
+    var body: some View {
+        if IndicatorStyle.current == .character, CharacterAssets.ready {
+            CharacterPreview(revision: 0).frame(width: 44, height: 44)
+        } else {
+            LiveWaveform(level: level).frame(width: 96, height: 22)
+                .padding(.horizontal, 16).padding(.vertical, 7)
+                .background(Capsule().fill(Color(nsColor: DesignTokens.hudBackground)))
+                .overlay(Capsule().stroke(Color(nsColor: DesignTokens.outline), lineWidth: 1))
+        }
+    }
 }
 
 /// Shown only when the artwork is bundled. The default stays the waveform.

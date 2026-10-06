@@ -1322,3 +1322,5 @@
 "menu.update" = "Update available: %@";
 "onboard.updates.toggle" = "Tell me when a new version is out";
 "onboard.updates.detail" = "Checks GitHub's public release page once a week and shows a notice in the menu. It never installs anything. Leave it off and Cadenza makes no connections of its own.";
+"shortcut.loneModifier.unsupported" = "Only Left Option and Right Option can be used as a shortcut by themselves. Add another key, or use a function key.";
+"screenshot.shortcut.loneModifier" = "A modifier key cannot be the screenshot shortcut on its own. Add a letter or a function key.";
