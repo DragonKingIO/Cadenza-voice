@@ -41,17 +41,26 @@ enum LegacyMigrationFixtures {
         c("迁移文件夹：新位置有同名的空文件夹时，里面的内容合并过去", text(new2.appendingPathComponent("models/a/model.onnx")) == "A" && text(new2.appendingPathComponent("models/installed.json")) == "{\"old\":1}")
         c("迁移文件夹：合并时同名且不同的文件不覆盖，并如实报告", text(new2.appendingPathComponent("models/b/model.onnx")) == "B-new" && text(old2.appendingPathComponent("models/b/model.onnx")) == "B-old" && merged.skipped == ["models/b/model.onnx"])
 
-        // 偏好设置：只复制一次，不覆盖，旧域被清掉
-        let legacy = "test.legacy.\(UUID().uuidString)", target = "test.new.\(UUID().uuidString)"
-        UserDefaults.standard.setPersistentDomain(["appLanguage": "en", "keepMe": "old", "n": 3], forName: legacy)
-        let defaults = UserDefaults(suiteName: target)!
+        // 偏好设置：只复制一次，不覆盖，旧域被清掉（用内存字典代替真实偏好文件，不在磁盘上留任何东西）
+        final class MemoryDefaults: DefaultsStore {
+            var values: [String: Any] = [:]
+            func object(forKey key: String) -> Any? { values[key] }
+            func set(_ value: Any?, forKey key: String) { values[key] = value }
+            func bool(forKey key: String) -> Bool { values[key] as? Bool ?? false }
+            func integer(forKey key: String) -> Int { values[key] as? Int ?? 0 }
+            func synchronize() -> Bool { true }
+        }
+        var legacyDomains: [String: [String: Any]] = ["legacy": ["appLanguage": "en", "keepMe": "old", "n": 3]]
+        let defaults = MemoryDefaults()
         defaults.set("new", forKey: "keepMe")
-        let copied = LegacyMigration.migrateDefaults(from: legacy, into: defaults, flagKey: "migrated")
-        c("迁移偏好：旧设置复制到新域，已有的值不被覆盖", copied == 2 && defaults.string(forKey: "appLanguage") == "en" && defaults.integer(forKey: "n") == 3 && defaults.string(forKey: "keepMe") == "new")
-        c("迁移偏好：旧域被移除", UserDefaults.standard.persistentDomain(forName: legacy)?.isEmpty ?? true)
-        UserDefaults.standard.setPersistentDomain(["late": 1], forName: legacy)
-        c("迁移偏好：只做一次，之后不再复制", LegacyMigration.migrateDefaults(from: legacy, into: defaults, flagKey: "migrated") == 0 && defaults.object(forKey: "late") == nil)
-        UserDefaults.standard.removePersistentDomain(forName: legacy); UserDefaults.standard.removePersistentDomain(forName: target)
+        let readLegacy: (String) -> [String: Any]? = { legacyDomains[$0] }, removeLegacy: (String) -> Void = { legacyDomains[$0] = nil }
+        let copied = LegacyMigration.migrateDefaults(from: "legacy", into: defaults, flagKey: "migrated", read: readLegacy, remove: removeLegacy)
+        c("迁移偏好：旧设置复制到新域，已有的值不被覆盖", copied == 2 && defaults.object(forKey: "appLanguage") as? String == "en" && defaults.integer(forKey: "n") == 3 && defaults.object(forKey: "keepMe") as? String == "new")
+        c("迁移偏好：旧域被移除", legacyDomains["legacy"] == nil)
+        legacyDomains["legacy"] = ["late": 1]
+        c("迁移偏好：只做一次，之后不再复制", LegacyMigration.migrateDefaults(from: "legacy", into: defaults, flagKey: "migrated", read: readLegacy, remove: removeLegacy) == 0 && defaults.object(forKey: "late") == nil)
+        let empty = MemoryDefaults()
+        c("迁移偏好：旧域不存在时只记下已处理，不报错", LegacyMigration.migrateDefaults(from: "none", into: empty, flagKey: "migrated", read: readLegacy, remove: removeLegacy) == 0 && empty.bool(forKey: "migrated"))
 
         // 钥匙串：用测试专用的服务名，只动自己创建的项目
         let oldService = "Cadenza.test.old.\(UUID().uuidString)", newService = "Cadenza.test.new.\(UUID().uuidString)"
@@ -65,6 +74,12 @@ enum LegacyMigrationFixtures {
         }
         func remove(_ service: String) { SecItemDelete([kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service] as CFDictionary) }
         defer { remove(oldService); remove(newService) }
+        // 没有可写的钥匙串（例如无人登录的 CI 机器）时跳过这一组，而不是误报失败
+        let probe = "Cadenza.test.probe.\(UUID().uuidString)"
+        add(probe, "p", "1")
+        let keychainUsable = get(probe, "p") == "1"
+        remove(probe)
+        if keychainUsable {
         add(oldService, "iflytek.apiKey", "secret-1"); add(oldService, "baidu.secret", "secret-2"); add(oldService, "same", "equal")
         add(newService, "baidu.secret", "different-new"); add(newService, "same", "equal")
         let result = LegacyMigration.migrateKeychain(from: oldService, to: newService, label: "测试")
@@ -73,9 +88,10 @@ enum LegacyMigrationFixtures {
         c("迁移钥匙串：新旧相同时旧的被清掉", get(oldService, "same") == nil && get(newService, "same") == "equal")
         c("迁移钥匙串：统计如实（搬走 2 个，保留 1 个）", result.moved == 2 && result.kept == 1)
         c("迁移钥匙串：旧服务不存在时什么都不做", LegacyMigration.migrateKeychain(from: "Cadenza.test.none.\(UUID().uuidString)", to: newService, label: "x") == (0, 0))
+        }
 
         // 被拒绝后不会每次启动都再弹授权框
-        let attempts = UserDefaults(suiteName: "test.attempts.\(UUID().uuidString)")!
+        let attempts = MemoryDefaults()
         c("迁移钥匙串：还没尝试过时允许尝试", LegacyMigration.keychainAttemptAllowed(attempts))
         attempts.set(LegacyMigration.maxKeychainAttempts - 1, forKey: LegacyMigration.keychainAttemptsKey)
         c("迁移钥匙串：再试一次的机会还在", LegacyMigration.keychainAttemptAllowed(attempts))

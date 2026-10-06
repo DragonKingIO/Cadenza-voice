@@ -4,6 +4,16 @@ import Security
 /// One-time move from the identifiers used before the rename (support folder, preferences domain, Keychain service)
 /// to the Cadenza ones. It only ever moves or copies first: nothing is deleted before its replacement is verified,
 /// and an existing destination is never overwritten.
+/// The few preference calls the migration needs, so a test can use memory instead of real preference files.
+protocol DefaultsStore: AnyObject {
+    func object(forKey key: String) -> Any?
+    func set(_ value: Any?, forKey key: String)
+    func bool(forKey key: String) -> Bool
+    func integer(forKey key: String) -> Int
+    @discardableResult func synchronize() -> Bool
+}
+extension UserDefaults: DefaultsStore {}
+
 enum LegacyMigration {
     static let legacySupportName = "Yansui"
     static let legacyDefaultsDomain = "local.yansui.app"
@@ -17,7 +27,7 @@ enum LegacyMigration {
     /// Runs before anything reads settings. Cheap and synchronous; the Keychain part runs later, in the background.
     static func runFileAndPreferenceMigration() {
         let files = moveSupportFolder(from: legacySupportDir, to: AppPaths.supportDir)
-        let prefs = migrateDefaults(from: legacyDefaultsDomain, into: .standard)
+        let prefs = migrateDefaults(from: legacyDefaultsDomain, into: UserDefaults.standard)
         if !files.moved.isEmpty || !files.skipped.isEmpty || prefs > 0 {
             Log.write("legacy-migration files-moved=\(files.moved.count) files-kept=\(files.skipped.count) old-folder-removed=\(files.removedOldDir) preferences-copied=\(prefs)")
         }
@@ -71,15 +81,17 @@ enum LegacyMigration {
 
     /// Copies the old preferences domain into the current one (never over an existing value), once, then removes the old domain.
     @discardableResult
-    static func migrateDefaults(from legacy: String, into defaults: UserDefaults, flagKey: String = doneKey) -> Int {
+    static func migrateDefaults(from legacy: String, into defaults: DefaultsStore, flagKey: String = doneKey,
+                                read: (String) -> [String: Any]? = { UserDefaults.standard.persistentDomain(forName: $0) },
+                                remove: (String) -> Void = { UserDefaults.standard.removePersistentDomain(forName: $0) }) -> Int {
         guard !defaults.bool(forKey: flagKey) else { return 0 }
         var copied = 0
-        if let old = UserDefaults.standard.persistentDomain(forName: legacy), !old.isEmpty {
+        if let old = read(legacy), !old.isEmpty {
             for (key, value) in old where defaults.object(forKey: key) == nil { defaults.set(value, forKey: key); copied += 1 }
         }
         defaults.set(true, forKey: flagKey)
         defaults.synchronize()
-        UserDefaults.standard.removePersistentDomain(forName: legacy)
+        remove(legacy)
         return copied
     }
 
@@ -120,7 +132,7 @@ enum LegacyMigration {
 
     /// macOS may ask for permission to read the old items. If it was refused, ask once more at the next launch and then stop,
     /// so a refusal does not bring the prompt back at every start (the keys can be entered again in Settings).
-    static func keychainAttemptAllowed(_ defaults: UserDefaults = .standard) -> Bool {
+    static func keychainAttemptAllowed(_ defaults: DefaultsStore = UserDefaults.standard) -> Bool {
         defaults.integer(forKey: keychainAttemptsKey) < maxKeychainAttempts
     }
 
