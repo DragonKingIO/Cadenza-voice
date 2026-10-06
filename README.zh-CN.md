@@ -4,7 +4,7 @@
 
 <p align="center">
   <b>随口说，随处写。</b><br>
-  开源的 macOS 语音输入，识别在你的 Mac 上完成。
+  开源的 macOS 语音输入，识别在本地完成。
 </p>
 
 <p align="center">
@@ -23,13 +23,13 @@
 
 https://github.com/user-attachments/assets/a60e81d9-32d2-4f48-a59d-9e9d79568d2f
 
-按住一个键（默认左 Option）说话，松开，文字就出现在光标处。很多语音输入服务会把你的每段录音上传到厂商的服务器；随言默认在你的 Mac 上识别，而且是开源的，什么会离开这台 Mac，谁都可以查。
+按住一个键（默认左 Option）说话，松开，文字就出现在光标处。很多语音输入服务会把你的每段录音上传到厂商的服务器；随言默认在本地识别，而且是开源的，什么会离开本机，谁都可以查。
 
 ## 功能
 
-- **默认本地识别。** SenseVoice（推荐）、FireRedASR2、Parakeet 通过 [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) 在你的 Mac 上运行，在应用内下载并校验。“用我的声音比较模型”告诉你哪个最听得懂你。
+- **默认本地识别。** SenseVoice（推荐）、FireRedASR2、Parakeet 通过 [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) 在本地运行，在应用内下载并校验。“用我的声音比较模型”告诉你哪个最听得懂你。
 - **想用云端，用你自己的账号。** 讯飞、火山引擎、腾讯云、阿里云、百度、Deepgram，使用你自己的密钥；只有你对该服务商同意之后才会发送音频。网络出问题时可以由本地模型接着识别。
-- **截图与文字识别**（新功能，仍在测试）。框选截图、标注、贴在屏幕上，一键取出图里的文字和二维码。默认用 Mac 自带的 Apple Vision 在本机识别。[详情](cadenza/docs/SCREENSHOT.md)（英文）
+- **截图与文字识别**（新功能，仍在测试）。框选截图、标注、贴在屏幕上，一键取出图里的文字和二维码。默认用 Mac 自带的 Apple Vision 在本地识别。[详情](cadenza/docs/SCREENSHOT.md)（英文）
 - **接入开发者和 AI 硬件。** 可选的本地接口，只监听 `127.0.0.1`、默认关闭，让你的程序、挂件或眼镜发送音频、取回文字；每个设备有自己的、可随时撤销的令牌。[本地接口](cadenza/docs/LOCAL-API.md) · [硬件接入](cadenza/docs/HARDWARE-INTEGRATION.md)（英文）
 - **隐私是设计前提。** 没有账号、没有服务器、没有统计、没有崩溃上报。录音和识别文字不写入磁盘和日志，密钥存放在 macOS 钥匙串。“永不联网”开关会隐藏一切可能联网的选项。
 - **可度量。** 识别效果的改动都用可重复的基准来证明。[准确度](cadenza/docs/ACCURACY.md)（英文）

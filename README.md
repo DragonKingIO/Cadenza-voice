@@ -4,7 +4,7 @@
 
 <p align="center">
   <b>Speak where you type.</b><br>
-  Open-source voice input for macOS. Recognition runs on your Mac.
+  Open-source voice input for macOS. Recognition runs locally.
 </p>
 
 <p align="center">
@@ -24,18 +24,18 @@
 https://github.com/user-attachments/assets/7a4794f5-be45-410d-828e-dcc23733d7d5
 
 Hold a key (Left Option by default), speak, and let go: the text appears where your cursor is. Many voice input services
-upload every recording to the vendor's servers. Cadenza recognizes speech on your Mac by default, and because it is open
-source, anyone can check what leaves the machine.
+upload every recording to the vendor's servers. Cadenza recognizes speech locally by default, and because it is open
+source, anyone can check what leaves your computer.
 
 ## Features
 
-- **Local by default.** SenseVoice (recommended), FireRedASR2 and Parakeet run on your Mac through
+- **Local by default.** SenseVoice (recommended), FireRedASR2 and Parakeet run locally through
   [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). Models are downloaded inside the app and checked. "Compare models
   with my voice" shows which one understands you best.
 - **Your own cloud service, if you want one.** iFLYTEK, Volcengine, Tencent Cloud, Alibaba Cloud, Baidu and Deepgram, with
   your own keys. Audio is sent only after you agree, provider by provider. If the network fails, a local model can take over.
 - **Screenshots and text recognition** *(new, still being tested)*. Capture an area, mark it up or pin it on screen, and copy
-  the text or QR code inside. Apple Vision reads the text on your Mac by default.
+  the text or QR code inside. Apple Vision reads the text locally by default.
   [More](cadenza/docs/SCREENSHOT.md)
 - **For developers and AI hardware.** An optional local API on `127.0.0.1` (off by default) lets your own programs, pendants or
   glasses send audio and get text back, with a separate, revocable token per device.

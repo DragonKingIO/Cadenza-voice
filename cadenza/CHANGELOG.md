@@ -18,7 +18,7 @@ many setups yet.
   so you can copy it.
 - Left Option is the default hold key. Right Option, another shortcut (a key with at least two modifiers, or a function key),
   or "tap to start, tap to stop" can be chosen instead.
-- Local recognition on your Mac with SenseVoice (recommended), FireRedASR2 (experimental) and Parakeet (experimental), run by
+- Local recognition with SenseVoice (recommended), FireRedASR2 (experimental) and Parakeet (experimental), run by
   sherpa-onnx. Models are downloaded inside the app and checked against their SHA-256 before use.
 - "Compare models with my voice": record a sentence and see how each downloaded model transcribes it.
 - Apple's built-in speech recognition.
@@ -28,7 +28,7 @@ many setups yet.
 ### Screenshots and text recognition (new, still being tested)
 
 - Capture an area or a window, mark it up with ten editable tools, pin it on screen, save or copy it.
-- Recognize the text and QR codes in the picture. Apple Vision on your Mac by default; Baidu, Tencent Cloud and Google Cloud
+- Recognize the text and QR codes in the picture. Apple Vision, locally, by default; Baidu, Tencent Cloud and Google Cloud
   Vision are optional, with your own keys and per-provider consent.
 
 ### For developers and hardware
