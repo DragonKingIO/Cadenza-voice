@@ -38,9 +38,14 @@ git clone https://github.com/DragonKingIO/Cadenza-voice.git && cd Cadenza-voice
 ./cadenza/build.sh --stage-only          # creates cadenza/build/stage.noindex/Cadenza.app.zip
 ```
 
-Unzip it and open the app. It is signed ad hoc, not notarized, so macOS may block the first launch: right-click the app and
-choose **Open**, or allow it in System Settings → Privacy & Security. Because each ad hoc build is a new identity, macOS may
-ask again for the permissions below after you rebuild. Full instructions: [Developing Cadenza](cadenza/docs/DEVELOPING.md).
+Unzip it and open the app. A copy you built yourself opens normally. Releases you download are signed ad hoc and not
+notarized, so macOS blocks the first launch: open System Settings → Privacy & Security, scroll to the message about the app and
+choose **Open Anyway** (since macOS 15, right-click → Open no longer bypasses this). Because each ad hoc build is a new
+identity, macOS asks again for the permissions below after you rebuild or update. Full instructions:
+[Developing Cadenza](cadenza/docs/DEVELOPING.md).
+
+**Platforms:** macOS 26 or later on Apple silicon only. See [Platforms](cadenza/docs/PLATFORMS.md) for why, and what could be
+reused for a port.
 
 | Permission | Why |
 |---|---|

@@ -27,7 +27,9 @@ git clone https://github.com/DragonKingIO/Cadenza-voice.git && cd Cadenza-voice
 ./cadenza/build.sh --stage-only          # 生成 cadenza/build/stage.noindex/Cadenza.app.zip
 ```
 
-解压后打开应用。它是临时签名、没有公证，macOS 第一次可能会拦截：右键点应用选“打开”，或到 系统设置 → 隐私与安全性 里允许。因为每次临时签名的构建都是新的身份，重新构建后 macOS 可能会再次询问下面的权限。完整说明见 [开发指南](cadenza/docs/DEVELOPING.md)（英文）。
+解压后打开应用。自己构建的副本可以直接打开；下载的发布版是临时签名、没有公证，macOS 第一次会拦截：到 系统设置 → 隐私与安全性，下拉找到关于这个应用的提示，点“仍要打开”（macOS 15 起，右键“打开”已不能绕过）。因为每次临时签名的构建都是新的身份，重新构建或更新后 macOS 会再次询问下面的权限。完整说明见 [开发指南](cadenza/docs/DEVELOPING.md)（英文）。
+
+**平台：** 目前只支持 macOS 26 及以上、Apple 芯片。原因，以及哪些部分可以复用于移植，见 [平台说明](cadenza/docs/PLATFORMS.md)（英文）。
 
 | 权限 | 用途 |
 |---|---|
