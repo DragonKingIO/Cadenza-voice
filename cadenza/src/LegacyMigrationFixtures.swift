@@ -74,6 +74,14 @@ enum LegacyMigrationFixtures {
         c("迁移钥匙串：统计如实（搬走 2 个，保留 1 个）", result.moved == 2 && result.kept == 1)
         c("迁移钥匙串：旧服务不存在时什么都不做", LegacyMigration.migrateKeychain(from: "Cadenza.test.none.\(UUID().uuidString)", to: newService, label: "x") == (0, 0))
 
+        // 被拒绝后不会每次启动都再弹授权框
+        let attempts = UserDefaults(suiteName: "test.attempts.\(UUID().uuidString)")!
+        c("迁移钥匙串：还没尝试过时允许尝试", LegacyMigration.keychainAttemptAllowed(attempts))
+        attempts.set(LegacyMigration.maxKeychainAttempts - 1, forKey: LegacyMigration.keychainAttemptsKey)
+        c("迁移钥匙串：再试一次的机会还在", LegacyMigration.keychainAttemptAllowed(attempts))
+        attempts.set(LegacyMigration.maxKeychainAttempts, forKey: LegacyMigration.keychainAttemptsKey)
+        c("迁移钥匙串：达到次数后不再启动时尝试", !LegacyMigration.keychainAttemptAllowed(attempts))
+
         // 新标识
         c("新标识：钥匙串服务与支持文件夹都使用当前名称", KeychainStore.service == "Cadenza" && AppPaths.supportDir.lastPathComponent == "Cadenza")
     }

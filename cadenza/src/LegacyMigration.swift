@@ -115,11 +115,22 @@ enum LegacyMigration {
         return (moved, kept)
     }
 
-    /// Background, once per launch until nothing is left to move. Safe to call when there is nothing to migrate.
+    static let keychainAttemptsKey = "legacyKeychainAttempts"
+    static let maxKeychainAttempts = 2
+
+    /// macOS may ask for permission to read the old items. If it was refused, ask once more at the next launch and then stop,
+    /// so a refusal does not bring the prompt back at every start (the keys can be entered again in Settings).
+    static func keychainAttemptAllowed(_ defaults: UserDefaults = .standard) -> Bool {
+        defaults.integer(forKey: keychainAttemptsKey) < maxKeychainAttempts
+    }
+
+    /// Background, at launch. Safe to call when there is nothing to migrate.
     static func migrateKeychainInBackground() {
+        guard keychainAttemptAllowed() else { return }
         DispatchQueue.global(qos: .utility).async {
             let result = migrateKeychain(from: legacyKeychainService, to: KeychainStore.service, label: L10n.format("ui.5b50196b3cb3", String(describing: Brand.name)))
             if result.moved > 0 || result.kept > 0 { Log.write("legacy-keychain-migration moved=\(result.moved) kept=\(result.kept)") }
+            if result.kept > 0 { UserDefaults.standard.set(UserDefaults.standard.integer(forKey: keychainAttemptsKey) + 1, forKey: keychainAttemptsKey) }
         }
     }
 }
