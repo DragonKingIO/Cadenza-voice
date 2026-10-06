@@ -60,7 +60,7 @@ BIN="$T"/*.app/Contents/MacOS/Yansui
 
 - Self-tests never open windows and use isolated configuration. They do write lines into the local log file.
 - `--selftest-local-model-real` runs a real installed model on speech synthesized by macOS `say`. It skips itself when no
-  model is installed. Download models inside the app (Settings → Recognition engine → Local models).
+  model is installed. Download models inside the app (Settings → Speech → Local models).
 - Tests with a fake recorder or fake socket prove the protocol, not a real microphone or provider. Say which you ran.
 
 ## Measure accuracy
