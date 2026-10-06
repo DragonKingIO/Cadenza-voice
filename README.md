@@ -8,7 +8,7 @@
 
 [简体中文](README.zh-CN.md) · [Website and documentation](https://dragonkingio.github.io/cadenza-site/)
 
-<!-- Intro video: when it exists, put a poster image that links to it here (hosting advice: cadenza/docs/MEDIA.md). -->
+<!-- Intro video (15 s, English): put the GitHub-hosted video URL on its own line here. Never commit the MP4 (cadenza/docs/MEDIA.md). -->
 
 Hold a shortcut, speak, release. Cadenza recognizes your speech and types the text where your cursor is. By default
 recognition happens **on this Mac** with a local model; nothing is uploaded unless you choose a cloud service and agree to
@@ -19,32 +19,25 @@ it. If the text cannot be typed, the app keeps it so you can copy it.
 
 ## Why Cadenza
 
-- **Private by design.** No account, no server, no analytics, no crash reporting. Audio stays on this Mac with local
-  recognition. Cloud services receive audio only after your explicit consent for that provider. Service keys live in the
-  macOS Keychain. A "never go online" switch hides everything that could connect.
+- **Your audio, your choice.** Many voice input services upload every recording to the vendor's servers. Cadenza is open
+  source, so you can read exactly what leaves your Mac, and you decide where recognition happens: a local model (nothing is
+  uploaded) or a cloud service of your own. No account, no server, no analytics, no crash reporting. Cloud services receive
+  audio only after your explicit consent for that provider, and their keys live in the macOS Keychain. A "never go online"
+  switch hides everything that could connect.
 - **Local models you can compare.** SenseVoice (recommended), FireRedASR2 and Parakeet run through
   [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx), downloaded inside the app with checksum verification. "Compare
   models with my voice" lets you pick the one that suits your voice. Recordings stay in memory.
 - **Bring your own cloud service, optionally.** iFLYTEK, Volcengine, Tencent Cloud, Alibaba Cloud, Baidu and Deepgram, with
   your own credentials. When the network fails, recognition can continue with a local model.
-- **Works with hardware.** An optional, off-by-default API on `127.0.0.1` lets your own pendant, glasses or button send audio
-  and receive text. See [Local API](cadenza/docs/LOCAL-API.md) and
-  [hardware integration](cadenza/docs/HARDWARE-INTEGRATION.md).
+- **Screenshots and text recognition** (new, still being tested). Capture an area, mark it up or pin it on screen, and copy
+  the text or QR code inside. Apple Vision recognizes the text on your Mac by default; Baidu, Tencent Cloud and Google Cloud
+  Vision are optional, with your own keys and consent. See [Screenshot and text recognition](cadenza/docs/SCREENSHOT.md).
+- **Built for developers and AI hardware.** An optional, off-by-default API on `127.0.0.1` lets a program or your own
+  pendant, glasses, recorder or DIY board start a recording, send audio and receive text, and, if you allow it, type the
+  result into the front app. Every device gets its own revocable token with separate permissions. See
+  [Local API](cadenza/docs/LOCAL-API.md) and [hardware integration](cadenza/docs/HARDWARE-INTEGRATION.md).
 - **Open and measured.** Accuracy changes are justified with a repeatable benchmark ([ACCURACY.md](cadenza/docs/ACCURACY.md)).
 - English and Simplified Chinese interface.
-
-## See it
-
-Everything below is the real settings window.
-
-**Choose where recognition happens.** Local models run on your Mac and nothing is uploaded. "Compare models with my voice"
-appears once a model is downloaded.
-
-<p align="center"><img src="cadenza/docs/images/settings-local-en.png" alt="Settings, Local models tab: SenseVoice (recommended), FireRedASR2 and Parakeet" width="640"></p>
-
-**Tune it.** Language, number formatting, voice-detection sensitivity and CPU use, all processed on this Mac.
-
-<p align="center"><img src="cadenza/docs/images/settings-tuning-en.png" alt="Settings, Recognition settings tab" width="640"></p>
 
 ## Install
 
@@ -72,6 +65,7 @@ reused for a port.
 | Accessibility | Find the text field and type the result |
 | Input Monitoring | Detect the global shortcut |
 | Speech Recognition | Only if you use Apple's built-in recognition |
+| Screen & System Audio Recording | Only for screenshots |
 
 ## What is and is not verified
 

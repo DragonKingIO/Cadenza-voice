@@ -8,7 +8,7 @@
 
 [English](README.md) · [官网与文档](https://dragonkingio.github.io/cadenza-site/zh-cn/)
 
-<!-- 介绍视频：有了之后，在这里放一张链接到视频的封面图（托管建议见 cadenza/docs/MEDIA.md）。 -->
+<!-- 介绍视频（15 秒，中文版）：把 GitHub 托管的视频链接单独放一行在这里。不要把 MP4 提交进仓库（见 cadenza/docs/MEDIA.md）。 -->
 
 按住快捷键说话，松开，识别出的文字会写到光标所在的位置。默认用**本地模型在这台 Mac 上识别**；除非你主动选择云端服务并同意，否则不会上传任何东西。文字没法写入时，软件会保留下来，方便你复制。
 
@@ -16,24 +16,13 @@
 
 ## 为什么用随言
 
-- **隐私是设计前提。** 没有账号、没有服务器、没有统计、没有崩溃上报。本地识别时音频不离开这台 Mac；云端服务只有在你对该服务商明确同意后才会收到音频；服务密钥存放在 macOS 钥匙串；还有“永不联网”开关，隐藏一切可能联网的选项。
+- **音频怎么处理，由你选。** 很多语音输入服务会把你的每段录音上传到厂商的服务器。随言是开源的，你可以直接读代码，确认什么会离开这台 Mac；识别在哪里进行也由你决定：本地模型（不上传任何内容），或者你自己的云端服务。没有账号、没有服务器、没有统计、没有崩溃上报。云端服务只有在你对该服务商明确同意后才会收到音频，密钥存放在 macOS 钥匙串；还有“永不联网”开关，隐藏一切可能联网的选项。
 - **可以对比的本地模型。** SenseVoice（推荐）、FireRedASR2、Parakeet，通过 [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) 运行，在应用内下载并校验。“用我的声音比较模型”可以按你的声音挑最合适的，录音只保存在内存里。
 - **云端服务自带账号，可选。** 讯飞、火山引擎、腾讯云、阿里云、百度、Deepgram，使用你自己的凭据；网络出问题时可以用本地模型继续识别。
-- **能接硬件。** 默认关闭、只监听 `127.0.0.1` 的接口，让你自己的挂件、眼镜或按钮发送音频、取回文字。见 [本地接口](cadenza/docs/LOCAL-API.md) 和 [硬件接入](cadenza/docs/HARDWARE-INTEGRATION.md)。
+- **截图与文字识别**（新功能，仍在测试）。框选截图、标注、贴在屏幕上，一键取出图里的文字和二维码。默认用 Mac 自带的 Apple Vision 在本机识别；百度、腾讯云、Google Cloud Vision 可选，使用你自己的密钥，并需要你的同意。见 [截图与文字识别](cadenza/docs/SCREENSHOT.md)（英文）。
+- **为开发者和 AI 硬件而做。** 默认关闭、只监听 `127.0.0.1` 的接口，让程序或你自己的挂件、眼镜、录音笔、自制开发板启动录音、发送音频、取回文字；你允许的话，还能把结果写入前台应用。每个设备有自己的、可随时撤销的令牌，权限逐项分开。见 [本地接口](cadenza/docs/LOCAL-API.md)（英文）和 [硬件接入](cadenza/docs/HARDWARE-INTEGRATION.md)（英文）。
 - **公开、可度量。** 识别效果的改动都用可重复的基准来证明（[ACCURACY.md](cadenza/docs/ACCURACY.md)）。
 - 界面支持简体中文和英文。
-
-## 看看界面
-
-下面都是真实的设置窗口。
-
-**选择在哪里识别。** 本地模型在你的 Mac 上运行，不上传任何内容。下载好模型后，会出现“用我的声音比较模型”。
-
-<p align="center"><img src="cadenza/docs/images/settings-local-zh.png" alt="设置，本地模型标签：SenseVoice（推荐）、FireRedASR2、Parakeet" width="640"></p>
-
-**细调。** 语言、数字规整、人声检测灵敏度和 CPU 使用方式，全部在这台 Mac 上处理。
-
-<p align="center"><img src="cadenza/docs/images/settings-tuning-zh.png" alt="设置，识别设置标签" width="640"></p>
 
 ## 安装
 
@@ -55,6 +44,7 @@ git clone https://github.com/DragonKingIO/Cadenza-voice.git && cd Cadenza-voice
 | 辅助功能 | 找到输入框并写入识别结果 |
 | 输入监控 | 检测全局快捷键 |
 | 语音识别 | 仅在使用 Apple 自带识别时需要 |
+| 录屏与系统录音 | 仅截图时需要 |
 
 ## 哪些已验证，哪些没有
 
