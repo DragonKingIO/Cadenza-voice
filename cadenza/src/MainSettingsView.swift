@@ -375,7 +375,7 @@ struct MainSettingsView: View {
 
     var body: some View {
         NavigationSplitView {
-            List(selection: $model.tab) {
+            List(selection: Binding<MainTab?>(get: { model.tab }, set: { if let tab = $0 { model.tab = tab } })) {
                 ForEach(MainTab.visible(showDeveloper: model.showDeveloper)) { tab in
                     // A dot inside the label, not .badge(): a badge on these rows stopped the sidebar from selecting anything when clicked.
                     Label {
