@@ -377,7 +377,10 @@ struct MainSettingsView: View {
         NavigationSplitView {
             List(selection: $model.tab) {
                 ForEach(MainTab.visible(showDeveloper: model.showDeveloper)) { tab in
-                    Label(tab.title,systemImage:tab.icon).tag(tab).badge(tab == .about && UpdateChecker.shared.available != nil ? Text("●") : nil)
+                    // A dot inside the label, not .badge(): a badge on these rows stopped the sidebar from selecting anything when clicked.
+                    Label {
+                        HStack { Text(tab.title); if tab == .about && UpdateChecker.shared.available != nil { Spacer(); Text("●").foregroundStyle(.tint).accessibilityLabel(L10n.format("update.available",UpdateChecker.shared.available?.version ?? "")) } }
+                    } icon: { Image(systemName: tab.icon) }.tag(tab)
                 }
             }
             .navigationSplitViewColumnWidth(min: 170, ideal: 190, max: 220)
@@ -529,14 +532,9 @@ struct HoldToTalkButton: View {
     var isRecognizing: Bool { model.recognizing }
 
     var body: some View {
-        Group {
-            if isActive {
-                VoiceLevelBar(level: model.level, color: .white).frame(width: 44, height: 30)
-            } else {
-                Image(systemName: "mic.fill").font(.system(size: 22, weight: .medium))
-                    .symbolEffect(.variableColor.iterative, options: .repeating, isActive: pressed)
-            }
-        }
+        // The level meter above the button already shows the voice, so the button itself stays a plain microphone.
+        Image(systemName: "mic.fill").font(.system(size: 22, weight: .medium))
+            .symbolEffect(.variableColor.iterative, options: .repeating, isActive: isActive)
         .foregroundStyle(isActive ? .white : .primary)
         .frame(width: 44, height: 44)
         .glassEffect(

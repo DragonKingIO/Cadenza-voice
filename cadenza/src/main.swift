@@ -45,6 +45,12 @@ if CommandLine.arguments.contains("--selftest-settings-ui") {
     print("[settings-ui] checks=\(count) failures=\(failed)");exit(failed == 0 ? 0:1)
 }
 
+if CommandLine.arguments.contains("--selftest-sidebar-click") {
+    var count=0,failed=0
+    SidebarClickFixtures.run{name,ok in count+=1;if !ok{failed+=1};print("[sidebar-click] \(ok ? "PASS":"FAIL") \(name)")}
+    print("[sidebar-click] checks=\(count) failures=\(failed)");exit(failed == 0 ? 0:1)
+}
+
 if CommandLine.arguments.contains("--selftest-trigger-stage2") {
     var count=0,failed=0
     TriggerStage2Fixtures.run{name,ok in count+=1;if !ok{failed+=1};print("[trigger-stage2] \(ok ? "PASS":"FAIL") \(name)")}
