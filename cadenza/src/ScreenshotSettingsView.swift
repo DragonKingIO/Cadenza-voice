@@ -54,7 +54,7 @@ enum ScreenshotShortcutPolicy {
                        voiceOver: Bool = NSWorkspace.shared.isVoiceOverEnabled) -> String? {
         let c = UInt32(controlKey), o = UInt32(optionKey), m = UInt32(cmdKey), h = UInt32(shiftKey)
         if s.keyCode == 63 { return L10n.tr("ui.be1ca2ee706d") }
-        if ListenTrigger.modifierKeyFlags[s.keyCode] != nil { return L10n.tr("ui.ba173a6d84f1") }
+        if ListenTrigger.modifierKeyFlags[s.keyCode] != nil { return L10n.tr("screenshot.shortcut.loneModifier") }
         let isFunction = ShortcutPolicy.functionKeys.contains(s.keyCode)
         guard s.keyCode <= 126, isFunction || HotkeySpecDisplay.printableKeys.keys.contains(s.keyCode) || ShortcutPolicy.navigational.contains(s.keyCode) else { return L10n.tr("ui.1e86164926a6") }
         if s.modifiers & ~(c | o | m | h) != 0 { return L10n.tr("ui.b21dfa61556d") }
