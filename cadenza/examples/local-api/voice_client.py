@@ -14,7 +14,7 @@ import os
 import socket
 import struct
 
-TOKEN_FILE = os.path.expanduser("~/Library/Application Support/Yansui/local-api-token")
+TOKEN_FILE = os.path.expanduser("~/Library/Application Support/Cadenza/local-api-token")
 
 
 class ApiError(Exception):
