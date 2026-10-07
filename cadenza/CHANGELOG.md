@@ -7,15 +7,26 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
+### Speech recognition
+- Two more on-device speech models, both experimental: **Paraformer** (Chinese with English words, int8, about 244 MB, the fastest, writes no punctuation) and **Qwen3-ASR 0.6B** (multilingual, int8, about 879 MB, writes punctuation). On the same 105 synthesized clips Qwen3-ASR made 0.8% character errors against 2.0–2.2% for SenseVoice and 1.8% for Paraformer, and was the only one to read Chinese with English words correctly; it is also the slowest. SenseVoice stays the recommended default. `--bench-model=<kind>:<folder>` compares models that are not installed.
+
+## [1.1.0] - 2026-10-07
+
+Still an **early preview**.
+
 ### Compatibility
 - One package for Apple silicon **and Intel** Macs, and the minimum system is now **macOS 14** (it was macOS 26). Where an interface exists only on newer systems, the app uses a plain alternative: the round trial button has an ordinary disc instead of Liquid Glass before macOS 26, and menu subtitles are appended to the item title before macOS 14.4.
 - Verified: the whole self-test suite on Apple silicon with macOS 26, and the Intel half of the package under Rosetta (except Apple Vision text recognition, which Rosetta cannot run). **Not yet verified on a real Intel Mac or on macOS 14 and 15.**
 
-### Speech recognition
-- Two more on-device speech models, both experimental: **Paraformer** (Chinese with English words, int8, about 244 MB, the fastest, writes no punctuation) and **Qwen3-ASR 0.6B** (multilingual, int8, about 879 MB, writes punctuation). On the same 105 synthesized clips Qwen3-ASR made 0.8% character errors against 2.0–2.2% for SenseVoice and 1.8% for Paraformer, and was the only one to read Chinese with English words correctly; it is also the slowest. SenseVoice stays the recommended default. `--bench-model=<kind>:<folder>` compares models that are not installed.
+### Recording bar
+- The bar is see-through glass in light mode, and matches the Settings preview in dark mode.
+- An optional character style (Settings) shows a short animation for writing, thinking, alerts and errors instead of the waveform. The animations were made with Dots Lab by Guillaume and are used with the author's permission; they are not covered by the MIT license (see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)).
 
 ### Text recognition
 - On-device recognition models: download, select and delete a PP-OCR model set in Settings → Text Recognition, like the speech models. It runs through the onnxruntime library that is already linked, reads Chinese and English text lines, and falls back to Apple Vision when it cannot run. Two sets are built in: PP-OCRv5 mobile (about 21.5 MB, recommended) and the earlier PP-OCRv4 mobile (about 15.6 MB), which can miss the spaces between English words.
+
+### Fixed
+- Cancelling a model download no longer leaves an empty staging folder behind.
 
 ## [1.0.0] - 2026-10-06
 
@@ -69,5 +80,6 @@ many setups yet.
   folder `Cadenza`). The first launch moves your settings, models and saved keys across; macOS may ask once to read the old
   keys, and the permissions must be granted again.
 
-[Unreleased]: https://github.com/DragonKingIO/Cadenza-voice/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/DragonKingIO/Cadenza-voice/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/DragonKingIO/Cadenza-voice/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/DragonKingIO/Cadenza-voice/releases/tag/v1.0.0
