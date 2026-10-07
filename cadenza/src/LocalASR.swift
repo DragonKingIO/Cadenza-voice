@@ -49,6 +49,8 @@ enum LocalTranscriberLoader {
         case "sensevoice": made = SherpaOfflineTranscriber.senseVoice(dir: dir, options: options)
         case "parakeet-tdt": made = SherpaOfflineTranscriber.nemoTransducer(dir: dir, options: options)
         case "fire-red-ctc": made = SherpaOfflineTranscriber.fireRedCtc(dir: dir, options: options)
+        case "paraformer": made = SherpaOfflineTranscriber.paraformer(dir: dir, options: options)
+        case "qwen3-asr": made = SherpaOfflineTranscriber.qwen3Asr(dir: dir, options: options)
         default: throw LocalModelError.unsupported
         }
         guard let t = made else { throw LocalModelError.loadFailed }
@@ -326,6 +328,40 @@ final class SherpaOfflineTranscriber: LocalTranscriber {
         cfg.model_config.tokens = UnsafePointer(c[1])
         cfg.model_config.num_threads = Int32(options.threads); cfg.model_config.provider = UnsafePointer(c[2])
         cfg.decoding_method = UnsafePointer(c[3])
+        guard let r = SherpaOnnxCreateOfflineRecognizer(&cfg) else { return nil }
+        return SherpaOfflineTranscriber(recognizer: r, vadPath: vad(in: dir), options:options)
+    }
+
+    /// Paraformer (int8, non-autoregressive): Mandarin with English words. The language and ITN options do not apply.
+    static func paraformer(dir: URL, options:LocalRecognitionOptions) -> SherpaOfflineTranscriber? {
+        let values: [String] = [dir.appendingPathComponent("model.int8.onnx").path, dir.appendingPathComponent("tokens.txt").path, "cpu", "greedy_search"]
+        let c = values.map { strdup($0)! }
+        defer { c.forEach { free($0) } }
+        var cfg = SherpaOnnxOfflineRecognizerConfig()
+        cfg.feat_config.sample_rate = 16000; cfg.feat_config.feature_dim = 80
+        cfg.model_config.paraformer.model = UnsafePointer(c[0])
+        cfg.model_config.tokens = UnsafePointer(c[1])
+        cfg.model_config.num_threads = Int32(options.threads); cfg.model_config.provider = UnsafePointer(c[2])
+        cfg.decoding_method = UnsafePointer(c[3])
+        guard let r = SherpaOnnxCreateOfflineRecognizer(&cfg) else { return nil }
+        return SherpaOfflineTranscriber(recognizer: r, vadPath: vad(in: dir), options:options)
+    }
+
+    /// Qwen3-ASR 0.6B (int8): a speech-to-text language model for 27+ languages and many Chinese dialects. It detects the
+    /// language itself, so the language option does not apply. Decoding is near-greedy (tiny temperature, fixed seed).
+    static func qwen3Asr(dir: URL, options:LocalRecognitionOptions) -> SherpaOfflineTranscriber? {
+        let values: [String] = [dir.appendingPathComponent("conv_frontend.onnx").path, dir.appendingPathComponent("encoder.int8.onnx").path,
+                                dir.appendingPathComponent("decoder.int8.onnx").path, dir.appendingPathComponent("tokenizer").path, "cpu", "greedy_search"]
+        let c = values.map { strdup($0)! }
+        defer { c.forEach { free($0) } }
+        var cfg = SherpaOnnxOfflineRecognizerConfig()
+        cfg.feat_config.sample_rate = 16000; cfg.feat_config.feature_dim = 80
+        cfg.model_config.qwen3_asr.conv_frontend = UnsafePointer(c[0]); cfg.model_config.qwen3_asr.encoder = UnsafePointer(c[1])
+        cfg.model_config.qwen3_asr.decoder = UnsafePointer(c[2]); cfg.model_config.qwen3_asr.tokenizer = UnsafePointer(c[3])
+        cfg.model_config.qwen3_asr.max_total_len = 1024; cfg.model_config.qwen3_asr.max_new_tokens = 512
+        cfg.model_config.qwen3_asr.temperature = 1e-6; cfg.model_config.qwen3_asr.top_p = 0.8; cfg.model_config.qwen3_asr.seed = 42
+        cfg.model_config.num_threads = Int32(options.threads); cfg.model_config.provider = UnsafePointer(c[4])
+        cfg.decoding_method = UnsafePointer(c[5])
         guard let r = SherpaOnnxCreateOfflineRecognizer(&cfg) else { return nil }
         return SherpaOfflineTranscriber(recognizer: r, vadPath: vad(in: dir), options:options)
     }

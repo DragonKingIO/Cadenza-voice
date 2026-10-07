@@ -147,8 +147,16 @@ enum AccuracyBenchmark {
     static func localEngines() -> [Engine] {
         guard LocalTranscriberLoader.supported else { return [] }
         var engines: [Engine] = []
-        for entry in LocalModelCenter.shared.installedEntries {
-            guard let dir = LocalModelCenter.shared.modelDir(entry.id) else { continue }
+        var candidates: [(entry: LocalModelEntry, dir: URL)] = LocalModelCenter.shared.installedEntries.compactMap { e in LocalModelCenter.shared.modelDir(e.id).map { (e, $0) } }
+        // Models that are not installed in the app can be compared too: `--bench-model=<kind>:<folder>` (repeatable), e.g.
+        // `--bench-model=paraformer:/path/to/folder`. The folder holds the files the kind needs, as in the model list.
+        for argument in CommandLine.arguments where argument.hasPrefix("--bench-model=") {
+            let parts = argument.dropFirst("--bench-model=".count).split(separator: ":", maxSplits: 1).map(String.init)
+            guard parts.count == 2, LocalModelCatalog.supportedKinds.contains(parts[0]) else { print("[bench] ignored \(argument): expected --bench-model=<kind>:<folder>"); continue }
+            let entry = LocalModelEntry(id: "extra-" + parts[0], version: "0", displayName: [:], summary: [:], kind: parts[0], languages: [], downloadSize: 1, installedSize: 1, minAppVersion: "1.0.0", license: "", changelog: "", files: [], requiredFiles: [])
+            candidates.append((entry, URL(fileURLWithPath: parts[1])))
+        }
+        for (entry, dir) in candidates {
             var variants: [(String, LocalRecognitionOptions)] = [("", LocalRecognitionOptions())]
             if entry.kind == "sensevoice" { var zh = LocalRecognitionOptions(); zh.language = "zh"; variants = [("auto", LocalRecognitionOptions()), ("zh", zh)] }
             if let t = value("--bench-vad").flatMap(Float.init) { variants = variants.map { var o = $0.1; o.vadThreshold = t; return ($0.0, o) } }

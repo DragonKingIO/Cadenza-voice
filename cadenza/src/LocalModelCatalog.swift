@@ -95,7 +95,7 @@ enum LocalModelCatalog {
     static func appliesToCurrentPlatform(_ e: LocalModelEntry) -> Bool { e.platforms.isEmpty || e.platforms.contains(currentPlatform) }
 
     /// 本版本推理层能运行的语音识别模型家族
-    static let supportedKinds: Set<String> = ["sensevoice", "parakeet-tdt", "fire-red-ctc"]
+    static let supportedKinds: Set<String> = ["sensevoice", "parakeet-tdt", "fire-red-ctc", "paraformer", "qwen3-asr"]
     /// 文字识别（OCR）模型家族：和语音模型共用下载、校验、安装机制，但在“文字识别”页管理，不属于语音识别
     static let ocrKinds: Set<String> = ["ppocr"]
     static func isOCR(_ e: LocalModelEntry) -> Bool { ocrKinds.contains(e.kind) }
@@ -163,6 +163,43 @@ enum LocalModelCatalog {
                                sha256: "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6", size: 643_854)
             ],
             requiredFiles: ["model.int8.onnx", "tokens.txt", "silero_vad.onnx"], platforms: ["macos", "windows"]),
+        LocalModelEntry(
+            id: "paraformer-zh-int8", version: "1.0.0",
+            displayName: ["en": "Chinese with English words, fastest (Paraformer) · experimental", "zh-Hans": "中文夹英文，速度最快（Paraformer）· 实验性"],
+            summary: ["en": "Mandarin with English words, from DAMO's Paraformer-large. In our test it was the fastest model (about 9 s for 105 clips, against 52 s for FireRedASR2) and made fewer character errors than SenseVoice on Chinese. It writes no punctuation. Runs fully on this Mac.",
+                      "zh-Hans": "普通话夹英文单词，来自 DAMO 的 Paraformer-large。我们的测试里它是最快的（105 句约 9 秒，FireRedASR2 要 52 秒），中文字错率比 SenseVoice 更低。不输出标点。完全在本机运行。"],
+            kind: "paraformer", languages: ["zh", "en"],
+            downloadSize: 244_090_828, installedSize: 250_000_000, minAppVersion: "1.0.0",
+            license: "Apache-2.0 (see the model package)", changelog: "Paraformer-large Chinese int8 (DAMO, via sherpa-onnx, 2023-09-14), Silero VAD.",
+            files: [
+                LocalModelFile(name: "model.int8.onnx",
+                               urls: ["https://huggingface.co/csukuangfj/sherpa-onnx-paraformer-zh-2023-09-14/resolve/def027084691107096b5ebba69785756d63de6c5/model.int8.onnx"],
+                               sha256: "f36a0433bcf096bd6d6f11b80a3ac8bed110bdca632fe0d731df8d1a84475945", size: 243_371_218),
+                LocalModelFile(name: "tokens.txt",
+                               urls: ["https://huggingface.co/csukuangfj/sherpa-onnx-paraformer-zh-2023-09-14/resolve/def027084691107096b5ebba69785756d63de6c5/tokens.txt"],
+                               sha256: "59aba8873a2ed1e122c25fee421e25f283b63290efbde85c1f01a853d83cb6e6", size: 75_756),
+                LocalModelFile(name: "silero_vad.onnx",
+                               urls: ["https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"],
+                               sha256: "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6", size: 643_854)
+            ],
+            requiredFiles: ["model.int8.onnx", "tokens.txt", "silero_vad.onnx"], platforms: ["macos", "windows"]),
+        LocalModelEntry(
+            id: "qwen3-asr-06b-int8", version: "1.0.0",
+            displayName: ["en": "Most accurate in our tests, multilingual (Qwen3-ASR) · experimental", "zh-Hans": "我们测试里最准，多语言（Qwen3-ASR）· 实验性"],
+            summary: ["en": "Qwen3-ASR 0.6B: 27+ languages and many Chinese dialects, detects the language itself. On our synthesized test speech it made the fewest character errors (0.8% against 2.2% for SenseVoice) and was the only one that got Chinese with English words right every time. It writes punctuation. It is the largest download (about 880 MB, and the first install takes a minute or two) and the slowest to answer (about a second for a short sentence), and it was only tested on synthesized speech. Runs fully on this Mac.",
+                      "zh-Hans": "Qwen3-ASR 0.6B：27 种以上语言和多种中文方言，自动判断语种。在我们的合成语音测试里字错率最低（0.8%，SenseVoice 是 2.2%），中文夹英文每次都对，是唯一做到的。会输出标点。下载最大（约 880 MB，第一次安装要一两分钟）、出结果也最慢（一句短话约一秒），且只测过合成语音。完全在本机运行。"],
+            kind: "qwen3-asr", languages: ["zh", "en", "yue", "ja", "ko"],
+            downloadSize: 879_346_277, installedSize: 1_000_000_000, minAppVersion: "1.0.0",
+            license: "Apache-2.0 (original Qwen3-ASR; see the model package)", changelog: "Qwen3-ASR 0.6B int8 ONNX export by Wasser1462 (sherpa-onnx, 2026-03-25), Silero VAD.",
+            files: [
+                LocalModelFile(name: "sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2",
+                               urls: ["https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2"],
+                               sha256: "393f8a14e2f5fb96746aaab342997a40641001fbd5bf9592a080a8329178ee96", size: 878_702_423, extract: true),
+                LocalModelFile(name: "silero_vad.onnx",
+                               urls: ["https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"],
+                               sha256: "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6", size: 643_854)
+            ],
+            requiredFiles: ["conv_frontend.onnx", "encoder.int8.onnx", "decoder.int8.onnx", "tokenizer/vocab.json", "tokenizer/merges.txt", "tokenizer/tokenizer_config.json", "silero_vad.onnx"], platforms: ["macos"]),
         LocalModelEntry(
             id: "ppocr-v5-mobile-zh-en", version: "1.0.0",
             displayName: ["en": "Chinese and English (PP-OCRv5 mobile) · recommended", "zh-Hans": "中英文（PP-OCRv5 移动版）· 推荐"],

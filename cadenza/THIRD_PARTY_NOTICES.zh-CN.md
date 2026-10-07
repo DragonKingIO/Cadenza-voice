@@ -14,7 +14,7 @@ Apple Speech 使用系统 Speech 框架。
 
 ## 下载的模型（不随软件打包）
 
-模型由用户在软件内下载，不属于本仓库或应用包。每个模型保留自己的许可证，随下载包一起提供，可在 设置 → 语音识别 → 本地 → 许可协议 中打开。内置清单目前提供 sherpa-onnx 转换的 SenseVoice Small（int8，2024-07-17）和 Silero VAD；再分发这些模型或基于它们做产品前，请先阅读包内的许可文件。远端更新清单里的模型由发布该清单的人负责。
+模型由用户在软件内下载，不属于本仓库或应用包。每个模型保留自己的许可证，随下载包一起提供，可在 设置 → 语音识别 → 本地 → 许可协议 中打开。内置清单目前提供 sherpa-onnx 转换的 SenseVoice Small（int8，2024-07-17）、Paraformer-large（DAMO，int8）、Qwen3-ASR 0.6B（阿里 Qwen，由 Wasser1462 导出的 int8 ONNX）、FireRedASR2、NVIDIA Parakeet TDT v3 和 Silero VAD；再分发这些模型或基于它们做产品前，请先阅读包内的许可文件。远端更新清单里的模型由发布该清单的人负责。
 
 ## 本机文字识别模型（未随软件分发）
 

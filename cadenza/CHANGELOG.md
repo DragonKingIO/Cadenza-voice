@@ -7,6 +7,9 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
+### Speech recognition
+- Two more on-device speech models, both experimental: **Paraformer** (Chinese with English words, int8, about 244 MB, the fastest, writes no punctuation) and **Qwen3-ASR 0.6B** (multilingual, int8, about 879 MB, writes punctuation). On the same 105 synthesized clips Qwen3-ASR made 0.8% character errors against 2.0–2.2% for SenseVoice and 1.8% for Paraformer, and was the only one to read Chinese with English words correctly; it is also the slowest. SenseVoice stays the recommended default. `--bench-model=<kind>:<folder>` compares models that are not installed.
+
 ### Text recognition
 - On-device recognition models: download, select and delete a PP-OCR model set in Settings → Text Recognition, like the speech models. It runs through the onnxruntime library that is already linked, reads Chinese and English text lines, and falls back to Apple Vision when it cannot run. Two sets are built in: PP-OCRv5 mobile (about 21.5 MB, recommended) and the earlier PP-OCRv4 mobile (about 15.6 MB), which can miss the spaces between English words.
 

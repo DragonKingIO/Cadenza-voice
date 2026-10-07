@@ -16,7 +16,7 @@ Builds made with `third_party/sherpa-onnx` statically link [sherpa-onnx](https:/
 
 ## Downloaded models (not bundled)
 
-Models are downloaded by the user inside the app and are not part of this repository or the app bundle. Each model keeps its own license, which is included in the downloaded package and can be opened from Settings → Speech → Local → License. The built-in list currently offers sherpa-onnx's conversion of SenseVoice Small (int8, 2024-07-17) and the Silero VAD model; read the license files shipped inside those packages before redistributing the models or building a product on them. Models listed in a remote update list are the responsibility of whoever publishes that list.
+Models are downloaded by the user inside the app and are not part of this repository or the app bundle. Each model keeps its own license, which is included in the downloaded package and can be opened from Settings → Speech → Local → License. The built-in list currently offers sherpa-onnx's conversion of SenseVoice Small (int8, 2024-07-17), Paraformer-large (DAMO, int8), Qwen3-ASR 0.6B (Alibaba Qwen, int8 ONNX export by Wasser1462), FireRedASR2, NVIDIA Parakeet TDT v3 and the Silero VAD model; read the license files shipped inside those packages before redistributing the models or building a product on them. Models listed in a remote update list are the responsibility of whoever publishes that list.
 
 ## On-device text recognition models (not bundled)
 
