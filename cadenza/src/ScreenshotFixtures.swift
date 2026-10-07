@@ -504,6 +504,8 @@ enum ScreenshotFixtures {
         c("没有文字的图片返回空结果而不是报错", (try? blank?.get().isEmpty) == true)
         // 二维码
         if let qr = qrImage("https://example.com/path?a=1") {
+            let viaCoreImage = BarcodeScanner.coreImageQRCodes(qr)
+            c("二维码：Core Image 兜底也能识别并给出位置", viaCoreImage.first?.payload == "https://example.com/path?a=1" && (viaCoreImage.first.map { $0.box.width > 0 && $0.box.width < 1 && $0.box.minX >= 0 && $0.box.maxX <= 1 } ?? false))
             let found = (try? waitFor(30) { await BarcodeScanner.scan(qr) }?.get()) ?? []
             c("二维码：识别出内容并判断为网址", found.first?.payload == "https://example.com/path?a=1" && found.first?.isURL == true)
         } else { c("生成测试二维码", false) }

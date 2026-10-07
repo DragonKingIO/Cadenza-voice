@@ -3,6 +3,7 @@ import CoreGraphics
 import ImageIO
 import UniformTypeIdentifiers
 import Vision
+import CoreImage
 import CryptoKit
 import AppKit
 
@@ -123,16 +124,36 @@ enum BarcodeScanner {
     static func scan(_ image: CGImage) async -> [ScannedCode] {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
-                let request = VNDetectBarcodesRequest()
-                let handler = VNImageRequestHandler(cgImage: image, options: [:])
-                guard (try? handler.perform([request])) != nil else { continuation.resume(returning: []); return }
-                var seen = Set<String>()
-                let codes: [ScannedCode] = (request.results ?? []).compactMap { obs in
-                    guard let payload = obs.payloadStringValue, !payload.isEmpty, seen.insert(payload).inserted else { return nil }
-                    return ScannedCode(payload: payload, symbology: obs.symbology.rawValue, box: obs.boundingBox)
-                }
+                var codes = visionCodes(image)
+                // Vision's barcode detector found nothing (or failed): some systems and virtual machines cannot run it, so try the
+                // QR detector of Core Image, which runs on the CPU everywhere. Normal pictures without a code cost a few milliseconds.
+                if codes.isEmpty { codes = coreImageQRCodes(image) }
                 continuation.resume(returning: codes)
             }
+        }
+    }
+
+    private static func visionCodes(_ image: CGImage) -> [ScannedCode] {
+        let request = VNDetectBarcodesRequest()
+        let handler = VNImageRequestHandler(cgImage: image, options: [:])
+        guard (try? handler.perform([request])) != nil else { return [] }
+        var seen = Set<String>()
+        return (request.results ?? []).compactMap { obs in
+            guard let payload = obs.payloadStringValue, !payload.isEmpty, seen.insert(payload).inserted else { return nil }
+            return ScannedCode(payload: payload, symbology: obs.symbology.rawValue, box: obs.boundingBox)
+        }
+    }
+
+    static func coreImageQRCodes(_ image: CGImage) -> [ScannedCode] {
+        guard image.width > 0, image.height > 0,
+              let detector = CIDetector(ofType: CIDetectorTypeQRCode, context: nil, options: [CIDetectorAccuracy: CIDetectorAccuracyHigh]) else { return [] }
+        let width = CGFloat(image.width), height = CGFloat(image.height)
+        var seen = Set<String>()
+        return detector.features(in: CIImage(cgImage: image)).compactMap { feature in
+            guard let qr = feature as? CIQRCodeFeature, let payload = qr.messageString, !payload.isEmpty, seen.insert(payload).inserted else { return nil }
+            // Same convention as Vision: normalized, origin at the lower left.
+            let box = CGRect(x: qr.bounds.minX / width, y: qr.bounds.minY / height, width: qr.bounds.width / width, height: qr.bounds.height / height)
+            return ScannedCode(payload: payload, symbology: VNBarcodeSymbology.qr.rawValue, box: box)
         }
     }
 }
