@@ -47,8 +47,9 @@ enum OCRLocalFixtures {
             print("[ocr-real] no model: install one in Settings → Text Recognition, or set CADENZA_OCR_MODEL_DIR"); return 2
         }
         let engine: PaddleOCREngine
+        let before = ModelSpeedBenchmark.residentMB(), loadStart = Date()
         do { engine = try PaddleOCREngine(directory: dir) } catch { print("[ocr-real] FAIL load: \((error as? PaddleOCRError)?.reason ?? "\(error)")"); return 1 }
-        print("[ocr-real] loaded \(dir.lastPathComponent)")
+        print("[ocr-real] loaded \(dir.lastPathComponent) in \(String(format: "%.1f", Date().timeIntervalSince(loadStart))) s")
         var failures = 0
         let cases: [(name: String, image: CGImage?, expect: [String])] = [
             ("english", OCRTestImage.make(), ["OCR", "TEST", "123"]),
@@ -64,6 +65,13 @@ enum OCRLocalFixtures {
                 if !ok { failures += 1 }
                 print("[ocr-real] \(ok ? "PASS" : "FAIL") \(item.name): \"\(text)\" lines=\(result.lines.count) \(Int(Date().timeIntervalSince(started) * 1000)) ms")
             } catch { failures += 1; print("[ocr-real] FAIL \(item.name): \(error)") }
+        }
+        // Steady-state time per line: the first read pays one-time setup, so time a few more of the same picture.
+        if let image = OCRTestImage.make() {
+            _ = try? engine.recognizeSynchronously(image)
+            let started = Date(); let runs = 8
+            for _ in 0..<runs { _ = try? engine.recognizeSynchronously(image) }
+            print("[ocr-real] steady \(Int(Date().timeIntervalSince(started) * 1000) / runs) ms per one-line picture, memory \(ModelSpeedBenchmark.residentMB()) MB (before load \(before) MB)")
         }
         print("[ocr-real] done failures=\(failures)")
         return failures == 0 ? 0 : 1

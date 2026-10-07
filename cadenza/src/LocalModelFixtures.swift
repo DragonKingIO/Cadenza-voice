@@ -63,6 +63,21 @@ enum LocalModelFixtures {
         let b = LocalModelCatalog.builtin[0]
         c("内置清单有效", LocalModelCatalog.builtin.allSatisfy { LocalModelCatalog.validate($0) == nil && LocalModelCatalog.downloadable($0) })
         let speechIDs = ["paraformer-zh-int8", "qwen3-asr-06b-int8"]
+        let profiles = LocalModelCatalog.builtin.compactMap(\.profile)
+        c("模型资料：每个内置模型都写了速度、内存，语音模型有每秒倍速和标点，文字识别模型有每行毫秒", profiles.count == LocalModelCatalog.builtin.count && LocalModelCatalog.builtin.allSatisfy { e in e.profile.map { $0.memoryMB > 0 && $0.loadSeconds > 0 && (LocalModelCatalog.isOCR(e) ? $0.lineMilliseconds != nil && $0.realTimeFactor == nil : $0.realTimeFactor != nil && $0.punctuation != nil) } == true })
+        c("模型资料：速度档位 0.10 以下快、0.20 以下中等，其余较慢", LocalModelProfile(realTimeFactor: 0.058, memoryMB: 1, loadSeconds: 1).speedClass == .fast && LocalModelProfile(realTimeFactor: 0.117, memoryMB: 1, loadSeconds: 1).speedClass == .medium && LocalModelProfile(realTimeFactor: 0.305, memoryMB: 1, loadSeconds: 1).speedClass == .slow && LocalModelProfile(lineMilliseconds: 30, memoryMB: 1, loadSeconds: 1).speedClass == nil)
+        c("模型资料：内存显示 MB 或 GB", LocalModelProfile.memoryText(594) == "594 MB" && LocalModelProfile.memoryText(1783) == "1.8 GB")
+        c("模型资料：一行摘要包含速度、倍速、内存、标点（语音）或每行毫秒、内存（文字识别）", {
+            let speech = LocalModelCatalog.builtin[0].profile?.summary() ?? "", ocr = LocalModelCatalog.builtin.first(where: LocalModelCatalog.isOCR)?.profile?.summary() ?? ""
+            return !speech.contains("local.profile") && speech.contains("0.6") && !ocr.contains("local.profile") && ocr.contains("30") && !ocr.contains("0.6")
+        }())
+        c("模型资料：旧清单没有资料字段时照常读取，写出再读回不丢", {
+            guard let e = LocalModelCatalog.builtin.first, var raw = (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(e))) as? [String: Any] else { return false }
+            let roundTrip = (try? JSONDecoder().decode(LocalModelEntry.self, from: JSONEncoder().encode(e)))?.profile == e.profile
+            raw["profile"] = nil
+            let old = (try? JSONSerialization.data(withJSONObject: raw)).flatMap { try? JSONDecoder().decode(LocalModelEntry.self, from: $0) }
+            return roundTrip && old != nil && old?.profile == nil
+        }())
         c("内置清单：新增的两个语音模型存在、可用，推荐默认仍是 SenseVoice", speechIDs.allSatisfy { id in LocalModelCatalog.builtin.first { $0.id == id }.map { LocalModelCatalog.usable($0) && LocalModelCatalog.validate($0) == nil } == true } && LocalModelCatalog.recommendedID == "sensevoice-multilingual-int8")
         c("内置清单：不需要解压的条目，必需文件都能由下载的文件得到", LocalModelCatalog.builtin.filter { e in !e.files.contains { $0.extract } }.allSatisfy { e in Set(e.requiredFiles).isSubset(of: Set(e.files.map(\.name))) })
         if LocalTranscriberLoader.supported {

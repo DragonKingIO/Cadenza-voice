@@ -111,6 +111,7 @@ if CommandLine.arguments.contains("--selftest-local-ocr-real") {_ = NSApplicatio
 if CommandLine.arguments.contains("--selftest-local-ocr-download") {_ = NSApplication.shared;exit(OCRLocalFixtures.realDownload())}
 if CommandLine.arguments.contains("--local-accuracy-probe") {exit(LocalModelFixtures.accuracyProbe())}
 if CommandLine.arguments.contains("--accuracy-benchmark") {exit(AccuracyBenchmark.run())}
+if CommandLine.arguments.contains("--bench-speed") {_ = NSApplication.shared;exit(ModelSpeedBenchmark.run())}
 if CommandLine.arguments.contains("--selftest-local-model") {
     var checks=0,failures=0
     LocalModelFixtures.run { name,passed in checks += 1;if !passed{failures += 1};print("[local-model-selftest] \(passed ? "PASS":"FAIL"): \(name)") }

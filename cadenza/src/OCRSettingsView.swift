@@ -119,7 +119,10 @@ struct OCRSettingsView: View {
                 Section {
                     ForEach(localModels) { entry in OCRLocalModelRow(entry: entry, center: center, model: model, askDelete: { deleting = entry }) }
                 } header: { Text(L10n.tr("ocr.local.header")) } footer: {
-                    Text(L10n.tr(PaddleOCREngine.isAvailable ? "ocr.local.footer" : "ppocr.err.runtime")).font(.callout).foregroundStyle(.primary)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(L10n.tr(PaddleOCREngine.isAvailable ? "ocr.local.footer" : "ppocr.err.runtime")).font(.callout).foregroundStyle(.primary)
+                        if localModels.contains(where: { $0.profile != nil }) { Text(L10n.tr("local.profile.footnote")).font(.caption).foregroundStyle(.secondary) }
+                    }
                 }
             }
 
@@ -169,6 +172,7 @@ private struct OCRLocalModelRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(entry.name())
                 Text(entry.detail()).font(.callout).foregroundStyle(.secondary)
+                if let profile = entry.profile { Text(profile.summary()).font(.caption).foregroundStyle(.secondary) }
                 stateLine(state)
             }
             Spacer()

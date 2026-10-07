@@ -663,7 +663,12 @@ struct EngineSettingsView: View {
                     if model.pendingLocalActivation && model.engine != .local {
                         Label(L10n.tr("local.pending"), systemImage: "arrow.down.circle").font(.callout).foregroundStyle(.secondary)
                     }
-                } header: { Text(L10n.tr("engine.section.local")) } footer: { Text(L10n.tr("local.models.advice")).font(.callout).foregroundStyle(.secondary) }
+                } header: { Text(L10n.tr("engine.section.local")) } footer: {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(L10n.tr("local.models.advice")).font(.callout).foregroundStyle(.secondary)
+                        if localEntries.contains(where: { $0.profile != nil }) { Text(L10n.tr("local.profile.footnote")).font(.caption).foregroundStyle(.secondary) }
+                    }
+                }
                 if !model.compareCandidates.isEmpty {
                     Section {
                         HStack {

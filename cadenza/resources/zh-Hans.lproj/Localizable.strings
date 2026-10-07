@@ -1333,3 +1333,13 @@
 "ppocr.err.runtime" = "这个版本没有包含本机推理库。";
 "ocr.local.header" = "本机识别模型";
 "ocr.local.footer" = "这些模型在这台 Mac 上运行，图片不会离开这台 Mac。下载一次后可离线使用；用不了时会改用 Apple Vision 识别并告诉你原因。";
+"local.profile.speed" = "速度：%@";
+"local.profile.speed.fast" = "快";
+"local.profile.speed.medium" = "中等";
+"local.profile.speed.slow" = "较慢";
+"local.profile.rtf" = "说 10 秒的话约 %@ 秒出结果";
+"local.profile.line" = "一行文字约 %d 毫秒";
+"local.profile.memory" = "内存约 %@";
+"local.profile.punct.yes" = "带标点";
+"local.profile.punct.no" = "不带标点";
+"local.profile.footnote" = "速度、内存和标点是开发者在一台 Mac 上用合成语音测的（2 个线程），你的机器会有差别。内存是模型加载并使用时应用占用的总量。";
