@@ -39,6 +39,10 @@ Turning consent off in the provider settings and saving it blocks future session
 
 The hybrid buffer gate is connected in source behind a disabled-by-default development switch; it has not been enabled in the installed app. Before the standalone-modifier decision point, a chord or extremely short tap discards the local buffer without establishing a provider connection. After the decision point, streaming providers may already have received audio; whole-recording providers receive audio only at a valid end. Consent is checked again before constructing the service. Local test transports count requests/messages without using real credentials or network audio. This is not a live packet-capture result.
 
+## Text tidying
+
+The "Tidy the text" setting (Settings → Voice input) removes hesitation sounds and stuttered repeats from recognized text, and can split long text into paragraphs. It is a fixed set of rules that runs on this Mac: no model, no network, nothing is sent or stored.
+
 ## Local storage
 
 - Settings: `config.json` in the app's data folder (Settings → Privacy → Open data folder), including provider options and consent flags. A few preferences (app language, recording indicator style, whether the diagnostic log is on, which version of this notice and the terms you accepted) are kept in the app's macOS preferences. The Local developer API, if you turn it on, keeps its port and access token in `local-api.json` and `local-api-token` in that same folder (readable only by your account).
@@ -62,6 +66,7 @@ The Local engine recognizes speech on this Mac with models you download in Setti
 - **Downloads.** Models are not bundled. A download contacts the model host named in the model list (the built-in list points to the upstream project's GitHub release page), which can see your IP address and the file requested; no audio or settings are sent. Files are verified by SHA-256 before use. Packages are unpacked with the system `tar` after checking for absolute paths, `..` and links.
 - **Update check.** If enabled (default, and only when at least one model is installed and an update source is configured), the app downloads a small list file at launch and compares versions. It never downloads a model by itself. You can turn this off in Settings.
 - **Fallback.** When enabled, the cloud engine's audio is also kept in memory (up to 120 seconds) so a failed cloud request can be recognized by a local model without you repeating it. That buffer is discarded when the session ends and is never written to disk. When the network is unavailable the app can skip the cloud engine and use the local model directly.
+- **Comparing with your voice.** "Compare models with my voice" records a few sentences into memory only (never to disk) and clears them when you close the window. The recordings are recognized on this Mac by the models and the built-in recognizer you tick. They are sent to a cloud service only if that service has your saved credentials, you gave it upload consent, and it is still ticked in the comparison list, which marks it "Uploads recording". When the app is locked to local recognition, no cloud service is offered.
 - **Storage.** Models and a small record of installed versions are stored in the `models` folder inside the app's data folder. Deleting a model in Settings removes its files. A loaded model occupies roughly 0.5 GB of memory and is released after a few idle minutes.
 - Model licenses are set by their authors; see the license file inside each installed model (Settings → Local → License).
 

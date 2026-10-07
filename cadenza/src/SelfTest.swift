@@ -33,6 +33,8 @@ enum SelfTest {
         PrivacyFixtures.run(check)
         LegacyMigrationFixtures.run(check)
         OCRLocalFixtures.run(check)
+        TextPolishFixtures.run(check)
+        ClipRecognitionFixtures.run(check)
         testConfigValidation()
         testCustomShortcuts()
         testOnboardingReadiness()

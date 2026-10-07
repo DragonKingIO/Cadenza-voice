@@ -79,11 +79,18 @@ enum BrandPreview {
             controller.settingsModel?.configuring=provider
         }
         if CommandLine.arguments.contains("--preview-compare"),let model=controller.settingsModel {
-            // Synthetic data only: two catalog entries with scripted recognizers, no microphone and no models.
+            // Synthetic data only: scripted recognizers, no microphone, no models, no network, no credentials.
             let entries=Array(LocalModelCatalog.builtin.prefix(2)),prompts=VoiceCompare.prompts(forLocale:"zh-CN")
-            let compare=VoiceCompare(prompts:prompts,models:entries,loader:{entry in
-                let first=entry.id == entries[0].id
-                return {samples in let i=max(0,min(prompts.count-1,Int((Double(samples.count)/16000).rounded())-2));let t=prompts[i];return first ? (i == 2 ? "把这段代码提交到 get hub 上。":t):(i == 0 ? "今天下午三点开会，请提前十分。":i == 3 ? "明天我要去北京见李明和王方。":t)}
+            let candidates=[CompareCandidate.local(entries[0]),.local(entries[1]),.cloud(.tencent),.cloud(.deepgram),.system()]
+            let compare=VoiceCompare(prompts:prompts,candidates:candidates,recognizer:{candidate in
+                {samples in let i=max(0,min(prompts.count-1,Int((Double(samples.count)/16000).rounded())-2));let t=prompts[i]
+                    switch candidate.id {
+                    case entries[0].id: return .text(i == 2 ? "把这段代码提交到 get hub 上。":t)
+                    case entries[1].id: return .text(i == 0 ? "今天下午三点开会，请提前十分。":i == 3 ? "明天我要去北京见李明和王方。":t)
+                    case CompareCandidate.cloud(.tencent).id: return .text(t)
+                    case CompareCandidate.cloud(.deepgram).id: return .failed(L10n.tr("compare.err.timeout"))
+                    default: return .text(i == 1 ? "我想只用本地识别不想用云端":t)
+                    }}
             })
             for i in 0..<prompts.count{compare.setClip(i,[Float](repeating:0.2,count:16000*(i+2)))}
             compare.analyze()

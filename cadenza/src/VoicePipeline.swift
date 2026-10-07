@@ -250,7 +250,7 @@ final class VoicePipeline {
                     _ = self.coordinatedCancel?();self.note(L10n.tr("ui.cc54a5947876"),isError:true);self.onStateChange?();return
                 }
                 let coordinated=self.coordinatedSession
-                let corrected=text.map{LocalASRCorrection.apply(ASRPunctuationCleanup.apply($0),maps:self.config.localASRMappings)}
+                let corrected=text.map{LocalASRCorrection.apply(TextPolish.apply(ASRPunctuationCleanup.apply($0),self.config.polish),maps:self.config.localASRMappings)}
                 self.holdFinalized(text:corrected)
                 if coordinated {self.coordinatedFinal?(self.lastTranscript)}
             }
