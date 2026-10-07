@@ -116,10 +116,12 @@ if CommandLine.arguments.contains("--selftest-screenshot") {
     exit(failures==0 ? 0:1)
 }
 if CommandLine.arguments.contains("--selftest-local-model-real") {exit(LocalModelFixtures.realModel())}
+if let flag=CommandLine.arguments.first(where:{$0.hasPrefix("--selftest-local-model-download=")}) {_ = NSApplication.shared;exit(LocalModelFixtures.realDownload(id:String(flag.dropFirst("--selftest-local-model-download=".count))))}
 if CommandLine.arguments.contains("--selftest-local-ocr-real") {_ = NSApplication.shared;exit(OCRLocalFixtures.real())}
 if CommandLine.arguments.contains("--selftest-local-ocr-download") {_ = NSApplication.shared;exit(OCRLocalFixtures.realDownload())}
 if CommandLine.arguments.contains("--local-accuracy-probe") {exit(LocalModelFixtures.accuracyProbe())}
 if CommandLine.arguments.contains("--accuracy-benchmark") {exit(AccuracyBenchmark.run())}
+if CommandLine.arguments.contains("--bench-speed") {_ = NSApplication.shared;exit(ModelSpeedBenchmark.run())}
 if CommandLine.arguments.contains("--selftest-local-model") {
     var checks=0,failures=0
     LocalModelFixtures.run { name,passed in checks += 1;if !passed{failures += 1};print("[local-model-selftest] \(passed ? "PASS":"FAIL"): \(name)") }

@@ -25,6 +25,42 @@ struct LocalModelFile: Codable, Equatable {
     }
 }
 
+/// What using a model is like on a typical Mac, as measured by the developers (`--bench-speed`, see docs/LOCAL-MODELS.md). It is
+/// shown in the model list so people can compare models before they download one; it never changes how a model runs.
+struct LocalModelProfile: Codable, Equatable {
+    /// Speech models: time to recognize divided by the length of the speech (0.05 means 10 s of speech takes half a second).
+    var realTimeFactor: Double?
+    /// Text recognition models: milliseconds for one line of text.
+    var lineMilliseconds: Int?
+    /// Memory the app holds while the model is loaded and in use, in MB.
+    var memoryMB: Int
+    var loadSeconds: Double
+    /// Speech models: whether the text comes with punctuation.
+    var punctuation: Bool?
+
+    enum SpeedClass { case fast, medium, slow }
+    /// Only for speech models. Thresholds: under 0.10 is fast, under 0.20 medium, otherwise slow.
+    var speedClass: SpeedClass? {
+        guard let f = realTimeFactor else { return nil }
+        return f < 0.10 ? .fast : f < 0.20 ? .medium : .slow
+    }
+
+    static func memoryText(_ mb: Int) -> String { mb >= 1000 ? String(format: "%.1f GB", Double(mb) / 1000) : "\(mb) MB" }
+
+    /// One short line for the model list, for example "Speed: Fast · 10 s of speech takes about 0.6 s · about 0.6 GB of memory · with punctuation".
+    func summary() -> String {
+        var parts: [String] = []
+        if let c = speedClass {
+            parts.append(L10n.format("local.profile.speed", L10n.tr(c == .fast ? "local.profile.speed.fast" : c == .medium ? "local.profile.speed.medium" : "local.profile.speed.slow")))
+            if let f = realTimeFactor { parts.append(L10n.format("local.profile.rtf", String(format: "%.1f", f * 10))) }
+        }
+        if let ms = lineMilliseconds { parts.append(L10n.format("local.profile.line", ms)) }
+        parts.append(L10n.format("local.profile.memory", Self.memoryText(memoryMB)))
+        if let p = punctuation { parts.append(L10n.tr(p ? "local.profile.punct.yes" : "local.profile.punct.no")) }
+        return parts.joined(separator: " · ")
+    }
+}
+
 struct LocalModelEntry: Codable, Equatable, Identifiable {
     var id: String
     /// 清单版本（语义化版本，用于判断是否有更新，不是上游模型日期）
@@ -45,12 +81,14 @@ struct LocalModelEntry: Codable, Equatable, Identifiable {
     var requiredFiles: [String]
     /// 适用平台（macos / windows …）；缺省或为空 = 所有平台。清单是平台无关的，各平台客户端只显示适用于自己的条目。
     var platforms: [String] = []
+    /// Measured speed and memory, shown in the list (optional: older lists and other publishers may leave it out).
+    var profile: LocalModelProfile?
 
-    enum CodingKeys: String, CodingKey { case id, version, displayName, summary, kind, languages, downloadSize, installedSize, minAppVersion, license, changelog, files, requiredFiles, platforms }
-    init(id: String, version: String, displayName: [String: String], summary: [String: String], kind: String, languages: [String], downloadSize: Int64, installedSize: Int64, minAppVersion: String, license: String, changelog: String, files: [LocalModelFile], requiredFiles: [String], platforms: [String] = []) {
+    enum CodingKeys: String, CodingKey { case id, version, displayName, summary, kind, languages, downloadSize, installedSize, minAppVersion, license, changelog, files, requiredFiles, platforms, profile }
+    init(id: String, version: String, displayName: [String: String], summary: [String: String], kind: String, languages: [String], downloadSize: Int64, installedSize: Int64, minAppVersion: String, license: String, changelog: String, files: [LocalModelFile], requiredFiles: [String], platforms: [String] = [], profile: LocalModelProfile? = nil) {
         self.id = id; self.version = version; self.displayName = displayName; self.summary = summary; self.kind = kind; self.languages = languages
         self.downloadSize = downloadSize; self.installedSize = installedSize; self.minAppVersion = minAppVersion; self.license = license; self.changelog = changelog
-        self.files = files; self.requiredFiles = requiredFiles; self.platforms = platforms
+        self.files = files; self.requiredFiles = requiredFiles; self.platforms = platforms; self.profile = profile
     }
     /// 说明性字段缺失时给默认值；安全相关字段（文件、哈希、地址、大小）一律必填
     init(from decoder: Decoder) throws {
@@ -64,6 +102,7 @@ struct LocalModelEntry: Codable, Equatable, Identifiable {
         license = try d.decodeIfPresent(String.self, forKey: .license) ?? ""; changelog = try d.decodeIfPresent(String.self, forKey: .changelog) ?? ""
         files = try d.decode([LocalModelFile].self, forKey: .files); requiredFiles = try d.decode([String].self, forKey: .requiredFiles)
         platforms = try d.decodeIfPresent([String].self, forKey: .platforms) ?? []
+        profile = try d.decodeIfPresent(LocalModelProfile.self, forKey: .profile)
     }
 
     func name(_ language: String = L10n.language) -> String { displayName[language] ?? displayName["en"] ?? id }
@@ -95,7 +134,7 @@ enum LocalModelCatalog {
     static func appliesToCurrentPlatform(_ e: LocalModelEntry) -> Bool { e.platforms.isEmpty || e.platforms.contains(currentPlatform) }
 
     /// 本版本推理层能运行的语音识别模型家族
-    static let supportedKinds: Set<String> = ["sensevoice", "parakeet-tdt", "fire-red-ctc"]
+    static let supportedKinds: Set<String> = ["sensevoice", "parakeet-tdt", "fire-red-ctc", "paraformer", "qwen3-asr"]
     /// 文字识别（OCR）模型家族：和语音模型共用下载、校验、安装机制，但在“文字识别”页管理，不属于语音识别
     static let ocrKinds: Set<String> = ["ppocr"]
     static func isOCR(_ e: LocalModelEntry) -> Bool { ocrKinds.contains(e.kind) }
@@ -128,7 +167,7 @@ enum LocalModelCatalog {
                                urls: ["https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"],
                                sha256: "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6", size: 643_854)
             ],
-            requiredFiles: ["model.int8.onnx", "tokens.txt", "silero_vad.onnx"], platforms: ["macos", "windows"]),
+            requiredFiles: ["model.int8.onnx", "tokens.txt", "silero_vad.onnx"], platforms: ["macos", "windows"], profile: LocalModelProfile(realTimeFactor: 0.058, memoryMB: 594, loadSeconds: 0.4, punctuation: true)),
         LocalModelEntry(
             id: "parakeet-tdt-v3-int8", version: "1.0.0",
             displayName: ["en": "European languages (Parakeet TDT v3) · experimental", "zh-Hans": "欧洲语言（Parakeet TDT v3）· 实验性"],
@@ -145,7 +184,7 @@ enum LocalModelCatalog {
                                urls: ["https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"],
                                sha256: "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6", size: 643_854)
             ],
-            requiredFiles: ["encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokens.txt", "silero_vad.onnx"], platforms: ["macos", "windows"]),
+            requiredFiles: ["encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokens.txt", "silero_vad.onnx"], platforms: ["macos", "windows"], profile: LocalModelProfile(realTimeFactor: 0.117, memoryMB: 1196, loadSeconds: 0.8, punctuation: true)),
         LocalModelEntry(
             id: "fire-red-asr2-ctc-int8", version: "1.0.0",
             displayName: ["en": "High-accuracy Chinese (FireRedASR2) · experimental", "zh-Hans": "高精度中文（FireRedASR2）· 实验性"],
@@ -162,7 +201,44 @@ enum LocalModelCatalog {
                                urls: ["https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"],
                                sha256: "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6", size: 643_854)
             ],
-            requiredFiles: ["model.int8.onnx", "tokens.txt", "silero_vad.onnx"], platforms: ["macos", "windows"]),
+            requiredFiles: ["model.int8.onnx", "tokens.txt", "silero_vad.onnx"], platforms: ["macos", "windows"], profile: LocalModelProfile(realTimeFactor: 0.305, memoryMB: 1286, loadSeconds: 0.7, punctuation: false)),
+        LocalModelEntry(
+            id: "paraformer-zh-int8", version: "1.0.0",
+            displayName: ["en": "Chinese with English words, fastest (Paraformer) · experimental", "zh-Hans": "中文夹英文，速度最快（Paraformer）· 实验性"],
+            summary: ["en": "Mandarin with English words, from DAMO's Paraformer-large. In our test it was the fastest model (about 9 s for 105 clips, against 52 s for FireRedASR2) and made fewer character errors than SenseVoice on Chinese. It writes no punctuation. Runs fully on this Mac.",
+                      "zh-Hans": "普通话夹英文单词，来自 DAMO 的 Paraformer-large。我们的测试里它是最快的（105 句约 9 秒，FireRedASR2 要 52 秒），中文字错率比 SenseVoice 更低。不输出标点。完全在本机运行。"],
+            kind: "paraformer", languages: ["zh", "en"],
+            downloadSize: 244_090_828, installedSize: 250_000_000, minAppVersion: "1.0.0",
+            license: "Apache-2.0 (see the model package)", changelog: "Paraformer-large Chinese int8 (DAMO, via sherpa-onnx, 2023-09-14), Silero VAD.",
+            files: [
+                LocalModelFile(name: "model.int8.onnx",
+                               urls: ["https://huggingface.co/csukuangfj/sherpa-onnx-paraformer-zh-2023-09-14/resolve/def027084691107096b5ebba69785756d63de6c5/model.int8.onnx"],
+                               sha256: "f36a0433bcf096bd6d6f11b80a3ac8bed110bdca632fe0d731df8d1a84475945", size: 243_371_218),
+                LocalModelFile(name: "tokens.txt",
+                               urls: ["https://huggingface.co/csukuangfj/sherpa-onnx-paraformer-zh-2023-09-14/resolve/def027084691107096b5ebba69785756d63de6c5/tokens.txt"],
+                               sha256: "59aba8873a2ed1e122c25fee421e25f283b63290efbde85c1f01a853d83cb6e6", size: 75_756),
+                LocalModelFile(name: "silero_vad.onnx",
+                               urls: ["https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"],
+                               sha256: "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6", size: 643_854)
+            ],
+            requiredFiles: ["model.int8.onnx", "tokens.txt", "silero_vad.onnx"], platforms: ["macos", "windows"], profile: LocalModelProfile(realTimeFactor: 0.048, memoryMB: 557, loadSeconds: 0.5, punctuation: false)),
+        LocalModelEntry(
+            id: "qwen3-asr-06b-int8", version: "1.0.0",
+            displayName: ["en": "Most accurate in our tests, multilingual (Qwen3-ASR) · experimental", "zh-Hans": "我们测试里最准，多语言（Qwen3-ASR）· 实验性"],
+            summary: ["en": "Qwen3-ASR 0.6B: 27+ languages and many Chinese dialects, detects the language itself. On our synthesized test speech it made the fewest character errors (0.8% against 2.2% for SenseVoice) and was the only one that got Chinese with English words right every time. It writes punctuation. It is the largest download (about 880 MB, and the first install takes a minute or two) and the slowest to answer (about a second for a short sentence), and it was only tested on synthesized speech. Runs fully on this Mac.",
+                      "zh-Hans": "Qwen3-ASR 0.6B：27 种以上语言和多种中文方言，自动判断语种。在我们的合成语音测试里字错率最低（0.8%，SenseVoice 是 2.2%），中文夹英文每次都对，是唯一做到的。会输出标点。下载最大（约 880 MB，第一次安装要一两分钟）、出结果也最慢（一句短话约一秒），且只测过合成语音。完全在本机运行。"],
+            kind: "qwen3-asr", languages: ["zh", "en", "yue", "ja", "ko"],
+            downloadSize: 879_346_277, installedSize: 1_000_000_000, minAppVersion: "1.0.0",
+            license: "Apache-2.0 (original Qwen3-ASR; see the model package)", changelog: "Qwen3-ASR 0.6B int8 ONNX export by Wasser1462 (sherpa-onnx, 2026-03-25), Silero VAD.",
+            files: [
+                LocalModelFile(name: "sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2",
+                               urls: ["https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2"],
+                               sha256: "393f8a14e2f5fb96746aaab342997a40641001fbd5bf9592a080a8329178ee96", size: 878_702_423, extract: true),
+                LocalModelFile(name: "silero_vad.onnx",
+                               urls: ["https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"],
+                               sha256: "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6", size: 643_854)
+            ],
+            requiredFiles: ["conv_frontend.onnx", "encoder.int8.onnx", "decoder.int8.onnx", "tokenizer/vocab.json", "tokenizer/merges.txt", "tokenizer/tokenizer_config.json", "silero_vad.onnx"], platforms: ["macos"], profile: LocalModelProfile(realTimeFactor: 0.25, memoryMB: 1783, loadSeconds: 1.4, punctuation: true)),
         LocalModelEntry(
             id: "ppocr-v5-mobile-zh-en", version: "1.0.0",
             displayName: ["en": "Chinese and English (PP-OCRv5 mobile) · recommended", "zh-Hans": "中英文（PP-OCRv5 移动版）· 推荐"],
@@ -182,7 +258,7 @@ enum LocalModelCatalog {
                                urls: ["https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/paddle/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile/ppocrv5_dict.txt"],
                                sha256: "d1979e9f794c464c0d2e0b70a7fe14dd978e9dc644c0e71f14158cdf8342af1b", size: 74_012)
             ],
-            requiredFiles: ["det.onnx", "rec.onnx", "dict.txt"], platforms: ["macos"]),
+            requiredFiles: ["det.onnx", "rec.onnx", "dict.txt"], platforms: ["macos"], profile: LocalModelProfile(lineMilliseconds: 30, memoryMB: 142, loadSeconds: 0.1)),
         LocalModelEntry(
             id: "ppocr-v4-mobile-zh-en", version: "1.0.0",
             displayName: ["en": "Chinese and English (PP-OCRv4 mobile)", "zh-Hans": "中英文（PP-OCRv4 移动版）"],
@@ -202,7 +278,7 @@ enum LocalModelCatalog {
                                urls: ["https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/v2.7.1/ppocr/utils/ppocr_keys_v1.txt"],
                                sha256: "28b2362ad4ab2dc38769aa72feb535e3a9ddb3fd2a7585a05920e6393b1dc7f7", size: 26_249)
             ],
-            requiredFiles: ["det.onnx", "rec.onnx", "dict.txt"], platforms: ["macos"])
+            requiredFiles: ["det.onnx", "rec.onnx", "dict.txt"], platforms: ["macos"], profile: LocalModelProfile(lineMilliseconds: 30, memoryMB: 113, loadSeconds: 0.1))
     ]
 
     // MARK: 清单校验（远端来源一律不可信）

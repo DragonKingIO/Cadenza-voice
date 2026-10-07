@@ -53,7 +53,13 @@
       "platforms": [
         "macos",
         "windows"
-      ]
+      ],
+      "profile": {
+        "real_time_factor": 0.058,
+        "memory_mb": 594,
+        "load_seconds": 0.4,
+        "punctuation": true
+      }
     },
     {
       "id": "parakeet-tdt-v3-int8",
@@ -128,7 +134,13 @@
       "platforms": [
         "macos",
         "windows"
-      ]
+      ],
+      "profile": {
+        "real_time_factor": 0.117,
+        "memory_mb": 1196,
+        "load_seconds": 0.8,
+        "punctuation": true
+      }
     },
     {
       "id": "fire-red-asr2-ctc-int8",
@@ -178,7 +190,138 @@
       "platforms": [
         "macos",
         "windows"
-      ]
+      ],
+      "profile": {
+        "real_time_factor": 0.305,
+        "memory_mb": 1286,
+        "load_seconds": 0.7,
+        "punctuation": false
+      }
+    },
+    {
+      "id": "paraformer-zh-int8",
+      "version": "1.0.0",
+      "display_name": {
+        "en": "Chinese with English words, fastest (Paraformer) · experimental",
+        "zh-Hans": "中文夹英文，速度最快（Paraformer）· 实验性"
+      },
+      "summary": {
+        "en": "Mandarin with English words, from DAMO's Paraformer-large. In our test it was the fastest model (about 9 s for 105 clips, against 52 s for FireRedASR2) and made fewer character errors than SenseVoice on Chinese. It writes no punctuation. Runs fully on this Mac.",
+        "zh-Hans": "普通话夹英文单词，来自 DAMO 的 Paraformer-large。我们的测试里它是最快的（105 句约 9 秒，FireRedASR2 要 52 秒），中文字错率比 SenseVoice 更低。不输出标点。完全在本机运行。"
+      },
+      "kind": "paraformer",
+      "languages": [
+        "zh",
+        "en"
+      ],
+      "download_size": 244090828,
+      "installed_size": 250000000,
+      "min_app_version": "1.0.0",
+      "license": "Apache-2.0 (see the model package)",
+      "changelog": "Paraformer-large Chinese int8 (DAMO, via sherpa-onnx, 2023-09-14), Silero VAD.",
+      "files": [
+        {
+          "name": "model.int8.onnx",
+          "urls": [
+            "https://huggingface.co/csukuangfj/sherpa-onnx-paraformer-zh-2023-09-14/resolve/def027084691107096b5ebba69785756d63de6c5/model.int8.onnx"
+          ],
+          "sha256": "f36a0433bcf096bd6d6f11b80a3ac8bed110bdca632fe0d731df8d1a84475945",
+          "size": 243371218
+        },
+        {
+          "name": "tokens.txt",
+          "urls": [
+            "https://huggingface.co/csukuangfj/sherpa-onnx-paraformer-zh-2023-09-14/resolve/def027084691107096b5ebba69785756d63de6c5/tokens.txt"
+          ],
+          "sha256": "59aba8873a2ed1e122c25fee421e25f283b63290efbde85c1f01a853d83cb6e6",
+          "size": 75756
+        },
+        {
+          "name": "silero_vad.onnx",
+          "urls": [
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"
+          ],
+          "sha256": "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6",
+          "size": 643854
+        }
+      ],
+      "required_files": [
+        "model.int8.onnx",
+        "tokens.txt",
+        "silero_vad.onnx"
+      ],
+      "platforms": [
+        "macos",
+        "windows"
+      ],
+      "profile": {
+        "real_time_factor": 0.048,
+        "memory_mb": 557,
+        "load_seconds": 0.5,
+        "punctuation": false
+      }
+    },
+    {
+      "id": "qwen3-asr-06b-int8",
+      "version": "1.0.0",
+      "display_name": {
+        "en": "Most accurate in our tests, multilingual (Qwen3-ASR) · experimental",
+        "zh-Hans": "我们测试里最准，多语言（Qwen3-ASR）· 实验性"
+      },
+      "summary": {
+        "en": "Qwen3-ASR 0.6B: 27+ languages and many Chinese dialects, detects the language itself. On our synthesized test speech it made the fewest character errors (0.8% against 2.2% for SenseVoice) and was the only one that got Chinese with English words right every time. It writes punctuation. It is the largest download (about 880 MB, and the first install takes a minute or two) and the slowest to answer (about a second for a short sentence), and it was only tested on synthesized speech. Runs fully on this Mac.",
+        "zh-Hans": "Qwen3-ASR 0.6B：27 种以上语言和多种中文方言，自动判断语种。在我们的合成语音测试里字错率最低（0.8%，SenseVoice 是 2.2%），中文夹英文每次都对，是唯一做到的。会输出标点。下载最大（约 880 MB，第一次安装要一两分钟）、出结果也最慢（一句短话约一秒），且只测过合成语音。完全在本机运行。"
+      },
+      "kind": "qwen3-asr",
+      "languages": [
+        "zh",
+        "en",
+        "yue",
+        "ja",
+        "ko"
+      ],
+      "download_size": 879346277,
+      "installed_size": 1000000000,
+      "min_app_version": "1.0.0",
+      "license": "Apache-2.0 (original Qwen3-ASR; see the model package)",
+      "changelog": "Qwen3-ASR 0.6B int8 ONNX export by Wasser1462 (sherpa-onnx, 2026-03-25), Silero VAD.",
+      "files": [
+        {
+          "name": "sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2",
+          "urls": [
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2"
+          ],
+          "sha256": "393f8a14e2f5fb96746aaab342997a40641001fbd5bf9592a080a8329178ee96",
+          "size": 878702423,
+          "extract": true
+        },
+        {
+          "name": "silero_vad.onnx",
+          "urls": [
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"
+          ],
+          "sha256": "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6",
+          "size": 643854
+        }
+      ],
+      "required_files": [
+        "conv_frontend.onnx",
+        "encoder.int8.onnx",
+        "decoder.int8.onnx",
+        "tokenizer/vocab.json",
+        "tokenizer/merges.txt",
+        "tokenizer/tokenizer_config.json",
+        "silero_vad.onnx"
+      ],
+      "platforms": [
+        "macos"
+      ],
+      "profile": {
+        "real_time_factor": 0.25,
+        "memory_mb": 1783,
+        "load_seconds": 1.4,
+        "punctuation": true
+      }
     },
     {
       "id": "ppocr-v5-mobile-zh-en",
@@ -231,7 +374,12 @@
       ],
       "platforms": [
         "macos"
-      ]
+      ],
+      "profile": {
+        "line_milliseconds": 30,
+        "memory_mb": 142,
+        "load_seconds": 0.1
+      }
     },
     {
       "id": "ppocr-v4-mobile-zh-en",
@@ -284,7 +432,12 @@
       ],
       "platforms": [
         "macos"
-      ]
+      ],
+      "profile": {
+        "line_milliseconds": 30,
+        "memory_mb": 113,
+        "load_seconds": 0.1
+      }
     }
   ],
   "_note_whisper": "Whisper large-v3-turbo is intentionally not listed yet: add it after its package file names and SHA-256 are confirmed (tools/manifest-tool.swift hash) and a runner exists."

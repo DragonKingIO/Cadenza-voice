@@ -83,6 +83,35 @@ The pipeline gives bounded extra time to local final decoding for long recording
 | East Asian languages (SenseVoice) | `sensevoice` | zh, en, ja, ko, yue | about 164 MB | Recommended default, verified on synthesized and speaker-to-microphone speech |
 | High-accuracy Chinese (FireRedASR2) | `fire-red-ctc` | zh, en | about 521 MB | Experimental. Installed and run with the real package (`model.int8.onnx`, `tokens.txt`, `silero_vad.onnx` as expected). On the synthesized-speech benchmark its character error rate matches SenseVoice (10.6% vs 10.0%), but it writes no punctuation, keeps spoken numbers as words, and decodes about four times slower. Use "Compare models with my voice" to check it on your own speech |
 | European languages (Parakeet TDT v3) | `parakeet-tdt` | 25 European languages | about 488 MB | Experimental |
+| Chinese with English words, fastest (Paraformer) | `paraformer` | zh, en | about 244 MB | Experimental. DAMO's Paraformer-large int8 from Hugging Face (file checksums published by the host). Fastest of the Chinese models, no punctuation. Installed and read with the real files. |
+| Most accurate in our tests, multilingual (Qwen3-ASR) | `qwen3-asr` | zh, en, yue, ja, ko and more | about 879 MB | Experimental. Qwen3-ASR 0.6B int8 (ONNX export by Wasser1462, sherpa-onnx release). Writes punctuation, about a second for a short sentence, the first install takes a minute or two. Installed and read with the real files. |
+
+The benchmark below was run with `--accuracy-benchmark --bench-quick` on the same 105 synthesized clips per model (several system voices, seven conditions; Chinese sentences, a few with English words), character error rate, lower is better. Synthesized speech is cleaner than a person, the mixed-language group is only a few sentences, and the numbers say nothing about other languages, so treat it as a comparison on identical audio, not a ranking for every voice:
+
+| Model | Overall | Chinese with English words | Time for the 105 clips (4 at a time) |
+|---|---|---|---|
+| Qwen3-ASR 0.6B int8 | 0.8% | 0.0% | 81 s |
+| Paraformer-large int8 | 1.8% | 20.0% | 9 s |
+| SenseVoice (recommended default) | 2.0–2.2% | 24.8% | fast |
+| FireRedASR2 CTC | 2.5% | 33.3% | 52 s |
+
+### Speed and memory (shown in the model list)
+
+Every built-in model carries a `profile` in the model list (`LocalModelProfile`), and the Settings page prints it under the model as one line, for example "Speed: fast · 10 s of speech takes about 0.6 s · about 594 MB of memory · with punctuation". The numbers come from `Cadenza --bench-speed --bench-model=<kind>:<folder>`, run once per model in its own process (memory that was used does not shrink): load time, then three timed runs of each of five synthesized sentences of 4.6–7.2 s after one warm-up, 2 threads, on one Apple silicon Mac. The speed word follows the real-time factor: under 0.10 fast, under 0.20 medium, otherwise slow. Memory is the whole app's resident size after loading and using the model, so it includes about 26 MB for the app itself.
+
+| Model | Load | Memory | 10 s of speech takes | Punctuation |
+|---|---|---|---|---|
+| Paraformer-large int8 | 0.5 s | 557 MB | 0.5 s | no |
+| SenseVoice int8 | 0.4 s | 594 MB | 0.6 s | yes |
+| Parakeet TDT v3 int8 (English clips) | 0.8 s | 1.2 GB | 1.2 s | yes |
+| Qwen3-ASR 0.6B int8 | 1.4 s | 1.8 GB | 2.4–2.8 s | yes |
+| FireRedASR2 CTC int8 | 0.7 s | 1.3 GB | 3.1 s | no (English comes out in capitals) |
+
+For the text recognition sets, one line of text takes about 30 ms (17–36 ms for the three test pictures) and the app holds about 142 MB with PP-OCRv5 and 113 MB with PP-OCRv4. Re-measure and update the `profile` when a model or the recognizer changes; the values are data, not behaviour, so they never affect how a model runs.
+
+Models that are not installed can be compared with `--bench-model=<kind>:<folder>` (repeatable), e.g. `--bench-model=paraformer:/path/to/folder`.
+`Cadenza --selftest-local-model-download=<id>` downloads one built-in speech model with the app's own downloader into a temporary folder,
+loads it, reads two synthesized sentences and deletes it again; with `CADENZA_MODEL_IMPORT=<file>,<file>` it installs files you already have.
 
 Automatic selection never depends on install order: among installed models for the language, the recommended one wins.
 A model the user picked explicitly ("Use") is always honoured. To compare models on the same sentences, run

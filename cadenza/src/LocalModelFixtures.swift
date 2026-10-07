@@ -63,6 +63,28 @@ enum LocalModelFixtures {
         let b = LocalModelCatalog.builtin[0]
         c("内置清单有效", LocalModelCatalog.builtin.allSatisfy { LocalModelCatalog.validate($0) == nil && LocalModelCatalog.downloadable($0) })
         c("语音识别页只有三个页签：识别设置并进了本地模型页，不再单独成页", EngineTab.allCases == [.local, .cloud, .system] && EngineTab(rawValue: "tuning") == nil && L10n.tr("engine.tab.tuning") == "engine.tab.tuning")
+        let speechIDs = ["paraformer-zh-int8", "qwen3-asr-06b-int8"]
+        let profiles = LocalModelCatalog.builtin.compactMap(\.profile)
+        c("模型资料：每个内置模型都写了速度、内存，语音模型有每秒倍速和标点，文字识别模型有每行毫秒", profiles.count == LocalModelCatalog.builtin.count && LocalModelCatalog.builtin.allSatisfy { e in e.profile.map { $0.memoryMB > 0 && $0.loadSeconds > 0 && (LocalModelCatalog.isOCR(e) ? $0.lineMilliseconds != nil && $0.realTimeFactor == nil : $0.realTimeFactor != nil && $0.punctuation != nil) } == true })
+        c("模型资料：速度档位 0.10 以下快、0.20 以下中等，其余较慢", LocalModelProfile(realTimeFactor: 0.058, memoryMB: 1, loadSeconds: 1).speedClass == .fast && LocalModelProfile(realTimeFactor: 0.117, memoryMB: 1, loadSeconds: 1).speedClass == .medium && LocalModelProfile(realTimeFactor: 0.305, memoryMB: 1, loadSeconds: 1).speedClass == .slow && LocalModelProfile(lineMilliseconds: 30, memoryMB: 1, loadSeconds: 1).speedClass == nil)
+        c("模型资料：内存显示 MB 或 GB", LocalModelProfile.memoryText(594) == "594 MB" && LocalModelProfile.memoryText(1783) == "1.8 GB")
+        c("模型资料：一行摘要包含速度、倍速、内存、标点（语音）或每行毫秒、内存（文字识别）", {
+            let speech = LocalModelCatalog.builtin[0].profile?.summary() ?? "", ocr = LocalModelCatalog.builtin.first(where: LocalModelCatalog.isOCR)?.profile?.summary() ?? ""
+            return !speech.contains("local.profile") && speech.contains("0.6") && !ocr.contains("local.profile") && ocr.contains("30") && !ocr.contains("0.6")
+        }())
+        c("模型资料：旧清单没有资料字段时照常读取，写出再读回不丢", {
+            guard let e = LocalModelCatalog.builtin.first, var raw = (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(e))) as? [String: Any] else { return false }
+            let roundTrip = (try? JSONDecoder().decode(LocalModelEntry.self, from: JSONEncoder().encode(e)))?.profile == e.profile
+            raw["profile"] = nil
+            let old = (try? JSONSerialization.data(withJSONObject: raw)).flatMap { try? JSONDecoder().decode(LocalModelEntry.self, from: $0) }
+            return roundTrip && old != nil && old?.profile == nil
+        }())
+        c("内置清单：新增的两个语音模型存在、可用，推荐默认仍是 SenseVoice", speechIDs.allSatisfy { id in LocalModelCatalog.builtin.first { $0.id == id }.map { LocalModelCatalog.usable($0) && LocalModelCatalog.validate($0) == nil } == true } && LocalModelCatalog.recommendedID == "sensevoice-multilingual-int8")
+        c("内置清单：不需要解压的条目，必需文件都能由下载的文件得到", LocalModelCatalog.builtin.filter { e in !e.files.contains { $0.extract } }.allSatisfy { e in Set(e.requiredFiles).isSubset(of: Set(e.files.map(\.name))) })
+        if LocalTranscriberLoader.supported {
+            let empty = tempDir("empty-model"); defer { try? FileManager.default.removeItem(at: empty) }
+            c("新增语音模型：文件缺失时加载失败而不是崩溃", speechIDs.allSatisfy { id in LocalModelCatalog.builtin.first { $0.id == id }.map { (try? LocalTranscriberLoader.load(dir: empty, entry: $0)) == nil } == true })
+        }
         c("内置清单：语音模型和文字识别模型各归各的，互不混入", LocalModelCatalog.builtin.filter(LocalModelCatalog.isOCR).allSatisfy { !LocalModelCatalog.usable($0) } && LocalModelCatalog.builtin.filter { !LocalModelCatalog.isOCR($0) }.allSatisfy { LocalModelCatalog.usable($0) } && LocalModelCatalog.builtin.contains(where: LocalModelCatalog.isOCR))
         let parakeet = LocalModelCatalog.builtin.first { $0.kind == "parakeet-tdt" }
         c("内置清单含欧洲语言包，覆盖德语/法语/西语/英语，不含中日韩", parakeet.map { ["de", "fr", "es", "en"].allSatisfy($0.languages.contains) && !$0.languages.contains("zh") && $0.languages.count == 25 } == true)
@@ -745,6 +767,55 @@ enum LocalModelFixtures {
             }
         }
         return 0
+    }
+
+    /// `Cadenza --selftest-local-model-download=<id>`: downloads a built-in model with the app's own downloader into a temporary
+    /// folder (the size is in the model list), checks and loads it, reads two synthesized sentences and deletes it again.
+    static func realDownload(id: String) -> Int32 {
+        guard LocalTranscriberLoader.supported else { print("[model-download] this build has no inference library"); return 2 }
+        guard let entry = LocalModelCatalog.builtin.first(where: { $0.id == id && !LocalModelCatalog.isOCR($0) }) else {
+            print("[model-download] unknown speech model \(id); built in: " + LocalModelCatalog.builtin.filter { !LocalModelCatalog.isOCR($0) }.map(\.id).joined(separator: ", ")); return 2
+        }
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("model-download-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let center = LocalModelCenter(root: root)
+        center.validator = { dir, e in (try? LocalTranscriberLoader.load(dir: dir, entry: e)) != nil }
+        // CADENZA_MODEL_IMPORT=<file>,<file>: use files that are already on disk (they still go through the same checks and
+        // installation as a download) instead of downloading them again.
+        if let list = ProcessInfo.processInfo.environment["CADENZA_MODEL_IMPORT"] {
+            var imported: Result<LocalModelEntry, Error>?
+            center.importFiles(list.split(separator: ",").map { URL(fileURLWithPath: String($0)) }) { imported = $0 }
+            while imported == nil { RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.1)) }
+            if case .failure(let error) = imported { print("[model-download] FAIL import: \(error)"); return 1 }
+        } else { center.download(entry) }
+        let started = Date()
+        var last = -1, lastState = ""
+        loop: while Date().timeIntervalSince(started) < 3600 {
+            RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.1))
+            let state = center.state(entry.id)
+            let name = "\(state)".prefix(14); if String(name) != lastState, !"\(state)".hasPrefix("downloading") { lastState = String(name); print("[model-download] \(Int(Date().timeIntervalSince(started))) s: \(state)") }
+            switch state {
+            case .installed: break loop
+            case .failed(let message): print("[model-download] FAIL download: \(message)"); return 1
+            case .downloading(let done, let total): let p = Int(Double(done) / Double(max(total, 1)) * 100); if p / 25 != last / 25 { print("[model-download] downloading \(p)%"); last = p }
+            default: break
+            }
+        }
+        guard center.isReady(entry.id), let dir = center.modelDir(entry.id) else { print("[model-download] FAIL: not installed after \(Int(Date().timeIntervalSince(started))) s, state \(center.state(entry.id))"); return 1 }
+        print("[model-download] installed in \(Int(Date().timeIntervalSince(started))) s")
+        guard let t = try? LocalTranscriberLoader.load(dir: dir, entry: entry) else { print("[model-download] FAIL: installed but cannot be loaded"); return 1 }
+        var failures = 0
+        for (label, voice, text, expect) in [("zh", "Tingting", "今天天气很好，我们一起去公园散步。", "天气"), ("en", nil, "Hello world. This is a local speech recognition test.", "hello")] as [(String, String?, String, String)] {
+            guard let clip = synthesize(text, voice: voice) else { print("[model-download] SKIP \(label): no system voice"); continue }
+            let s = ProcessInfo.processInfo.systemUptime
+            let out = LocalDecoder.transcribe(clip, with: t)
+            let ok = out.lowercased().contains(expect)
+            if !ok { failures += 1 }
+            print("[model-download] \(ok ? "PASS" : "FAIL") \(label) \(Int((ProcessInfo.processInfo.systemUptime - s) * 1000)) ms: \(out)")
+        }
+        center.delete(entry.id)
+        print("[model-download] deleted: \(center.state(entry.id) == .notInstalled)")
+        return failures == 0 ? 0 : 1
     }
 
     static func realModel() -> Int32 {

@@ -1334,3 +1334,13 @@
 "ocr.local.footer" = "These models run on this Mac and the picture never leaves it. Download one once and it works offline. If it cannot be used, Apple Vision reads the text instead and tells you why.";
 
 "provider.credentialGuide" = "View setup tutorial";
+"local.profile.speed" = "Speed: %@";
+"local.profile.speed.fast" = "fast";
+"local.profile.speed.medium" = "medium";
+"local.profile.speed.slow" = "slow";
+"local.profile.rtf" = "10 s of speech takes about %@ s";
+"local.profile.line" = "about %d ms per line of text";
+"local.profile.memory" = "about %@ of memory";
+"local.profile.punct.yes" = "with punctuation";
+"local.profile.punct.no" = "no punctuation";
+"local.profile.footnote" = "Speed, memory and punctuation were measured by the developers on one Mac with synthesized speech (2 threads), so yours will differ. Memory is what the app holds while the model is loaded and in use.";

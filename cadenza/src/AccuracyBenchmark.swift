@@ -147,8 +147,16 @@ enum AccuracyBenchmark {
     static func localEngines() -> [Engine] {
         guard LocalTranscriberLoader.supported else { return [] }
         var engines: [Engine] = []
-        for entry in LocalModelCenter.shared.installedEntries {
-            guard let dir = LocalModelCenter.shared.modelDir(entry.id) else { continue }
+        var candidates: [(entry: LocalModelEntry, dir: URL)] = LocalModelCenter.shared.installedEntries.compactMap { e in LocalModelCenter.shared.modelDir(e.id).map { (e, $0) } }
+        // Models that are not installed in the app can be compared too: `--bench-model=<kind>:<folder>` (repeatable), e.g.
+        // `--bench-model=paraformer:/path/to/folder`. The folder holds the files the kind needs, as in the model list.
+        for argument in CommandLine.arguments where argument.hasPrefix("--bench-model=") {
+            let parts = argument.dropFirst("--bench-model=".count).split(separator: ":", maxSplits: 1).map(String.init)
+            guard parts.count == 2, LocalModelCatalog.supportedKinds.contains(parts[0]) else { print("[bench] ignored \(argument): expected --bench-model=<kind>:<folder>"); continue }
+            let entry = LocalModelEntry(id: "extra-" + parts[0], version: "0", displayName: [:], summary: [:], kind: parts[0], languages: [], downloadSize: 1, installedSize: 1, minAppVersion: "1.0.0", license: "", changelog: "", files: [], requiredFiles: [])
+            candidates.append((entry, URL(fileURLWithPath: parts[1])))
+        }
+        for (entry, dir) in candidates {
             var variants: [(String, LocalRecognitionOptions)] = [("", LocalRecognitionOptions())]
             if entry.kind == "sensevoice" { var zh = LocalRecognitionOptions(); zh.language = "zh"; variants = [("auto", LocalRecognitionOptions()), ("zh", zh)] }
             if let t = value("--bench-vad").flatMap(Float.init) { variants = variants.map { var o = $0.1; o.vadThreshold = t; return ($0.0, o) } }
@@ -283,6 +291,62 @@ enum AccuracyBenchmark {
         if let out = value("--bench-out") {
             let json: [[String: Any]] = rows.map { ["engine": $0.engine, "condition": $0.condition.rawValue, "category": $0.category, "reference": $0.text, "hypothesis": $0.hypothesis, "cer": $0.cer] }
             if let data = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted]) { try? data.write(to: URL(fileURLWithPath: out)) }
+        }
+        return 0
+    }
+}
+
+// MARK: - Speed and memory (`--bench-speed --bench-model=<kind>:<folder>`)
+
+/// Measures how long a model takes to load, how long it takes to answer a short sentence and how much memory the process holds,
+/// so the model list can say it. Run once per model, each in its own process, because memory that was used does not shrink.
+enum ModelSpeedBenchmark {
+    static func residentMB() -> Int {
+        var info = mach_task_basic_info()
+        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size / MemoryLayout<natural_t>.size)
+        let status = withUnsafeMutablePointer(to: &info) { $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count) } }
+        return status == KERN_SUCCESS ? Int(info.resident_size / 1_048_576) : -1
+    }
+
+    static let chinese = ["我们明天上午十点在会议室开会，请提前十分钟到，带上最新的报告。", "我想只用本地识别，不想用云端，因为我的录音只想留在这台电脑上。", "晚上我们一起去吃火锅怎么样，顺便聊一聊下个月的安排。"]
+    static let english = ["Hello world. This is a local speech recognition test, please check the result carefully.", "Tomorrow morning at ten we meet in the conference room, please bring the latest report."]
+
+    static func run() -> Int32 {
+        guard LocalTranscriberLoader.supported else { print("[speed] no inference library in this build"); return 2 }
+        let args = CommandLine.arguments.filter { $0.hasPrefix("--bench-model=") }
+        guard args.count == 1, let spec = args.first?.dropFirst("--bench-model=".count).split(separator: ":", maxSplits: 1).map(String.init), spec.count == 2 else {
+            print("[speed] expected exactly one --bench-model=<kind>:<folder>"); return 2
+        }
+        let entry = LocalModelEntry(id: "speed-" + spec[0], version: "0", displayName: [:], summary: [:], kind: spec[0], languages: [], downloadSize: 1, installedSize: 1, minAppVersion: "1.0.0", license: "", changelog: "", files: [], requiredFiles: [])
+        let dir = URL(fileURLWithPath: spec[1])
+        let before = residentMB()
+        let loadStart = ProcessInfo.processInfo.systemUptime
+        guard let t = try? LocalTranscriberLoader.load(dir: dir, entry: entry) else { print("[speed] cannot load \(spec[0]) from \(spec[1])"); return 1 }
+        let load = ProcessInfo.processInfo.systemUptime - loadStart
+        let clips: [(String, [Float])] = (chinese.map { ("zh", $0) } + english.map { ("en", $0) }).compactMap { language, text in
+            AccuracyBenchmark.speech(text, voice: language == "zh" ? "Tingting" : "Samantha", rate: nil).map { (language, $0) }
+        }
+        guard !clips.isEmpty else { print("[speed] no system voice available"); return 2 }
+        _ = LocalDecoder.transcribe(clips[0].1, with: t)             // warm-up: the first answer pays one-time setup
+        var rows: [(String, Double, Double, String)] = []
+        for (language, samples) in clips {
+            var times: [Double] = [], text = ""
+            for _ in 0..<3 {
+                let s = ProcessInfo.processInfo.systemUptime
+                text = LocalDecoder.transcribe(samples, with: t)
+                times.append(ProcessInfo.processInfo.systemUptime - s)
+            }
+            rows.append((language, Double(samples.count) / 16000, times.reduce(0, +) / Double(times.count), text))
+        }
+        let after = residentMB()
+        print("[speed] kind=\(spec[0]) load=\(String(format: "%.1f", load)) s memory=\(after) MB (before load \(before) MB, +\(after - before) MB)")
+        for r in rows { print("[speed]   \(r.0) audio=\(String(format: "%.1f", r.1)) s decode=\(Int(r.2 * 1000)) ms rtf=\(String(format: "%.3f", r.2 / r.1)) text=\(r.3)") }
+        for language in ["zh", "en"] {
+            let own = rows.filter { $0.0 == language }
+            guard !own.isEmpty else { continue }
+            let audio = own.map(\.1).reduce(0, +) / Double(own.count), decode = own.map(\.2).reduce(0, +) / Double(own.count)
+            let punctuated = own.filter { $0.3.contains(where: { "，。,.？?！!".contains($0) }) }.count
+            print("[speed] summary \(language): mean audio \(String(format: "%.1f", audio)) s, mean decode \(Int(decode * 1000)) ms, rtf \(String(format: "%.3f", decode / audio)), punctuation in \(punctuated)/\(own.count)")
         }
         return 0
     }

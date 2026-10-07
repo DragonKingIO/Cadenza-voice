@@ -129,6 +129,7 @@ struct LocalModelRow: View {
                         if entry.id == LocalModelCatalog.recommendedID { Text(L10n.tr("local.recommended")).font(.caption.bold()).padding(.horizontal, 6).padding(.vertical, 1).background(Color.green.opacity(0.18), in: Capsule()).foregroundStyle(Color.green) }
                     }
                     Text(Self.languageList(entry.languages) + " · " + Self.mb(entry.downloadSize)).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                    if let profile = entry.profile { Text(profile.summary()).font(.caption).foregroundStyle(.secondary).lineLimit(2).fixedSize(horizontal: false, vertical: true) }
                 }
                 Spacer(minLength: 8)
                 compactTrailing(state)
@@ -158,6 +159,7 @@ struct LocalModelRow: View {
             }
             Text(entry.detail()).font(.callout).foregroundStyle(.secondary)
             Text(L10n.format("local.meta", Self.languageList(entry.languages), Self.mb(entry.downloadSize), Self.mb(entry.installedSize))).font(.caption).foregroundStyle(.tertiary)
+            if let profile = entry.profile { Text(profile.summary()).font(.caption).foregroundStyle(.secondary) }
             if !usable { Text(L10n.tr("local.needsAppUpdate")).font(.callout).foregroundStyle(.orange) }
             content(state)
             if !testMessage.isEmpty {Text(testMessage).font(.callout).foregroundStyle(.primary)}
