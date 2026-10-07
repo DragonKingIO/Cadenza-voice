@@ -18,6 +18,12 @@ enum DesignTokens {
     static let capsuleSize = NSSize(width: 320, height: 56)
     static let accent=adaptive((161,215,186),jade)
     static let hudBackground=adaptive((32,36,35),.white)
+    /// Tint for the glass bar. Dark mode keeps a dark tint; light mode only a light white one, so the glass stays see-through
+    /// instead of turning into a grey or white slab.
+    static let hudBackgroundDark=NSColor(srgbRed:32/255,green:36/255,blue:35/255,alpha:1)
+    static let hudGlassTintDark=hudBackgroundDark
+    static let hudGlassTintLight=NSColor.white.withAlphaComponent(0.45)
+    static let hudGlassTint=adaptive((32,36,35),NSColor.white.withAlphaComponent(0.45))
     static let outline=NSColor(name:nil){appearance in
         let dark=appearance.bestMatch(from:[.aqua,.darkAqua]) == .darkAqua
         if AppearanceController.highContrast {return dark ? NSColor(srgbRed:0.55,green:0.60,blue:0.56,alpha:1):NSColor(srgbRed:0.40,green:0.44,blue:0.41,alpha:1)}
@@ -216,12 +222,17 @@ final class WaveformView: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
-        ctx.setFillColor(DesignTokens.accent.cgColor)
         let n = levels.count
         let slot = bounds.width / CGFloat(n)
-        let barW = max(2, slot * 0.42)
+        let barW = max(2.4, slot * 0.5)
+        let centre = CGFloat(n - 1) / 2
+        // Decided from the app's appearance, like the bar behind it, so the wave is never light-on-light or dark-on-dark.
+        let accent = NSApp.effectiveAppearance.bestMatch(from:[.darkAqua,.aqua]) == .darkAqua ? NSColor(srgbRed:161/255,green:215/255,blue:186/255,alpha:1):DesignTokens.jade
         for (i, v) in levels.enumerated() {
-            let h = max(2, CGFloat(v) * bounds.height * 0.92)
+            // Bars fade toward both ends, so the wave looks like it rises out of the glass instead of ending abruptly.
+            let fade = 1 - 0.35 * abs(CGFloat(i) - centre) / centre
+            ctx.setFillColor(accent.withAlphaComponent(fade).cgColor)
+            let h = max(barW, CGFloat(v) * bounds.height * 0.92)
             let rect = NSRect(x: CGFloat(i) * slot + (slot - barW) / 2, y: bounds.midY - h / 2, width: barW, height: h)
             NSBezierPath(roundedRect: rect, xRadius: barW / 2, yRadius: barW / 2).fill()
         }
@@ -298,9 +309,20 @@ private final class CapsuleContentView:NSView {
     var onHover:((Bool)->Void)?
     private var tracking:NSTrackingArea?
     override var wantsUpdateLayer:Bool {true}
+    /// The glass behind this view. Its tint is set here from the app's appearance: a dynamic colour handed over once can
+    /// stay on the value it had when the bar was built, which left a light tint (and an invisible wave) after switching to dark.
+    weak var glassHost:NSView?
     static let glassSupported:Bool = { if #available(macOS 26.0, *) { return true }; return false }()
     override func updateLayer(){effectiveAppearance.performAsCurrentDrawingAppearance {
-        if Self.glassSupported && !AppearanceController.highContrast { layer?.backgroundColor=NSColor.clear.cgColor;layer?.borderWidth=0 } // 玻璃材质承担背景
+        if Self.glassSupported && !AppearanceController.highContrast {
+            // The glass carries the background. In light mode a hairline white highlight gives it a defined, glassy edge.
+            let dark=NSApp.effectiveAppearance.bestMatch(from:[.darkAqua,.aqua]) == .darkAqua
+            if #available(macOS 26.0, *), let glass=glassHost as? NSGlassEffectView { glass.tintColor=dark ? DesignTokens.hudGlassTintDark:DesignTokens.hudGlassTintLight }
+            // Dark mode matches the preview in Settings: a dark bar with a mint wave. The glass alone turned bright over a light
+            // desktop and hid the wave. Light mode stays see-through glass with a hairline highlight.
+            layer?.backgroundColor=dark ? DesignTokens.hudBackgroundDark.withAlphaComponent(0.92).cgColor:NSColor.clear.cgColor
+            layer?.borderColor=NSColor.white.withAlphaComponent(dark ? 0.12:0.6).cgColor;layer?.borderWidth=dark ? 1:0.5
+        }
         else { layer?.backgroundColor=DesignTokens.hudBackground.cgColor;layer?.borderColor=DesignTokens.outline.cgColor;layer?.borderWidth=AppearanceController.highContrast ? 1.5:1 }
     }}
     override func viewDidChangeEffectiveAppearance(){super.viewDidChangeEffectiveAppearance();needsDisplay=true}
@@ -489,7 +511,7 @@ final class CapsuleWindowController:NSObject {
         }
         mode=next;return changed
     }
-    private func present(){guard !suppressPresentation,let panel=panel else{return};position();panel.alphaValue=1;panel.orderFrontRegardless()}
+    private func present(){guard !suppressPresentation,let panel=panel else{return};content?.needsDisplay=true;position();panel.alphaValue=1;panel.orderFrontRegardless()}
     private func position(){guard let panel=panel,let screen=anchorScreen ?? NSScreen.main else{return};panel.setFrameOrigin(RecordingHUDPlacement.origin(size:panel.frame.size,frame:screen.frame,visible:screen.visibleFrame))}
     @objc private func performAction(){if mode == .record {onStop?()} else if mode == .recognize {onCancel?()} else if mode == .error {switch action {case .retry:onRetry?();case .result:onOpenResult?();case .privacy:onPrivacy?();case .targetHelp:onTargetHelp?()}}}
     @objc private func cancel(){onCancel?()}
@@ -503,7 +525,7 @@ final class CapsuleWindowController:NSObject {
         let root=CapsuleRootView(frame:NSRect(origin:.zero,size:waveSize));root.onHover={[weak self] hover in self?.hovered=hover;self?.layoutWave()}
         var pill:NSView=c
         if #available(macOS 26.0, *), !AppearanceController.highContrast {
-            let glass=NSGlassEffectView(frame:NSRect(origin:.zero,size:waveSize));glass.cornerRadius=20;glass.tintColor=DesignTokens.hudBackground;glass.contentView=c
+            let glass=NSGlassEffectView(frame:NSRect(origin:.zero,size:waveSize));glass.cornerRadius=20;glass.tintColor=DesignTokens.hudGlassTint;glass.contentView=c;c.glassHost=glass
             pill=glass
         }
         pill.frame=root.bounds;pill.autoresizingMask=[];root.addSubview(pill);chrome=pill
