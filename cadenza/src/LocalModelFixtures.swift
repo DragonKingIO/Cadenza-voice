@@ -322,7 +322,7 @@ enum LocalModelFixtures {
         // 导入：用户自己下载的包，按 SHA256 匹配后走同一套安装
         var imported: Result<LocalModelEntry, Error>?
         center.importFile(a1.url) { imported = $0 }
-        c("导入匹配的包并完成安装", wait(30) { if case .installed = center.state(e1.id) { return true }; return false } && (try? imported?.get().id) == e1.id)
+        c("导入匹配的包并完成安装", wait(30) { if case .installed = center.state(e1.id), imported != nil { return true }; return false } && (try? imported?.get().id) == e1.id)
         center.delete(e1.id)
         let hitsBefore = sA1.ranges.count + sV.ranges.count
         var multi: Result<LocalModelEntry, Error>?

@@ -21,7 +21,9 @@ STAGED="build/stage.noindex/Cadenza.app.zip"
 [ -f "$STAGED" ] || { echo "ERROR: the staged package is missing"; exit 3; }
 
 OUT="build/release"
-NAME="Cadenza-$VERSION-macos-$(uname -m).zip"
+ARCHS="${CADENZA_ARCHS:-arm64 x86_64}"
+if [ "$ARCHS" = "arm64 x86_64" ]; then LABEL="universal"; else LABEL="${ARCHS// /-}"; fi
+NAME="Cadenza-$VERSION-macos-$LABEL.zip"
 mkdir -p "$OUT"
 cp "$STAGED" "$OUT/$NAME"
 ( cd "$OUT" && shasum -a 256 "$NAME" > SHA256SUMS.txt && shasum -a 256 -c SHA256SUMS.txt )

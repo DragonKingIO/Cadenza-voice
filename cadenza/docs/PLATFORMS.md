@@ -1,6 +1,6 @@
 # Platforms
 
-**Cadenza runs on macOS 26 or later, on Apple silicon. That is the only supported platform**, and the project does not plan
+**Cadenza runs on macOS 14 or later, on Apple silicon and Intel Macs. macOS is the only supported platform**, and the project does not plan
 to add Windows or Linux itself in the near term.
 
 ## Why only macOS
