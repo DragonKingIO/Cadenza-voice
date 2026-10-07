@@ -22,6 +22,10 @@ Models are downloaded by the user inside the app and are not part of this reposi
 
 Like the speech models, the PP-OCR text recognition models are downloaded by the user inside the app and are not part of this repository or the app bundle. They are made by the [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) project and its converters; each package keeps its own license, which you should read before redistributing a model or building a product on it. The headers `tools/fetch-sherpa-onnx.sh` fetches for onnxruntime (MIT) are interface declarations used to call the library that is already linked; they are downloaded, SHA-256 checked, and not committed.
 
+## Recording bar character animations
+
+The four short animations in `resources/character/` (`write`, `think`, `alert`, `error`) are shown instead of the waveform when the user chooses the character style in Settings. They were made with [Dots Lab](https://dots-lab.pages.dev/) by Guillaume ([@guillaume_rygn](https://x.com/guillaume_rygn)) and are included with the author's permission. The Dots Lab page states no license, so these images are **not** covered by this project's MIT license: do not reuse them outside this project without asking the author.
+
 ## Screenshot toolbar icons
 
 The 39 toolbar and overlay icons (`resources/shot-*.svg`) were drawn for this project and are covered by the project license. They are not copied from or traced over any other application's icons or from any icon library.

@@ -101,7 +101,7 @@ cp resources/brand/cadenza-menubar*.png "$APP/Contents/Resources/"
 cp resources/brand/cadenza-icon-128.png "$APP/Contents/Resources/"
 cp resources/brand/cadenza-logo.svg "$APP/Contents/Resources/"
 cp resources/*.svg "$APP/Contents/Resources/"
-# Optional character artwork (kept out of git until its license is confirmed); the app falls back to the waveform without it.
+# Character animations for the recording bar (see THIRD_PARTY_NOTICES.md); the app falls back to the waveform if the folder is missing.
 # Privacy notice and terms shown inside the app (the repository copies stay the source of truth).
 rm -rf "$APP/Contents/Resources/legal"; mkdir -p "$APP/Contents/Resources/legal"
 cp PRIVACY.md PRIVACY.zh-CN.md TERMS.md TERMS.zh-CN.md "$APP/Contents/Resources/legal/"

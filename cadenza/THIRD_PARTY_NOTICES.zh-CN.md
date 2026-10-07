@@ -20,6 +20,10 @@ Apple Speech 使用系统 Speech 框架。
 
 和语音模型一样，PP-OCR 文字识别模型由用户在应用里自行下载，不属于本仓库，也不在应用包里。它们由 [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) 项目及其转换者制作；每个模型包带有自己的许可证，再分发模型或基于它做产品之前请先阅读。`tools/fetch-sherpa-onnx.sh` 获取的 onnxruntime（MIT）头文件只是接口声明，用来调用已经链接的库；它们会被下载并做 SHA-256 校验，不提交进仓库。
 
+## 录音条角色动画
+
+`resources/character/` 里的四个短动画（`write`、`think`、`alert`、`error`）在设置里选择“角色”样式时代替声波显示。它们由 Guillaume（[@guillaume_rygn](https://x.com/guillaume_rygn)）用 [Dots Lab](https://dots-lab.pages.dev/) 制作，经作者同意收录。Dots Lab 页面没有声明许可协议，所以这些图片**不**适用本项目的 MIT 许可证：未经作者许可，请勿在本项目之外使用。
+
 ## 截图工具栏图标
 
 39 个工具栏与浮层图标（`resources/shot-*.svg`）为本项目原创绘制，适用本项目许可证；并非复制或描摹其他应用或图标库的图标。
