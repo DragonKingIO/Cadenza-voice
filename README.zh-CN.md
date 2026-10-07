@@ -58,7 +58,7 @@ git clone https://github.com/DragonKingIO/Cadenza-voice.git && cd Cadenza-voice
 
 ## 状态
 
-早期预览。维护者每天都在用（Apple 芯片、macOS 26），但还没在很多环境里测试过。Intel Mac 以及 macOS 14、15 在构建上已支持，但还没有在真机上验证；也没有验证所有应用的兼容性。SenseVoice 本地识别有基准测试，也在日常使用。云端服务里，讯飞和 Deepgram 用合成语音联网测试过，其余只用假的网络层测试过。服务商名称只是描述，不代表背书，随言与它们没有关联。只支持 macOS（[原因](cadenza/docs/PLATFORMS.md)，英文），欢迎另起项目移植。
+早期预览。维护者每天都在用（Apple 芯片、macOS 26），但还没在很多环境里测试过。安装包由 CI 在 GitHub 的机器上测试：Apple 芯片的 macOS 14、15、26，以及 Intel 的 macOS 15、26（跑全部自测套件）；但还没有人在 Intel Mac 或 macOS 14、15 上亲手用过；也没有验证所有应用的兼容性。SenseVoice 本地识别有基准测试，也在日常使用。云端服务里，讯飞和 Deepgram 用合成语音联网测试过，其余只用假的网络层测试过。服务商名称只是描述，不代表背书，随言与它们没有关联。只支持 macOS（[原因](cadenza/docs/PLATFORMS.md)，英文），欢迎另起项目移植。
 
 ## 参与贡献
 

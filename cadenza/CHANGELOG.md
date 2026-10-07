@@ -7,6 +7,9 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
+### Compatibility
+- CI now runs the package on Apple silicon with macOS 14, 15 and 26 and on Intel with macOS 15 and 26, so the claims about Intel and older systems are checked on real systems at every change. That run found that Vision's QR code detector finds nothing on macOS 14 in that environment; QR codes now fall back to Core Image's detector when Vision finds none.
+
 ### Added
 - **Tidy the text** (Settings → Voice input). Recognized text can be cleaned before it is inserted: hesitation sounds (呃, 嗯, um, uh), stuttered repeats ("我我我想", "I I think"), stray spaces and doubled marks. *Standard* is on by default; *Thorough* also drops spoken fillers that only fill a pause ("那个，", "然后，", "you know,"); *Off* inserts exactly what the recognizer wrote. Long text can optionally be split into paragraphs (off by default, because a line break typed into a chat box can send the message). It is a fixed set of rules on this Mac, with no model and no network. Words that belong to a sentence are kept: 额度, 呃逆, "err on the side", a 嗯 that is a whole answer, links, e-mail addresses and `code`.
 
