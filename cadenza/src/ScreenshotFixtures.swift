@@ -816,9 +816,9 @@ enum ScreenshotFixtures {
         var snapshot = StatusMenuSnapshot(); snapshot.screenshotShortcut = "⌃⇧A"; snapshot.ocrShortcut = "⌃⇧S"
         let menu = NSMenu(); StatusMenuController.rebuild(menu, s: snapshot, target: NSObject())
         let item = menu.items.first { $0.identifier?.rawValue == "screenshot" }
-        c("状态栏菜单：有截图项并显示快捷键", item != nil && item?.subtitle == "⌃⇧A" && item?.isEnabled == true)
+        c("状态栏菜单：有截图项并显示快捷键", item != nil && item?.subtitleText == "⌃⇧A" && item?.isEnabled == true)
         let more = menu.items.first { $0.identifier?.rawValue == "screenshot.more" }?.submenu
-        c("状态栏菜单：更多截图方式含全屏、延时 3/5/10 秒、重复上次区域、直接识字", more?.items.contains { $0.identifier?.rawValue == "screenshot.full" } == true && more?.items.first { $0.identifier?.rawValue == "screenshot.delay" }?.submenu?.items.map(\.tag) == [3, 5, 10] && more?.items.contains { $0.identifier?.rawValue == "screenshot.repeat" } == true && more?.items.first { $0.identifier?.rawValue == "screenshot.ocr" }?.subtitle == "⌃⇧S")
+        c("状态栏菜单：更多截图方式含全屏、延时 3/5/10 秒、重复上次区域、直接识字", more?.items.contains { $0.identifier?.rawValue == "screenshot.full" } == true && more?.items.first { $0.identifier?.rawValue == "screenshot.delay" }?.submenu?.items.map(\.tag) == [3, 5, 10] && more?.items.contains { $0.identifier?.rawValue == "screenshot.repeat" } == true && more?.items.first { $0.identifier?.rawValue == "screenshot.ocr" }?.subtitleText == "⌃⇧S")
         c("状态栏菜单：没有贴图时不显示贴图菜单", !menu.items.contains { $0.identifier?.rawValue == "pins" })
         snapshot.pinCount = 2; snapshot.pinsClickThrough = true
         let pinMenu = NSMenu(); StatusMenuController.rebuild(pinMenu, s: snapshot, target: NSObject())

@@ -218,7 +218,7 @@ enum PrivacyFixtures {
         var snapshot = menuState; snapshot.engines = localEntries; snapshot.engine = localSelected
         StatusMenuController.rebuild(menuRoot, s: snapshot, target: NSObject())
         let engineItem = menuRoot.items.first { $0.identifier?.rawValue == "engine" }
-        c("菜单：识别引擎副标题显示模型名而不是“本地”", engineItem?.subtitle == sample.name())
+        c("菜单：识别引擎副标题显示模型名而不是“本地”", engineItem?.subtitleText == sample.name())
         c("菜单：分组标题是不可点的区段标题", engineItem?.submenu?.items.first?.isSectionHeader == true)
         c("菜单：有关于项", menuRoot.items.contains { $0.identifier?.rawValue == "about" })
 

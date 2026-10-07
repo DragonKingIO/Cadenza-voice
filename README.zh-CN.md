@@ -16,8 +16,8 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/license-MIT-185c53" alt="许可证：MIT">
-  <img src="https://img.shields.io/badge/macOS-26%2B-185c53" alt="macOS 26 及以上">
-  <img src="https://img.shields.io/badge/Apple%20silicon-only-185c53" alt="仅限 Apple 芯片">
+  <img src="https://img.shields.io/badge/macOS-14%2B-185c53" alt="macOS 14 及以上">
+  <img src="https://img.shields.io/badge/Apple%20silicon%20%2B%20Intel-185c53" alt="Apple 芯片与 Intel">
   <img src="https://img.shields.io/badge/status-early%20preview-3fa597" alt="状态：早期预览">
 </p>
 
@@ -36,7 +36,7 @@
 
 ## 开始使用
 
-目前还没有发布版本，需要自己构建，几分钟即可。要求 macOS 26 及以上、Apple 芯片，并安装 Xcode 命令行工具（`xcode-select --install`）。
+可以[下载最新发布版](https://github.com/DragonKingIO/Cadenza-voice/releases/latest)，也可以自己构建，几分钟即可。构建要求 macOS 14 及以上（Apple 芯片或 Intel 都行），并安装 Xcode 命令行工具（`xcode-select --install`）；构建出的包在两种芯片上都能运行。
 
 ```sh
 git clone https://github.com/DragonKingIO/Cadenza-voice.git && cd Cadenza-voice
@@ -58,7 +58,7 @@ git clone https://github.com/DragonKingIO/Cadenza-voice.git && cd Cadenza-voice
 
 ## 状态
 
-早期预览。维护者每天都在用，但还没在很多环境里测试过，也没有验证所有应用的兼容性。SenseVoice 本地识别有基准测试，也在日常使用。云端服务里，讯飞和 Deepgram 用合成语音联网测试过，其余只用假的网络层测试过。服务商名称只是描述，不代表背书，随言与它们没有关联。只支持 macOS（[原因](cadenza/docs/PLATFORMS.md)，英文），欢迎另起项目移植。
+早期预览。维护者每天都在用（Apple 芯片、macOS 26），但还没在很多环境里测试过。Intel Mac 以及 macOS 14、15 在构建上已支持，但还没有在真机上验证；也没有验证所有应用的兼容性。SenseVoice 本地识别有基准测试，也在日常使用。云端服务里，讯飞和 Deepgram 用合成语音联网测试过，其余只用假的网络层测试过。服务商名称只是描述，不代表背书，随言与它们没有关联。只支持 macOS（[原因](cadenza/docs/PLATFORMS.md)，英文），欢迎另起项目移植。
 
 ## 参与贡献
 

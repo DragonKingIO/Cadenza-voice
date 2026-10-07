@@ -71,7 +71,7 @@ enum StatusMenuController {
         menu.addItem(.separator())
         func submenu(_ id:String,_ title:String,_ entries:[StatusMenuSnapshot.Entry],_ selected:String,_ selector:String)->NSMenu {
             let top=item(id,title),sub=NSMenu();sub.autoenablesItems=false
-            top.subtitle=entries.first{$0.value==selected}?.title ?? L10n.tr("menu.unavailable")
+            top.setSubtitle(entries.first{$0.value==selected}?.title ?? L10n.tr("menu.unavailable"))
             for entry in entries {
                 if entry.header {sub.addItem(NSMenuItem.sectionHeader(title:entry.title));continue}
                 let label=entry.title+(entry.available ? "":L10n.tr(id == "engine" ? "menu.notConfigured":"menu.unavailableSuffix"))
@@ -87,7 +87,7 @@ enum StatusMenuController {
         menu.addItem(.separator())
         menu.addItem(item("copy",L10n.tr("menu.copyLast"),"copyLastRecognition",enabled:s.hasResult && !s.busy))
         let shot=item("screenshot",L10n.tr("menu.screenshot"),"startScreenshot",enabled:!s.busy)
-        if !s.screenshotShortcut.isEmpty {shot.subtitle=s.screenshotShortcut}
+        if !s.screenshotShortcut.isEmpty {shot.setSubtitle(s.screenshotShortcut)}
         menu.addItem(shot)
         // 更多截图方式：全屏、延时、重复上次区域、直接识字
         let more=item("screenshot.more",L10n.tr("menu.screenshot.more")),moreMenu=NSMenu();moreMenu.autoenablesItems=false
@@ -98,7 +98,7 @@ enum StatusMenuController {
         moreMenu.addItem(item("screenshot.repeat",L10n.tr("menu.screenshot.repeat"),"repeatScreenshot",enabled:!s.busy))
         moreMenu.addItem(.separator())
         let direct=item("screenshot.ocr",L10n.tr("menu.screenshot.ocr"),"startDirectOCR",enabled:!s.busy)
-        if !s.ocrShortcut.isEmpty {direct.subtitle=s.ocrShortcut}
+        if !s.ocrShortcut.isEmpty {direct.setSubtitle(s.ocrShortcut)}
         moreMenu.addItem(direct)
         more.submenu=moreMenu;menu.addItem(more)
         if s.pinCount>0 {
@@ -112,5 +112,16 @@ enum StatusMenuController {
         menu.addItem(item("settings",L10n.tr("menu.settings"),"showSettings",key:","))
         menu.addItem(item("about",L10n.format("ui.0bf588b9906c",String(describing:Brand.name)),"showAbout"))
         let quit=item("quit",L10n.format("ui.86a56484fcd8",Brand.name),"terminate:",key:"q");quit.target=NSApplication.shared;menu.addItem(quit)
+    }
+}
+
+extension NSMenuItem {
+    /// `NSMenuItem.subtitle` exists from macOS 14.4; touching it earlier would crash. Before that the text is appended to the title.
+    func setSubtitle(_ text:String) {
+        if #available(macOS 14.4, *) { subtitle=text } else { title=title+" · "+text }
+    }
+    var subtitleText:String? {
+        if #available(macOS 14.4, *) { return subtitle }
+        return nil
     }
 }

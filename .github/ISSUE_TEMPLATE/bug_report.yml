@@ -28,7 +28,7 @@ body:
     id: macos
     attributes:
       label: macOS version and Mac model (系统版本和机型)
-      placeholder: "macOS 26.0, MacBook Pro M3"
+      placeholder: "macOS 15.1, MacBook Pro M3 (or an Intel Mac)"
     validations: { required: true }
   - type: dropdown
     id: engine
