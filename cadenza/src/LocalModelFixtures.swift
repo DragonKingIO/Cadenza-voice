@@ -62,6 +62,7 @@ enum LocalModelFixtures {
     static func catalog(_ c: (String, Bool) -> Void) {
         let b = LocalModelCatalog.builtin[0]
         c("内置清单有效", LocalModelCatalog.builtin.allSatisfy { LocalModelCatalog.validate($0) == nil && LocalModelCatalog.downloadable($0) })
+        c("语音识别页只有三个页签：识别设置并进了本地模型页，不再单独成页", EngineTab.allCases == [.local, .cloud, .system] && EngineTab(rawValue: "tuning") == nil && L10n.tr("engine.tab.tuning") == "engine.tab.tuning")
         c("内置清单：语音模型和文字识别模型各归各的，互不混入", LocalModelCatalog.builtin.filter(LocalModelCatalog.isOCR).allSatisfy { !LocalModelCatalog.usable($0) } && LocalModelCatalog.builtin.filter { !LocalModelCatalog.isOCR($0) }.allSatisfy { LocalModelCatalog.usable($0) } && LocalModelCatalog.builtin.contains(where: LocalModelCatalog.isOCR))
         let parakeet = LocalModelCatalog.builtin.first { $0.kind == "parakeet-tdt" }
         c("内置清单含欧洲语言包，覆盖德语/法语/西语/英语，不含中日韩", parakeet.map { ["de", "fr", "es", "en"].allSatisfy($0.languages.contains) && !$0.languages.contains("zh") && $0.languages.count == 25 } == true)
