@@ -319,7 +319,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
 
     private func micStatusText() -> String {
-        switch AVCaptureDevice.authorizationStatus(for: .audio) {
+        switch TCC.micStatus() {
         case .authorized: return L10n.tr("ui.f1d6383ba4f6")
         case .denied, .restricted: return L10n.tr("ui.0c3677bcc7b3")
         default: return L10n.tr("ui.f62a6539e33a")
@@ -327,7 +327,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
 
     private func speechStatusText() -> String {
-        switch SFSpeechRecognizer.authorizationStatus() {
+        switch TCC.speechStatus() {
         case .authorized: return L10n.tr("ui.f1d6383ba4f6")
         case .denied, .restricted: return L10n.tr("ui.0c3677bcc7b3")
         default: return L10n.tr("ui.f62a6539e33a")
@@ -408,7 +408,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
 
     func inspectDualSave() {
-        guard CGPreflightListenEventAccess() else {Log.write("dual-ui-check blocked listen-permission=false");return}
+        guard TCC.listenAllowed() else {Log.write("dual-ui-check blocked listen-permission=false");return}
         showSettings()
         let h=HotkeySpec(keyCode:5,modifiers:UInt32(controlKey)|UInt32(shiftKey),modifierKeyCodes:[56,59])
         let t=HotkeySpec(keyCode:106,modifiers:0)
@@ -514,7 +514,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     func inspectShortcutSaveFailure() {
         let original = configStore.config.trigger
         showSettings(); settingsWindow?.inspectShortcutSaveFailure()
-        Log.write("shortcut-ui-check save-attempt listen-permission=\(CGPreflightListenEventAccess()) old-binding-preserved=\(self.configStore.config.trigger == original) no-voice-session=\(!pipeline.hasActiveSession)")
+        Log.write("shortcut-ui-check save-attempt listen-permission=\(TCC.listenAllowed()) old-binding-preserved=\(self.configStore.config.trigger == original) no-voice-session=\(!pipeline.hasActiveSession)")
     }
     func inspectCloudSynchronization() { showSettings(); Log.write("ui-check independent-cloud-controls-synced=\(settingsWindow?.inspectCloudSynchronization() == true)") }
     func inspectShortcutConflict() { showSettings(); settingsWindow?.inspectShortcutConflict() }

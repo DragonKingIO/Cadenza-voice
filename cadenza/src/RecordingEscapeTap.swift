@@ -9,8 +9,8 @@ final class RecordingEscapeTap {
     private(set) var consumesEscape=false
     @discardableResult func start(cancel:@escaping()->Void)->Bool {
         stop();self.cancel=cancel;recording=true
-        if AXIsProcessTrusted(),install(options:.defaultTap){consumesEscape=true;return true}
-        if CGPreflightListenEventAccess(),install(options:.listenOnly){return false}
+        if TCC.axTrusted(),install(options:.defaultTap){consumesEscape=true;return true}
+        if TCC.listenAllowed(),install(options:.listenOnly){return false}
         fallback=NSEvent.addGlobalMonitorForEvents(matching:.keyDown){[weak self] e in if e.keyCode==53{self?.cancel?()}}
         return false
     }

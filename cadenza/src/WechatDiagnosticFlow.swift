@@ -15,7 +15,7 @@ final class WechatDiagnosticTarget {
     }
     func validate()->EnhancedTargetState {
         guard let current=Self.stamp(pid) else{return .exited}
-        guard current.0==birth.0,current.1==birth.1,Self.pathMatches(pid),AXIsProcessTrusted() else{return .invalid}
+        guard current.0==birth.0,current.1==birth.1,Self.pathMatches(pid),TCC.axTrusted() else{return .invalid}
         guard !IsSecureEventInputEnabled() else{return .secure}
         guard ForegroundIdentity.capture()?.pid==pid else{return .changed}
         let app=AXUIElementCreateApplication(pid);guard AXUIElementSetMessagingTimeout(app,0.05) == .success else{return .invalid}
