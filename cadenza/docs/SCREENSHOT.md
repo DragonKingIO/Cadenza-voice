@@ -59,9 +59,9 @@ How it reads (`PPOCR.swift`, `PPOCREngine.swift`, following the PaddleOCR refere
 rectangle (score at least 0.6, grown by the unclip ratio 1.5); each rectangle is cut out, turned a quarter turn if it is tall, resized
 to height 48 and read by the recognition model; the characters come from CTC greedy decoding, and lines below 0.5 confidence are dropped.
 
-The built-in entry is the PP-OCRv4 mobile Chinese and English set: detection and recognition models (ONNX, converted by the RapidOCR project, pinned to a repository commit, Apache-2.0, about 15.6 MB together) and the PaddleOCR v2.7.1 character dictionary.
+Two sets are built in. PP-OCRv5 mobile (recommended; detection about 4.8 MB, recognition about 16.6 MB, dictionary 74 KB, from the RapidOCR project's release v3.9.2) is newer and kept the spaces between English words in our test pictures. PP-OCRv4 mobile is the earlier, smaller set: detection and recognition models (ONNX, converted by the RapidOCR project, pinned to a repository commit, Apache-2.0, about 15.6 MB together) and the PaddleOCR v2.7.1 character dictionary.
 
-Known limits: lines are found as upright rectangles, so slanted text is read less reliably, and there is no 180° direction classifier. The recognition model sometimes drops the space between English words (it predicts it for some words and not for others), so Apple Vision is the better choice for English-only text; a fixed rule that guesses the spaces from the character spacing would break words in other fonts, so none is applied.
+Known limits: lines are found as upright rectangles, so slanted text is read less reliably, and there is no 180° direction classifier. The PP-OCRv4 recognition model sometimes drops the space between English words (it predicts it for some words and not for others), so Apple Vision or the v5 set is the better choice for English-only text; PP-OCRv5 sometimes splits one Chinese line into two pieces at a wide punctuation mark, which are then joined with a space; a fixed rule that guesses the spaces from the character spacing would break words in other fonts, so none is applied.
 If the chosen set is not installed, cannot be loaded or fails while reading, Apple Vision reads the text and the screenshot view says why
 (or the error is shown when "fall back" is off).
 
