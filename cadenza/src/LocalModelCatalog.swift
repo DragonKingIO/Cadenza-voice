@@ -38,6 +38,9 @@ struct LocalModelProfile: Codable, Equatable {
     /// Speech models: whether the text comes with punctuation.
     var punctuation: Bool?
 
+    /// A model list is read with the snake_case key strategy, which turns `memory_mb` into `memoryMb`, so that is the key name here.
+    enum CodingKeys: String, CodingKey { case realTimeFactor, lineMilliseconds, memoryMB = "memoryMb", loadSeconds, punctuation }
+
     enum SpeedClass { case fast, medium, slow }
     /// Only for speech models. Thresholds: under 0.10 is fast, under 0.20 medium, otherwise slow.
     var speedClass: SpeedClass? {
