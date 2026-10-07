@@ -54,7 +54,7 @@ git clone https://github.com/DragonKingIO/Cadenza-voice.git && cd Cadenza-voice
 | 语音识别 | 仅在使用 Apple 自带识别时需要 |
 | 录屏与系统录音 | 仅截图时需要 |
 
-自己构建的副本可以直接打开。之后的发布版是临时签名、**没有公证**（项目没有预算购买 Apple 开发者证书），所以下载的副本第一次打开会被 macOS 拦截：到 系统设置 → 隐私与安全性，点“仍要打开”。下一步：[快速开始](https://dragonkingio.github.io/cadenza-site/zh-cn/getting-started/) · [开发指南](cadenza/docs/DEVELOPING.md)（英文）。
+自己构建的副本可以直接打开。发布版是临时签名、**没有公证**，所以下载的副本第一次打开会被 macOS 拦截：到 系统设置 → 隐私与安全性，点“仍要打开”。下一步：[快速开始](https://dragonkingio.github.io/cadenza-site/zh-cn/getting-started/) · [开发指南](cadenza/docs/DEVELOPING.md)（英文）。
 
 ## 状态
 
