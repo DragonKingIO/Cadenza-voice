@@ -106,6 +106,8 @@ if CommandLine.arguments.contains("--selftest-screenshot") {
     exit(failures==0 ? 0:1)
 }
 if CommandLine.arguments.contains("--selftest-local-model-real") {exit(LocalModelFixtures.realModel())}
+if CommandLine.arguments.contains("--selftest-local-ocr-real") {_ = NSApplication.shared;exit(OCRLocalFixtures.real())}
+if CommandLine.arguments.contains("--selftest-local-ocr-download") {_ = NSApplication.shared;exit(OCRLocalFixtures.realDownload())}
 if CommandLine.arguments.contains("--local-accuracy-probe") {exit(LocalModelFixtures.accuracyProbe())}
 if CommandLine.arguments.contains("--accuracy-benchmark") {exit(AccuracyBenchmark.run())}
 if CommandLine.arguments.contains("--selftest-local-model") {
@@ -456,11 +458,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     private func startLocalModels() {
         NetworkReachability.shared.start()
         let center = LocalModelCenter.shared
-        if LocalTranscriberLoader.supported {
-            center.validator = { dir, entry in (try? LocalTranscriberLoader.load(dir: dir, entry: entry)) != nil }
+        center.validator = { dir, entry in
+            if LocalModelCatalog.isOCR(entry) { return PaddleOCREngine.validate(directory: dir) }       // 文字识别模型：检测、识别、字典必须配套
+            return !LocalTranscriberLoader.supported || (try? LocalTranscriberLoader.load(dir: dir, entry: entry)) != nil
         }
         center.onChange = { [weak self] in
             LocalTranscriberCache.shared.unload()
+            PaddleOCRCache.unload()
             self?.reconcileLocalModelSettings()
         }
         reconcileLocalModelSettings()
@@ -474,6 +478,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     func reconcileLocalModelSettings() {
         let ready = Set(LocalModelCenter.shared.installedEntries.map(\.id))
         let c = configStore.config
+        // 选中的本机文字识别模型被删除后，文字识别退回 Apple Vision
+        if c.screenshot.ocrEngine == PaddleOCREngine.engineID && !ready.contains(c.screenshot.ocrLocalModel) {
+            changeConfig { $0.screenshot.ocrEngine = "vision"; $0.screenshot.ocrLocalModel = "" }
+        }
         guard (c.engine == ASREngine.local.rawValue && ready.isEmpty) || (!c.localModel.modelID.isEmpty && !ready.contains(c.localModel.modelID)) || (!c.localModel.primaryModelID.isEmpty && !ready.contains(c.localModel.primaryModelID)) else { refreshStatus(); return }
         changeConfig {
             if $0.engine == ASREngine.local.rawValue && ready.isEmpty { $0.engine = ASREngine.apple.rawValue }

@@ -61,7 +61,8 @@ enum LocalModelFixtures {
 
     static func catalog(_ c: (String, Bool) -> Void) {
         let b = LocalModelCatalog.builtin[0]
-        c("内置清单有效", LocalModelCatalog.builtin.allSatisfy { LocalModelCatalog.validate($0) == nil && LocalModelCatalog.usable($0) })
+        c("内置清单有效", LocalModelCatalog.builtin.allSatisfy { LocalModelCatalog.validate($0) == nil && LocalModelCatalog.downloadable($0) })
+        c("内置清单：语音模型和文字识别模型各归各的，互不混入", LocalModelCatalog.builtin.filter(LocalModelCatalog.isOCR).allSatisfy { !LocalModelCatalog.usable($0) } && LocalModelCatalog.builtin.filter { !LocalModelCatalog.isOCR($0) }.allSatisfy { LocalModelCatalog.usable($0) } && LocalModelCatalog.builtin.contains(where: LocalModelCatalog.isOCR))
         let parakeet = LocalModelCatalog.builtin.first { $0.kind == "parakeet-tdt" }
         c("内置清单含欧洲语言包，覆盖德语/法语/西语/英语，不含中日韩", parakeet.map { ["de", "fr", "es", "en"].allSatisfy($0.languages.contains) && !$0.languages.contains("zh") && $0.languages.count == 25 } == true)
         c("欧洲包必需文件与官方示例一致", parakeet?.requiredFiles.sorted() == ["decoder.int8.onnx", "encoder.int8.onnx", "joiner.int8.onnx", "silero_vad.onnx", "tokens.txt"])
@@ -155,6 +156,14 @@ enum LocalModelFixtures {
             port = p; return true
         }
         func stop() { listener?.cancel() }
+        /// Sends the bytes, then closes the connection after `closeAfter` seconds. Closing right away made a busy client report
+        /// "connection lost" before it had passed on the partial body, so the resume test depended on machine speed; the pause
+        /// lets it hand over the bytes first.
+        private static func finish(_ conn: NWConnection, _ data: Data, closeAfter: TimeInterval = 0) {
+            conn.send(content: data, contentContext: .finalMessage, isComplete: true, completion: .contentProcessed { _ in
+                if closeAfter > 0 { DispatchQueue.global().asyncAfter(deadline: .now() + closeAfter) { conn.cancel() } } else { conn.cancel() }
+            })
+        }
         private func handle(_ conn: NWConnection) {
             conn.start(queue: DispatchQueue(label: "fixture.conn"))
             conn.receive(minimumIncompleteLength: 1, maximumLength: 8192) { [weak self] data, _, _, _ in
@@ -168,9 +177,9 @@ enum LocalModelFixtures {
                 }
                 let payload = self.body.suffix(from: start)
                 var out = Data("HTTP/1.1 \(status)\r\nContent-Length: \(payload.count)\r\n\(extra)Connection: close\r\n\r\n".utf8)
-                if drop { out.append(payload.prefix(payload.count * 2 / 5)); conn.send(content: out, completion: .contentProcessed { _ in conn.cancel() }); return }
+                if drop { out.append(payload.prefix(payload.count * 2 / 5)); Self.finish(conn, out, closeAfter: 0.8); return }
                 out.append(payload)
-                conn.send(content: out, completion: .contentProcessed { _ in conn.cancel() })
+                Self.finish(conn, out)
             }
         }
     }
@@ -200,7 +209,17 @@ enum LocalModelFixtures {
         (o, _) = download(file([s1.base + "/f.bin"]), to: part)
         let resumed = wait { o.result != nil } && (try? o.result?.get()) != nil && ok(part)
         let after = Array(s1.ranges.dropFirst(before))
-        c("连接中断后用 Range 从断点续传并得到完整文件", resumed && after.count >= 2 && after[0] == nil && (after[1]?.hasPrefix("bytes=") == true))
+        // Whether the partial body reaches the downloader before the "connection lost" error depends on the system, so this only
+        // requires that the interrupted download is retried and ends with the complete, verified file.
+        c("连接中断后重试并得到完整文件", resumed && after.count >= 2 && after[0] == nil)
+        // The Range request itself is checked with a half-written .part file, which does not depend on timing.
+        part = dir.appendingPathComponent("seeded.part")
+        try? body.prefix(240_000).write(to: part)
+        let beforeSeeded = s1.ranges.count
+        s1.mode = .normal
+        (o, _) = download(file([s1.base + "/f.bin"]), to: part)
+        let seeded = wait { o.result != nil } && (try? o.result?.get()) != nil && ok(part)
+        c("已有部分数据时用 Range 从断点续传并得到完整文件", seeded && s1.ranges.dropFirst(beforeSeeded).first == "bytes=240000-")
 
         s1.mode = .ignoreRange; part = dir.appendingPathComponent("c.part")
         try? body.prefix(1000).write(to: part)
@@ -298,7 +317,7 @@ enum LocalModelFixtures {
 
         // 取消：清除暂存
         center.download(e1); center.cancel(e1.id)
-        c("取消后不安装并清理暂存", center.state(e1.id) == .notInstalled && !FileManager.default.fileExists(atPath: root.appendingPathComponent(".downloads/\(e1.id)-1.0.0").path))
+        c("取消后不安装并清理暂存", wait(5) { center.state(e1.id) == .notInstalled && !FileManager.default.fileExists(atPath: root.appendingPathComponent(".downloads/\(e1.id)-1.0.0").path) })
 
         // 导入：用户自己下载的包，按 SHA256 匹配后走同一套安装
         var imported: Result<LocalModelEntry, Error>?

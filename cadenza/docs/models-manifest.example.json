@@ -179,6 +179,59 @@
         "macos",
         "windows"
       ]
+    },
+    {
+      "id": "ppocr-v4-mobile-zh-en",
+      "version": "1.0.0",
+      "display_name": {
+        "en": "Chinese and English (PP-OCRv4 mobile)",
+        "zh-Hans": "中英文（PP-OCRv4 移动版）"
+      },
+      "summary": {
+        "en": "Reads Chinese and English text lines, including small print and busy backgrounds. Runs on this Mac and works offline. It can miss the spaces between English words, so Apple Vision suits English-only text better.",
+        "zh-Hans": "识别中英文文字行，对小字和复杂背景更稳。完全在本机运行，可离线使用。英文单词之间的空格有时会漏掉，纯英文内容用 Apple Vision 更合适。"
+      },
+      "kind": "ppocr",
+      "languages": [],
+      "download_size": 15629724,
+      "installed_size": 16000000,
+      "min_app_version": "1.0.0",
+      "license": "Apache-2.0 (see the model package)",
+      "changelog": "PP-OCRv4 mobile detection and recognition models (ONNX, converted by the RapidOCR project) and the PaddleOCR v2.7.1 character dictionary.",
+      "files": [
+        {
+          "name": "det.onnx",
+          "urls": [
+            "https://huggingface.co/SWHL/RapidOCR/resolve/1cfba2e90fc938db55889873735088de210cc173/PP-OCRv4/ch_PP-OCRv4_det_infer.onnx"
+          ],
+          "sha256": "d2a7720d45a54257208b1e13e36a8479894cb74155a5efe29462512d42f49da9",
+          "size": 4745517
+        },
+        {
+          "name": "rec.onnx",
+          "urls": [
+            "https://huggingface.co/SWHL/RapidOCR/resolve/1cfba2e90fc938db55889873735088de210cc173/PP-OCRv4/ch_PP-OCRv4_rec_infer.onnx"
+          ],
+          "sha256": "48fc40f24f6d2a207a2b1091d3437eb3cc3eb6b676dc3ef9c37384005483683b",
+          "size": 10857958
+        },
+        {
+          "name": "dict.txt",
+          "urls": [
+            "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/v2.7.1/ppocr/utils/ppocr_keys_v1.txt"
+          ],
+          "sha256": "28b2362ad4ab2dc38769aa72feb535e3a9ddb3fd2a7585a05920e6393b1dc7f7",
+          "size": 26249
+        }
+      ],
+      "required_files": [
+        "det.onnx",
+        "rec.onnx",
+        "dict.txt"
+      ],
+      "platforms": [
+        "macos"
+      ]
     }
   ],
   "_note_whisper": "Whisper large-v3-turbo is intentionally not listed yet: add it after its package file names and SHA-256 are confirmed (tools/manifest-tool.swift hash) and a runner exists."

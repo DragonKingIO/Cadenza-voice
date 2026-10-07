@@ -18,6 +18,10 @@ Builds made with `third_party/sherpa-onnx` statically link [sherpa-onnx](https:/
 
 Models are downloaded by the user inside the app and are not part of this repository or the app bundle. Each model keeps its own license, which is included in the downloaded package and can be opened from Settings → Speech → Local → License. The built-in list currently offers sherpa-onnx's conversion of SenseVoice Small (int8, 2024-07-17) and the Silero VAD model; read the license files shipped inside those packages before redistributing the models or building a product on them. Models listed in a remote update list are the responsibility of whoever publishes that list.
 
+## On-device text recognition models (not bundled)
+
+Like the speech models, the PP-OCR text recognition models are downloaded by the user inside the app and are not part of this repository or the app bundle. They are made by the [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) project and its converters; each package keeps its own license, which you should read before redistributing a model or building a product on it. The headers `tools/fetch-sherpa-onnx.sh` fetches for onnxruntime (MIT) are interface declarations used to call the library that is already linked; they are downloaded, SHA-256 checked, and not committed.
+
 ## Screenshot toolbar icons
 
 The 39 toolbar and overlay icons (`resources/shot-*.svg`) were drawn for this project and are covered by the project license. They are not copied from or traced over any other application's icons or from any icon library.

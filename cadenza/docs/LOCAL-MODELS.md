@@ -16,7 +16,7 @@ Users download, select and delete models in **Settings → Speech → Local**. M
 
 ## Build
 
-`tools/fetch-sherpa-onnx.sh` downloads the pinned sherpa-onnx static library and C header (both SHA-256 checked) into `third_party/sherpa-onnx` (git-ignored). `build.sh` links it when present (`-D LOCAL_SHERPA`); otherwise the app builds without local inference and the Local page says so. This is the inference library only — no model is fetched.
+`tools/fetch-sherpa-onnx.sh` downloads the pinned sherpa-onnx static library and C header (both SHA-256 checked) into `third_party/sherpa-onnx` (git-ignored). `build.sh` links it when present (`-D LOCAL_SHERPA`); otherwise the app builds without local inference and the Local page says so. This is the inference library only — no model is fetched. The same script also fetches the pinned onnxruntime C API headers (SHA-256 checked, git-ignored); with them `build.sh` adds `-D LOCAL_ORT`, which the on-device text recognition models need (see `docs/SCREENSHOT.md`).
 
 ## On disk
 

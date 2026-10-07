@@ -1287,7 +1287,7 @@
 "ocr.privacy.footer" = "An image is sent only when you start recognition with an online engine that has keys saved and uploads allowed. Keys are kept in the macOS Keychain and are never shown again.";
 "ocr.privacy.header" = "What leaves this Mac";
 "ocr.privacy.local" = "On this Mac";
-"ocr.privacy.localValue" = "Screenshots, QR codes, and Apple Vision recognition";
+"ocr.privacy.localValue" = "Screenshots, QR codes, Apple Vision and on-device model recognition";
 "ocr.privacy.noneAllowed" = "None";
 "ocr.sheet.accurate" = "Use the high-accuracy mode (may cost more)";
 "ocr.sheet.clear" = "Remove Keys";
@@ -1324,3 +1324,12 @@
 "onboard.updates.detail" = "Checks GitHub's public release page once a week and shows a notice in the menu. It never installs anything. Leave it off and Cadenza makes no connections of its own.";
 "shortcut.loneModifier.unsupported" = "Only Left Option and Right Option can be used as a shortcut by themselves. Add another key, or use a function key.";
 "screenshot.shortcut.loneModifier" = "A modifier key cannot be the screenshot shortcut on its own. Add a letter or a function key.";
+"screenshot.ocr.err.localModel" = "Local text recognition is unavailable: %@";
+"screenshot.ocr.byLocal" = "Recognized on this Mac with %@";
+"ppocr.err.notInstalled" = "The chosen local model is not installed.";
+"ppocr.err.files" = "The model files are missing or cannot be loaded.";
+"ppocr.err.dict" = "The dictionary does not match the model.";
+"ppocr.err.output" = "The model returned an unexpected result.";
+"ppocr.err.runtime" = "This build has no on-device inference library.";
+"ocr.local.header" = "On-device models";
+"ocr.local.footer" = "These models run on this Mac and the picture never leaves it. Download one once and it works offline. If it cannot be used, Apple Vision reads the text instead and tells you why.";
