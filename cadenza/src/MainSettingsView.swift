@@ -529,6 +529,20 @@ struct TryCard: View {
     }
 }
 
+/// The round background of the trial button: Liquid Glass on macOS 26 and later, a plain accent or control-coloured disc before that.
+private struct RoundGlass: ViewModifier {
+    let active: Bool
+    func body(content: Content) -> some View {
+        if #available(macOS 26.0, *) {
+            content.glassEffect(active ? .regular.tint(Color(nsColor: NSColor.controlAccentColor)).interactive() : .regular.interactive(), in: .circle)
+        } else {
+            content
+                .background(Circle().fill(active ? Color(nsColor: NSColor.controlAccentColor) : Color(nsColor: NSColor.controlBackgroundColor)))
+                .overlay(Circle().strokeBorder(Color(nsColor: NSColor.separatorColor)))
+        }
+    }
+}
+
 struct HoldToTalkButton: View {
     @Bindable var model: SettingsModel
     @State private var pressed = false
@@ -542,10 +556,7 @@ struct HoldToTalkButton: View {
             .symbolEffect(.variableColor.iterative, options: .repeating, isActive: isActive)
         .foregroundStyle(isActive ? .white : .primary)
         .frame(width: 44, height: 44)
-        .glassEffect(
-            isActive ? .regular.tint(Color(nsColor: NSColor.controlAccentColor)).interactive() : .regular.interactive(),
-            in: .circle
-        )
+        .modifier(RoundGlass(active: isActive))
         .opacity(isRecognizing ? 0.4 : 1)
         .help(isActive ? L10n.tr("ui.8832416c4895") : L10n.tr("ui.e4947a64758a"))
         .gesture(

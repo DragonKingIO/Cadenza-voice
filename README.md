@@ -16,8 +16,8 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/license-MIT-185c53" alt="License: MIT">
-  <img src="https://img.shields.io/badge/macOS-26%2B-185c53" alt="macOS 26 or later">
-  <img src="https://img.shields.io/badge/Apple%20silicon-only-185c53" alt="Apple silicon only">
+  <img src="https://img.shields.io/badge/macOS-14%2B-185c53" alt="macOS 14 or later">
+  <img src="https://img.shields.io/badge/Apple%20silicon%20%2B%20Intel-185c53" alt="Apple silicon and Intel">
   <img src="https://img.shields.io/badge/status-early%20preview-3fa597" alt="Status: early preview">
 </p>
 
@@ -46,8 +46,9 @@ source, anyone can check what leaves your computer.
 
 ## Get started
 
-There is no release yet, so build it yourself. It takes a few minutes and needs macOS 26 or later on Apple silicon, with the
-Xcode Command Line Tools (`xcode-select --install`).
+[Download the latest release](https://github.com/DragonKingIO/Cadenza-voice/releases/latest), or build it yourself in a few
+minutes. Building needs macOS 14 or later (Apple silicon or Intel) with the Xcode Command Line Tools
+(`xcode-select --install`); the package it makes runs on both chips.
 
 ```sh
 git clone https://github.com/DragonKingIO/Cadenza-voice.git && cd Cadenza-voice
@@ -72,7 +73,7 @@ Apple Developer ID), so macOS blocks the first launch of a downloaded copy: open
 
 ## Status
 
-Early preview. It is used every day on the maintainer's Mac but has not been tested on many setups, and compatibility with
+Early preview. It is used every day on the maintainer's Mac (Apple silicon, macOS 26) but has not been tested on many setups. Intel Macs and macOS 14 and 15 are supported by the build but not yet verified on real machines, and compatibility with
 every app is not verified. Local recognition with SenseVoice is covered by the benchmark and daily use. Of the cloud providers,
 iFLYTEK and Deepgram were tested online with synthesized speech; the others only with fake transports. Provider names are
 descriptive labels, not endorsements, and Cadenza is not affiliated with them. Only macOS is supported

@@ -7,6 +7,10 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
+### Compatibility
+- One package for Apple silicon **and Intel** Macs, and the minimum system is now **macOS 14** (it was macOS 26). Where an interface exists only on newer systems, the app uses a plain alternative: the round trial button has an ordinary disc instead of Liquid Glass before macOS 26, and menu subtitles are appended to the item title before macOS 14.4.
+- Verified: the whole self-test suite on Apple silicon with macOS 26, and the Intel half of the package under Rosetta (except Apple Vision text recognition, which Rosetta cannot run). **Not yet verified on a real Intel Mac or on macOS 14 and 15.**
+
 ### Speech recognition
 - Two more on-device speech models, both experimental: **Paraformer** (Chinese with English words, int8, about 244 MB, the fastest, writes no punctuation) and **Qwen3-ASR 0.6B** (multilingual, int8, about 879 MB, writes punctuation). On the same 105 synthesized clips Qwen3-ASR made 0.8% character errors against 2.0–2.2% for SenseVoice and 1.8% for Paraformer, and was the only one to read Chinese with English words correctly; it is also the slowest. SenseVoice stays the recommended default. `--bench-model=<kind>:<folder>` compares models that are not installed.
 

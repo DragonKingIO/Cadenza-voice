@@ -48,12 +48,12 @@ after an update.
 - …
 
 ## Install
-1. Download `Cadenza-X.Y.Z-macos-arm64.zip` and unzip it.
+1. Download `Cadenza-X.Y.Z-macos-universal.zip` and unzip it.
 2. Open the app. macOS blocks the first launch because the app is not notarized: open System Settings → Privacy & Security,
    scroll to the message about the app and choose **Open Anyway**.
 3. Allow Microphone, Accessibility and Input Monitoring when asked.
 
-Requires macOS 26 or later on Apple silicon.
+Requires macOS 14 or later (Apple silicon or Intel).
 
 ## Verify
 `shasum -a 256 -c SHA256SUMS.txt`

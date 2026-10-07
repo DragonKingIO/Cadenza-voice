@@ -45,16 +45,29 @@ else
     echo "local-inference=absent (run tools/fetch-sherpa-onnx.sh to enable local models)"
 fi
 
+# One binary for Apple silicon and Intel (override with CADENZA_ARCHS="arm64" for a quicker single-architecture build).
+# Each architecture is compiled for the oldest supported macOS; the result is merged with lipo.
+MIN_MACOS="14.0"
+ARCHS="${CADENZA_ARCHS:-arm64 x86_64}"
+SLICES=()
+RC=0
+: > build/swiftc.log
 set +e
-swiftc -target "$(uname -m)-apple-macosx26.0" -swift-version 5 -O src/*.swift trigger-state-machine/Sources/TriggerCore/TriggerStateMachine.swift -lz ${SHERPA_FLAGS[@]+"${SHERPA_FLAGS[@]}"} -o "$BIN" > build/swiftc.log 2>&1
-RC=$?
+for ARCH in $ARCHS; do
+    swiftc -target "$ARCH-apple-macosx$MIN_MACOS" -swift-version 5 -O src/*.swift trigger-state-machine/Sources/TriggerCore/TriggerStateMachine.swift -lz ${SHERPA_FLAGS[@]+"${SHERPA_FLAGS[@]}"} -o "$BIN.$ARCH" >> build/swiftc.log 2>&1
+    SLICE_RC=$?
+    [ "$SLICE_RC" -ne 0 ] && RC=$SLICE_RC
+    SLICES+=("$BIN.$ARCH")
+done
 set -e
-echo "swiftc-exit=$RC"
+echo "swiftc-exit=$RC archs=$ARCHS min-macos=$MIN_MACOS"
 if [ "$RC" -ne 0 ]; then
     echo "--- swiftc.log (tail) ---"
     tail -40 build/swiftc.log
     exit "$RC"
 fi
+if [ "${#SLICES[@]}" -eq 1 ]; then mv "${SLICES[0]}" "$BIN"; else lipo -create "${SLICES[@]}" -output "$BIN"; rm -f "${SLICES[@]}"; fi
+echo "binary-architectures=$(lipo -archs "$BIN")"
 if [ -s build/swiftc.log ]; then
     echo "--- swiftc.log (warnings) ---"
     cat build/swiftc.log
@@ -81,7 +94,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <key>CFBundleShortVersionString</key><string>1.0.0</string>
     <key>CFBundleVersion</key><string>1</string>
     <key>LSUIElement</key><false/>
-    <key>LSMinimumSystemVersion</key><string>26.0</string>
+    <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSMicrophoneUsageDescription</key><string>Cadenza uses the microphone to turn your speech into text.</string>

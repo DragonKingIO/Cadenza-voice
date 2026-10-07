@@ -5,7 +5,7 @@ there is no Xcode project. Local speech models run through [sherpa-onnx](https:/
 
 ## Requirements
 
-- macOS 26 or later on Apple silicon, with the Xcode Command Line Tools (`xcode-select --install`).
+- macOS 14 or later (Apple silicon or Intel), with the Xcode Command Line Tools (`xcode-select --install`). The build produces one binary for both chips (`CADENZA_ARCHS=arm64 ./cadenza/build.sh --stage-only` builds only the chip you are on, faster).
 - Optional: the sherpa-onnx static library for local models. Without it the app still builds, without local recognition.
 
 ## Build

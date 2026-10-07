@@ -24,7 +24,7 @@ enum StatusMenuFixtures {
             check("\(state) settings and quit shortcuts",entry("settings")?.keyEquivalent=="," && entry("quit")?.keyEquivalent=="q" && entry("settings")?.keyEquivalentModifierMask == .command)
             check("\(state) copy protects empty or active results",entry("copy")?.isEnabled == !s.busy)
             check("\(state) busy blocks config and pause",entry("mode")?.submenu?.items.first?.isEnabled == !s.busy && entry("pause")?.isEnabled == !s.busy)
-            check("\(state) current values are native subtitles",entry("engine")?.subtitle==L10n.tr("engine.iflytek") && entry("mic")?.subtitle==L10n.tr("ui.04b77083689b"))
+            check("\(state) current values are native subtitles",entry("engine")?.subtitleText==L10n.tr("engine.iflytek") && entry("mic")?.subtitleText==L10n.tr("ui.04b77083689b"))
             check("\(state) unconfigured engine disabled",entry("engine")?.submenu?.items[2].isEnabled==false)
             check("\(state) symbol respects template color",StatusMenuController.image(s)?.isTemplate==s.template)
             check("\(state) quit targets the application",entry("quit")?.target === NSApplication.shared)
