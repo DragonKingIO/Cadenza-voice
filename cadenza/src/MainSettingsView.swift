@@ -619,7 +619,7 @@ private struct EngineRow: View {
 
 /// One list of everything that can recognize speech. Pick a row's button to use it; nothing switches by itself.
 enum EngineTab: String, CaseIterable, Identifiable {
-    case local, cloud, system, tuning
+    case local, cloud, system
     var id: String { rawValue }
     var title: String { L10n.tr("engine.tab." + rawValue) }
     init(scope: EngineScope) { switch scope { case .local: self = .local; case .cloud: self = .cloud; case .system: self = .system } }
@@ -637,7 +637,7 @@ struct EngineSettingsView: View {
         return center.entries.filter { !LocalModelCatalog.isOCR($0) }.sorted { rank($0) < rank($1) }
     }
     private var cloudEngines: [ASREngine] { ASREngine.allCases.filter { $0 != .apple && $0 != .local } }
-    private var visibleTabs: [EngineTab] { model.localOnlyOn ? [.local, .tuning] : EngineTab.allCases }
+    private var visibleTabs: [EngineTab] { model.localOnlyOn ? [.local] : EngineTab.allCases }
     private var readyEntries: [LocalModelEntry] { center.installedEntries.filter { LocalModelCatalog.usable($0) } }
 
     var body:some View {
@@ -648,9 +648,11 @@ struct EngineSettingsView: View {
                 if !model.localOnlyMessage.isEmpty { Label(model.localOnlyMessage, systemImage: "info.circle").font(.callout).foregroundStyle(.orange) }
             } footer: { Text(L10n.tr("localonly.footer")).font(.callout).foregroundStyle(.secondary) }
 
-            Section {
-                Picker("", selection: $tab) { ForEach(visibleTabs) { Text($0.title).tag($0) } }
-                    .pickerStyle(.segmented).labelsHidden().frame(maxWidth: .infinity)
+            if visibleTabs.count > 1 {
+                Section {
+                    Picker("", selection: $tab) { ForEach(visibleTabs) { Text($0.title).tag($0) } }
+                        .pickerStyle(.segmented).labelsHidden().frame(maxWidth: .infinity)
+                }
             }
 
             switch tab {
@@ -681,6 +683,8 @@ struct EngineSettingsView: View {
                         }
                     }
                 }
+                // How the local models listen (language, numbers, sensitivity, speed) and where they come from belong with the models.
+                LocalTuningSections(model: model)
             case .cloud:
                 Section {
                     ForEach(cloudEngines, id: \.self) { engine in
@@ -698,8 +702,6 @@ struct EngineSettingsView: View {
                         Toggle(L10n.tr("engine.appleCloud"), isOn: Binding(get: { model.allowCloud }, set: { value in model.persist { $0.allowCloudRecognition = value } })).font(.callout)
                     }
                 } header: { Text(L10n.tr("engine.section.system")) }
-            case .tuning:
-                LocalTuningSections(model: model)
             }
         }
         .onAppear { tab = model.requestedEngineTab ?? EngineTab(scope: model.scope); model.requestedEngineTab = nil; if !visibleTabs.contains(tab) { tab = .local } }

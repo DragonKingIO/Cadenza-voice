@@ -62,6 +62,7 @@ enum LocalModelFixtures {
     static func catalog(_ c: (String, Bool) -> Void) {
         let b = LocalModelCatalog.builtin[0]
         c("内置清单有效", LocalModelCatalog.builtin.allSatisfy { LocalModelCatalog.validate($0) == nil && LocalModelCatalog.downloadable($0) })
+        c("语音识别页只有三个页签：识别设置并进了本地模型页，不再单独成页", EngineTab.allCases == [.local, .cloud, .system] && EngineTab(rawValue: "tuning") == nil && L10n.tr("engine.tab.tuning") == "engine.tab.tuning")
         let speechIDs = ["paraformer-zh-int8", "qwen3-asr-06b-int8"]
         let profiles = LocalModelCatalog.builtin.compactMap(\.profile)
         c("模型资料：每个内置模型都写了速度、内存，语音模型有每秒倍速和标点，文字识别模型有每行毫秒", profiles.count == LocalModelCatalog.builtin.count && LocalModelCatalog.builtin.allSatisfy { e in e.profile.map { $0.memoryMB > 0 && $0.loadSeconds > 0 && (LocalModelCatalog.isOCR(e) ? $0.lineMilliseconds != nil && $0.realTimeFactor == nil : $0.realTimeFactor != nil && $0.punctuation != nil) } == true })

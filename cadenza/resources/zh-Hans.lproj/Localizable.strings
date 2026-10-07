@@ -1115,7 +1115,6 @@
 "engine.tab.local" = "本地模型";
 "engine.tab.cloud" = "云端服务";
 "engine.tab.system" = "Mac 自带";
-"engine.tab.tuning" = "识别设置";
 "engine.current" = "当前使用";
 "local.language.auto" = "自动（中文环境默认普通话）";
 "local.recognition.itn.detail" = "把“三点十分”写成“3:10”这类数字格式。只对 SenseVoice 有效。";
