@@ -123,7 +123,13 @@ enum LocalModelFixtures {
         let json = "{\"schema\":1,\"models\":[{\"id\":\"x\",\"version\":\"1.0.0\",\"display_name\":{\"en\":\"X\"},\"summary\":{},\"kind\":\"sensevoice\",\"languages\":[\"zh\"],\"download_size\":10,\"installed_size\":20,\"min_app_version\":\"1.0.0\",\"license\":\"t\",\"changelog\":\"\",\"files\":[{\"name\":\"a.bin\",\"urls\":[\"https://e.com/a.bin\"],\"sha256\":\"\(String(repeating: "a", count: 64))\",\"size\":10}],\"required_files\":[\"a.bin\"]}]}"
         let decoded = try? LocalModelCatalog.decode(Data(json.utf8))
         c("蛇形字段清单可解析且校验通过", decoded?.models.first.map { LocalModelCatalog.validate($0) == nil } == true)
-        if let data = FileManager.default.contents(atPath: "docs/models-manifest.example.json") {
+        // The example list: from the cadenza folder (the installer runs there) or from the repository root (CI runs there). It used
+        // to be read only from the first, so the check was skipped silently everywhere else.
+        let exampleURLs = ["docs/models-manifest.example.json", "cadenza/docs/models-manifest.example.json"].map { URL(fileURLWithPath: $0) }
+        let snake = "{\"schema\":1,\"models\":[{\"id\":\"x\",\"version\":\"1.0.0\",\"kind\":\"sensevoice\",\"download_size\":10,\"installed_size\":10,\"files\":[{\"name\":\"a.bin\",\"urls\":[\"https://example.com/a\"],\"sha256\":\"" + String(repeating: "a", count: 64) + "\",\"size\":10}],\"required_files\":[\"a.bin\"],\"profile\":{\"real_time_factor\":0.058,\"memory_mb\":594,\"load_seconds\":0.4,\"punctuation\":true}}]}"
+        let withProfile = (try? LocalModelCatalog.decode(Data(snake.utf8)))?.models.first?.profile
+        c("清单里的模型资料用下划线写法（memory_mb 等）也能读出来", withProfile?.memoryMB == 594 && withProfile?.realTimeFactor == 0.058 && withProfile?.punctuation == true)
+        if let data = exampleURLs.lazy.compactMap({ try? Data(contentsOf: $0) }).first {
             let m = try? LocalModelCatalog.decode(data)
             c("样例清单可解析且全部条目有效", m != nil && m!.models.allSatisfy { LocalModelCatalog.validate($0) == nil })
             c("样例清单与内置清单一致", m?.models == LocalModelCatalog.builtin)
