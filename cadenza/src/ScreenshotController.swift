@@ -293,6 +293,7 @@ final class ScreenshotController {
     static func engineNote(_ result: OCRResult) -> String {
         if let reason = result.fallbackReason { return L10n.format("screenshot.ocr.fellBack", reason) }
         if let provider = OCRProvider(rawValue: result.engine) { return L10n.format("screenshot.ocr.by", provider.title) }
+        if result.engine == PaddleOCREngine.engineID { return L10n.format("screenshot.ocr.byLocal", "PP-OCR") }
         return L10n.tr("screenshot.ocr.local")
     }
 

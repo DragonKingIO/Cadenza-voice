@@ -61,7 +61,8 @@ enum LocalModelFixtures {
 
     static func catalog(_ c: (String, Bool) -> Void) {
         let b = LocalModelCatalog.builtin[0]
-        c("内置清单有效", LocalModelCatalog.builtin.allSatisfy { LocalModelCatalog.validate($0) == nil && LocalModelCatalog.usable($0) })
+        c("内置清单有效", LocalModelCatalog.builtin.allSatisfy { LocalModelCatalog.validate($0) == nil && LocalModelCatalog.downloadable($0) })
+        c("内置清单：语音模型和文字识别模型各归各的，互不混入", LocalModelCatalog.builtin.filter(LocalModelCatalog.isOCR).allSatisfy { !LocalModelCatalog.usable($0) } && LocalModelCatalog.builtin.filter { !LocalModelCatalog.isOCR($0) }.allSatisfy { LocalModelCatalog.usable($0) } && LocalModelCatalog.builtin.contains(where: LocalModelCatalog.isOCR))
         let parakeet = LocalModelCatalog.builtin.first { $0.kind == "parakeet-tdt" }
         c("内置清单含欧洲语言包，覆盖德语/法语/西语/英语，不含中日韩", parakeet.map { ["de", "fr", "es", "en"].allSatisfy($0.languages.contains) && !$0.languages.contains("zh") && $0.languages.count == 25 } == true)
         c("欧洲包必需文件与官方示例一致", parakeet?.requiredFiles.sorted() == ["decoder.int8.onnx", "encoder.int8.onnx", "joiner.int8.onnx", "silero_vad.onnx", "tokens.txt"])

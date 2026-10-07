@@ -209,6 +209,11 @@ final class SettingsModel {
         if let provider = OCRProvider(rawValue: id), !(hasCredentials(provider) && screenshotSettings.ocrConsent[id] == true) { configuringOCR = provider; return }
         persist { $0.screenshot.ocrEngine = id }
     }
+    /// 选择本机文字识别模型：只有已安装且本版本能运行的模型才能选
+    func selectLocalOCRModel(_ id: String, ready: [LocalModelEntry] = LocalModelCenter.shared.installedEntries) {
+        guard ready.contains(where: { $0.id == id && LocalModelCatalog.usableOCR($0) }) else { return }
+        persist { $0.screenshot.ocrEngine = PaddleOCREngine.engineID; $0.screenshot.ocrLocalModel = id }
+    }
     func ocrDraft(_ provider: OCRProvider) -> OCRProviderDraft {
         if let factory = ocrDraftFactory { return factory(provider) }
         return OCRProviderDraft(provider: provider, settings: screenshotSettings, persist: { [weak self] p, consent, accurate, region in
@@ -618,7 +623,7 @@ struct EngineSettingsView: View {
 
     private var localEntries: [LocalModelEntry] {
         func rank(_ e: LocalModelEntry) -> Int { e.id == LocalModelCatalog.recommendedID ? 0 : e.kind == "fire-red-ctc" ? 1 : 2 }
-        return center.entries.sorted { rank($0) < rank($1) }
+        return center.entries.filter { !LocalModelCatalog.isOCR($0) }.sorted { rank($0) < rank($1) }
     }
     private var cloudEngines: [ASREngine] { ASREngine.allCases.filter { $0 != .apple && $0 != .local } }
     private var visibleTabs: [EngineTab] { model.localOnlyOn ? [.local, .tuning] : EngineTab.allCases }

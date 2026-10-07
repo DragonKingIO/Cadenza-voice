@@ -7,6 +7,9 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
+### Text recognition
+- On-device recognition models: download, select and delete a PP-OCR model set in Settings → Text Recognition, like the speech models. It runs through the onnxruntime library that is already linked, reads Chinese and English text lines, and falls back to Apple Vision when it cannot run. The PP-OCRv4 mobile Chinese and English set (about 16 MB) is the first built-in model; it can miss the spaces between English words.
+
 ## [1.0.0] - 2026-10-06
 
 The first public build, released as an **early preview**: it is used every day on the maintainer's Mac but has not been tested on

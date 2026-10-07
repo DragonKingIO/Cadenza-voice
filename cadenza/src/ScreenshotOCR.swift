@@ -46,7 +46,7 @@ protocol OCREngine {
 }
 
 enum OCRError: LocalizedError, Equatable {
-    case failed(String), unknownEngine, tooSmall
+    case failed(String), unknownEngine, tooSmall, localModel(String)
     case noConsent(String), noCredentials(String), offline
     case auth(String, String), quota(String, String), service(String, String), network(String, String), invalidResponse(String)
     var errorDescription: String? {
@@ -54,6 +54,7 @@ enum OCRError: LocalizedError, Equatable {
         case .failed(let m): return L10n.format("screenshot.ocr.failed", m)
         case .unknownEngine: return L10n.tr("screenshot.ocr.unknownEngine")
         case .tooSmall: return L10n.tr("screenshot.ocr.err.tooSmall")
+        case .localModel(let m): return L10n.format("screenshot.ocr.err.localModel", m)
         case .noConsent(let p): return L10n.format("screenshot.ocr.err.noConsent", p)
         case .noCredentials(let p): return L10n.format("screenshot.ocr.err.noCredentials", p)
         case .offline: return L10n.tr("screenshot.ocr.err.offline")
@@ -472,6 +473,9 @@ struct OCRRouter {
     var online: () -> Bool? = { NetworkReachability.shared.isOnline }
     var transport: OCRTransport = NativeOCRTransport()
     var local: OCREngine = VisionOCREngine()
+    /// Directory of the installed local model set with this id, nil when it is not installed.
+    var localModelDirectory: (String) -> URL? = { id in LocalModelCenter.shared.isReady(id) ? LocalModelCenter.shared.modelDir(id) : nil }
+    var localModelEngine: (URL) throws -> OCREngine = { try PaddleOCRCache.engine(directory: $0) }
 
     func cloudEngine(for provider: OCRProvider) -> OCREngine? {
         guard let c = credentials(provider) else { return nil }
@@ -493,7 +497,16 @@ struct OCRRouter {
 
     func recognize(_ image: CGImage) async throws -> OCRResult {
         var result: OCRResult
-        if let provider = OCRProvider(rawValue: settings.ocrEngine) {
+        if settings.ocrEngine == PaddleOCREngine.engineID {
+            do {
+                guard let directory = localModelDirectory(settings.ocrLocalModel) else { throw OCRError.localModel(L10n.tr("ppocr.err.notInstalled")) }
+                result = try await localModelEngine(directory).recognize(image)
+            } catch {
+                guard settings.ocrFallback else { throw error }
+                let reason = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                result = try await local.recognize(image); result.fallbackReason = reason
+            }
+        } else if let provider = OCRProvider(rawValue: settings.ocrEngine) {
             if let blocker = cloudBlocker(provider) {
                 guard settings.ocrFallback else { throw blocker }
                 result = try await local.recognize(image); result.fallbackReason = blocker.localizedDescription

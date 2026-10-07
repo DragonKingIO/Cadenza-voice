@@ -94,8 +94,17 @@ enum LocalModelCatalog {
     static let currentPlatform = "macos"
     static func appliesToCurrentPlatform(_ e: LocalModelEntry) -> Bool { e.platforms.isEmpty || e.platforms.contains(currentPlatform) }
 
-    /// 本版本推理层能运行的模型家族
+    /// 本版本推理层能运行的语音识别模型家族
     static let supportedKinds: Set<String> = ["sensevoice", "parakeet-tdt", "fire-red-ctc"]
+    /// 文字识别（OCR）模型家族：和语音模型共用下载、校验、安装机制，但在“文字识别”页管理，不属于语音识别
+    static let ocrKinds: Set<String> = ["ppocr"]
+    static func isOCR(_ e: LocalModelEntry) -> Bool { ocrKinds.contains(e.kind) }
+    /// 能下载并安装：语音模型，或本版本能运行的文字识别模型
+    static func downloadable(_ e: LocalModelEntry) -> Bool { usable(e) || usableOCR(e) }
+    /// 能用于文字识别：属于 OCR 家族、本版本带有推理库、软件版本够新
+    static func usableOCR(_ e: LocalModelEntry, appVersion: String = LocalModelVersion.appVersion) -> Bool {
+        isOCR(e) && PaddleOCREngine.isAvailable && !LocalModelVersion.isNewer(e.minAppVersion, than: appVersion)
+    }
 
     /// 远端清单地址（空 = 只用内置清单）。开源后填项目托管地址；用户也可在配置里覆盖。
     static let defaultManifestURLs: [String] = []
@@ -153,7 +162,27 @@ enum LocalModelCatalog {
                                urls: ["https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"],
                                sha256: "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6", size: 643_854)
             ],
-            requiredFiles: ["model.int8.onnx", "tokens.txt", "silero_vad.onnx"], platforms: ["macos", "windows"])
+            requiredFiles: ["model.int8.onnx", "tokens.txt", "silero_vad.onnx"], platforms: ["macos", "windows"]),
+        LocalModelEntry(
+            id: "ppocr-v4-mobile-zh-en", version: "1.0.0",
+            displayName: ["en": "Chinese and English (PP-OCRv4 mobile)", "zh-Hans": "中英文（PP-OCRv4 移动版）"],
+            summary: ["en": "Reads Chinese and English text lines, including small print and busy backgrounds. Runs on this Mac and works offline. It can miss the spaces between English words, so Apple Vision suits English-only text better.",
+                      "zh-Hans": "识别中英文文字行，对小字和复杂背景更稳。完全在本机运行，可离线使用。英文单词之间的空格有时会漏掉，纯英文内容用 Apple Vision 更合适。"],
+            kind: "ppocr", languages: [],
+            downloadSize: 15_629_724, installedSize: 16_000_000, minAppVersion: "1.0.0",
+            license: "Apache-2.0 (see the model package)", changelog: "PP-OCRv4 mobile detection and recognition models (ONNX, converted by the RapidOCR project) and the PaddleOCR v2.7.1 character dictionary.",
+            files: [
+                LocalModelFile(name: "det.onnx",
+                               urls: ["https://huggingface.co/SWHL/RapidOCR/resolve/1cfba2e90fc938db55889873735088de210cc173/PP-OCRv4/ch_PP-OCRv4_det_infer.onnx"],
+                               sha256: "d2a7720d45a54257208b1e13e36a8479894cb74155a5efe29462512d42f49da9", size: 4_745_517),
+                LocalModelFile(name: "rec.onnx",
+                               urls: ["https://huggingface.co/SWHL/RapidOCR/resolve/1cfba2e90fc938db55889873735088de210cc173/PP-OCRv4/ch_PP-OCRv4_rec_infer.onnx"],
+                               sha256: "48fc40f24f6d2a207a2b1091d3437eb3cc3eb6b676dc3ef9c37384005483683b", size: 10_857_958),
+                LocalModelFile(name: "dict.txt",
+                               urls: ["https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/v2.7.1/ppocr/utils/ppocr_keys_v1.txt"],
+                               sha256: "28b2362ad4ab2dc38769aa72feb535e3a9ddb3fd2a7585a05920e6393b1dc7f7", size: 26_249)
+            ],
+            requiredFiles: ["det.onnx", "rec.onnx", "dict.txt"], platforms: ["macos"])
     ]
 
     // MARK: 清单校验（远端来源一律不可信）

@@ -1287,7 +1287,7 @@
 "ocr.privacy.footer" = "只有当你用已保存密钥、且已允许上传的在线引擎开始识别时，才会发送图片。密钥保存在 macOS 钥匙串里，之后不会再显示出来。";
 "ocr.privacy.header" = "哪些内容会离开这台 Mac";
 "ocr.privacy.local" = "只在这台 Mac 上";
-"ocr.privacy.localValue" = "截图本身、二维码识别、Apple Vision 识别";
+"ocr.privacy.localValue" = "截图本身、二维码识别、Apple Vision 与本机模型识别";
 "ocr.privacy.noneAllowed" = "无";
 "ocr.sheet.accurate" = "使用高精度模式（可能产生更多费用）";
 "ocr.sheet.clear" = "移除密钥";
@@ -1324,3 +1324,12 @@
 "onboard.updates.detail" = "每周读取一次 GitHub 的公开发布页，并在菜单里提示，不会安装任何东西。不勾选的话，随言不会自己建立任何连接。";
 "shortcut.loneModifier.unsupported" = "单独的修饰键只支持左 Option 和右 Option。请再加一个按键，或改用功能键。";
 "screenshot.shortcut.loneModifier" = "截图快捷键不能只用一个修饰键，请再加一个字母键或功能键。";
+"screenshot.ocr.err.localModel" = "本地文字识别不可用：%@";
+"screenshot.ocr.byLocal" = "在这台 Mac 上用 %@ 识别";
+"ppocr.err.notInstalled" = "所选的本地识别模型还没有安装。";
+"ppocr.err.files" = "模型文件缺失或无法加载。";
+"ppocr.err.dict" = "字典与模型不匹配。";
+"ppocr.err.output" = "模型返回了意料之外的结果。";
+"ppocr.err.runtime" = "这个版本没有包含本机推理库。";
+"ocr.local.header" = "本机识别模型";
+"ocr.local.footer" = "这些模型在这台 Mac 上运行，图片不会离开这台 Mac。下载一次后可离线使用；用不了时会改用 Apple Vision 识别并告诉你原因。";
