@@ -27,16 +27,16 @@ final class HoldNativeEngine: NSObject, HoldRecordingSession {
     }
 
     static func micAuthorized() -> Bool {
-        AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+        TCC.micStatus() == .authorized
     }
 
     static func speechAuthorized() -> Bool {
-        SFSpeechRecognizer.authorizationStatus() == .authorized
+        TCC.speechStatus() == .authorized
     }
 
     static func requestAll(_ done: @escaping (Bool) -> Void) {
-        AVCaptureDevice.requestAccess(for: .audio) { micOK in
-            SFSpeechRecognizer.requestAuthorization { status in
+        TCC.requestMic { micOK in
+            TCC.requestSpeech { status in
                 DispatchQueue.main.async { done(micOK && status == .authorized) }
             }
         }
@@ -45,10 +45,10 @@ final class HoldNativeEngine: NSObject, HoldRecordingSession {
     static func requestRequired(engine: String, _ done: @escaping (Bool) -> Void) {
         func speech(_ micOK: Bool) {
             guard engine == "apple" else { DispatchQueue.main.async { done(micOK) }; return }
-            guard SFSpeechRecognizer.authorizationStatus() == .notDetermined else { DispatchQueue.main.async { done(micOK && speechAuthorized()) }; return }
-            SFSpeechRecognizer.requestAuthorization { status in DispatchQueue.main.async { done(micOK && status == .authorized) } }
+            guard TCC.speechStatus() == .notDetermined else { DispatchQueue.main.async { done(micOK && speechAuthorized()) }; return }
+            TCC.requestSpeech { status in DispatchQueue.main.async { done(micOK && status == .authorized) } }
         }
-        if AVCaptureDevice.authorizationStatus(for: .audio) == .notDetermined { AVCaptureDevice.requestAccess(for: .audio, completionHandler: speech) }
+        if TCC.micStatus() == .notDetermined { TCC.requestMic(speech) }
         else { speech(micAuthorized()) }
     }
 

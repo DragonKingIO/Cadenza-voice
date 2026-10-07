@@ -1363,3 +1363,4 @@
 "compare.failedClip" = "(could not recognize)";
 "compare.err.failed" = "The service did not return a result.";
 "compare.err.timeout" = "No answer in time. Check the connection and try again.";
+"retained.noAccessibility" = "Accessibility permission for %@ is off, so the text could not be entered. It has been kept for you; grant the permission again.";

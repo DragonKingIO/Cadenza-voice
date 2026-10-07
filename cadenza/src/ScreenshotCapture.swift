@@ -5,9 +5,9 @@ import Carbon.HIToolbox
 // MARK: - 屏幕录制权限（截图需要）
 
 enum ScreenCapturePermission {
-    static var granted: Bool { CGPreflightScreenCaptureAccess() }
+    static var granted: Bool { TCC.screenGranted() }
     /// 第一次调用会弹出系统授权窗口；之后只返回当前状态
-    @discardableResult static func request() -> Bool { CGRequestScreenCaptureAccess() }
+    @discardableResult static func request() -> Bool { TCC.screenRequest() }
     static func openSettings() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") { NSWorkspace.shared.open(url) }
     }

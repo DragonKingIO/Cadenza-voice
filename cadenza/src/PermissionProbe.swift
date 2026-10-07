@@ -1,7 +1,7 @@
 import Cocoa
 import CoreGraphics
 
-/// Live state of the Input Monitoring permission. `CGPreflightListenEventAccess()` is cached for the life of the process,
+/// Live state of the Input Monitoring permission. `TCC.listenAllowed()` is cached for the life of the process,
 /// so it keeps saying "allowed" after the switch is turned off (and after a rebuilt app lost its grant). Creating a
 /// listen-only event tap asks the system again, so it tells the truth about what the process can actually receive.
 enum MonitorPermission: Equatable {
@@ -20,7 +20,7 @@ enum PermissionProbe {
         CFMachPortInvalidate(tap)
         return true
     }
-    static var preflight: () -> Bool = { CGPreflightListenEventAccess() }
+    static var preflight: () -> Bool = { TCC.listenAllowed() }
 
     /// Never creates a tap when the system says no, so it cannot trigger a permission prompt.
     static func monitor() -> MonitorPermission {

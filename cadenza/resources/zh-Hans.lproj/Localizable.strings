@@ -1363,3 +1363,4 @@
 "compare.failedClip" = "（未能识别）";
 "compare.err.failed" = "服务没有返回结果。";
 "compare.err.timeout" = "等了太久没有回应，请检查网络后重试。";
+"retained.noAccessibility" = "%@ 的辅助功能权限已失效，文字没能填入，已为你保留；请重新授权。";

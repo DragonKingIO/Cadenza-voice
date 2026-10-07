@@ -18,6 +18,8 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+      - name: Permission calls go through TCC
+        run: ./cadenza/tools/check-tcc-calls.sh
       - name: Fetch the inference library
         run: ./cadenza/tools/fetch-sherpa-onnx.sh
       - name: Build (ad hoc signed package)

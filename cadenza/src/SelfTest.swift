@@ -35,6 +35,7 @@ enum SelfTest {
         OCRLocalFixtures.run(check)
         TextPolishFixtures.run(check)
         ClipRecognitionFixtures.run(check)
+        TCCFixtures.run(check)
         testConfigValidation()
         testCustomShortcuts()
         testOnboardingReadiness()
@@ -531,6 +532,10 @@ enum SelfTest {
         check("未知焦点允许开始但禁用自动上屏", pipeline.session != nil && pipeline.session?.retentionReason != nil)
         pipeline.holdEnded();recorders.last?.onFinal?("仅软件保留");pump()
         check("未知目标按住松开后识别结果保留且不插入", pipeline.session == nil && pipeline.lastTranscript == "仅软件保留" && inserted.count == 1 && pipeline.resultAction == .result)
+        pipeline.accessibilityLost = { true }
+        pipeline.holdStarted(source: .hotkey);pipeline.holdEnded();recorders.last?.onFinal?("权限失效时的文字");pump()
+        check("辅助功能失效时保留结果并指向授权而不是笼统失败", pipeline.lastTranscript == "权限失效时的文字" && inserted.count == 1 && pipeline.resultAction == .privacy && pipeline.lastResult == L10n.format("retained.noAccessibility", String(describing: Brand.name)))
+        pipeline.accessibilityLost = { !TCC.isolated && !FocusProbe.accessibilityTrusted }
         check("未知目标不盲写也不自动复制",copied.isEmpty && !pipeline.lastInputAccepted)
         var secured=focus;secured.protectedInput=true
         pipeline.snapshotFocus={secured};let beforeSecure=recorders.count

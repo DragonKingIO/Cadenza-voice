@@ -56,6 +56,7 @@ BIN="$T"/*.app/Contents/MacOS/Cadenza
 ./cadenza/trigger-state-machine/run-tests.sh
 ```
 
+- Self-tests, previews, benchmarks and `--check-*` runs never ask macOS about permissions (`src/TCC.swift`): a build signed differently from the installed app (ad hoc) that does so makes macOS reset the installed app's Accessibility, Input Monitoring and Screen Recording grants. Ask for permissions only through `TCC`; `tools/check-tcc-calls.sh` enforces it. Do not launch a staged build without one of those flags.
 - Self-tests never open windows and use isolated configuration. They do write lines into the local log file.
 - `--selftest-local-model-real` runs a real installed model on speech synthesized by macOS `say`. It skips itself when no
   model is installed. Download models inside the app (Settings → Speech → Local models).

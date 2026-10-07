@@ -113,7 +113,7 @@ final class NativeWechatEnhancedAdapter:EnhancedAXAdapter {
         guard let value=value,CFGetTypeID(value)==AXUIElementGetTypeID() else{return nil};return(value as! AXUIElement)
     }
     init?(pid:pid_t,cursorConfirmed:Bool,expectedTarget:WechatDiagnosticTarget?=nil,stopRequested:@escaping()->Bool={false}) {
-        guard cursorConfirmed,pid>0,AXIsProcessTrusted(),!IsSecureEventInputEnabled(),Self.pathMatches(pid),
+        guard cursorConfirmed,pid>0,TCC.axTrusted(),!IsSecureEventInputEnabled(),Self.pathMatches(pid),
               let birth=Self.stamp(pid),ForegroundIdentity.capture()?.pid==pid else{return nil}
         let app=AXUIElementCreateApplication(pid);let timeoutRC=AXUIElementSetMessagingTimeout(app,0.05)
         Log.write("wechat-enhanced phase=app-timeout rc=\(timeoutRC.rawValue)")
@@ -138,7 +138,7 @@ final class NativeWechatEnhancedAdapter:EnhancedAXAdapter {
         // Restoration may proceed on the SAME original process after foreground
         // switch or secure input; it never writes text or targets the new app.
         guard requireFront else{return .same}
-        guard AXIsProcessTrusted() else{return .invalid}
+        guard TCC.axTrusted() else{return .invalid}
         guard !IsSecureEventInputEnabled() else{return .secure}
         guard ForegroundIdentity.capture()?.pid==pid else{return .changed}
         var value:CFTypeRef?
