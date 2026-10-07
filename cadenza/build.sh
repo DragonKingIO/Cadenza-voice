@@ -39,7 +39,8 @@ if [ -f "$SHERPA_DIR/include/sherpa-onnx/c-api/c-api.h" ] && [ -f "$SHERPA_DIR/l
     SHERPA_FLAGS=(-D LOCAL_SHERPA -import-objc-header bridge/SherpaBridge.h -I "$SHERPA_DIR/include" -L "$SHERPA_DIR/lib"
         -lsherpa-onnx-c-api -lsherpa-onnx-core -lonnxruntime -lkaldi-native-fbank-core -lkaldi-decoder-core -lkissfft-float
         -lsherpa-onnx-fst -lsherpa-onnx-fstfar -lsherpa-onnx-kaldifst-core -lssentencepiece_core -lc++)
-    echo "local-inference=sherpa-onnx $(cat "$SHERPA_DIR/VERSION" 2>/dev/null)"
+    if [ -f "$SHERPA_DIR/include/onnxruntime/core/session/onnxruntime_c_api.h" ]; then SHERPA_FLAGS+=(-D LOCAL_ORT); fi
+    echo "local-inference=sherpa-onnx $(cat "$SHERPA_DIR/VERSION" 2>/dev/null) onnxruntime-api=$([ -f "$SHERPA_DIR/include/onnxruntime/core/session/onnxruntime_c_api.h" ] && echo yes || echo no)"
 else
     echo "local-inference=absent (run tools/fetch-sherpa-onnx.sh to enable local models)"
 fi

@@ -98,6 +98,9 @@ final class OCRProviderDraft {
 
 struct OCRSettingsView: View {
     @Bindable var model: SettingsModel
+    private let center = LocalModelCenter.shared
+    @State private var deleting: LocalModelEntry?
+    private var localModels: [LocalModelEntry] { center.entries.filter(LocalModelCatalog.isOCR) }
 
     private var settings: ScreenshotSettings { model.screenshotSettings }
 
@@ -112,6 +115,14 @@ struct OCRSettingsView: View {
                 }
             } header: { Text(L10n.tr("ocr.engines.header")) } footer: { Text(L10n.tr("ocr.engines.footer")).font(.callout).foregroundStyle(.primary) }
 
+            if !localModels.isEmpty {
+                Section {
+                    ForEach(localModels) { entry in OCRLocalModelRow(entry: entry, center: center, model: model, askDelete: { deleting = entry }) }
+                } header: { Text(L10n.tr("ocr.local.header")) } footer: {
+                    Text(L10n.tr(PaddleOCREngine.isAvailable ? "ocr.local.footer" : "ppocr.err.runtime")).font(.callout).foregroundStyle(.primary)
+                }
+            }
+
             Section {
                 Toggle(L10n.tr("ocr.fallback"), isOn: Binding(get: { settings.ocrFallback }, set: { v in model.persist { $0.screenshot.ocrFallback = v } }))
             } header: { Text(L10n.tr("ocr.fallback.header")) } footer: { Text(L10n.tr("ocr.fallback.footer")).font(.callout).foregroundStyle(.primary) }
@@ -124,6 +135,9 @@ struct OCRSettingsView: View {
         .sheet(item: $model.configuringOCR) { provider in
             OCRProviderSheet(draft: model.ocrDraft(provider)) { model.configuringOCR = nil; model.sync() }
         }
+        .confirmationDialog(L10n.format("local.delete.title", deleting?.name() ?? ""), isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), titleVisibility: .visible) {
+            Button(L10n.tr("local.delete"), role: .destructive) { if let e = deleting { center.delete(e.id) }; deleting = nil }
+        } message: { Text(L10n.tr("local.delete.detail")) }
     }
 
     private func detail(for p: OCRProvider) -> String {
@@ -135,6 +149,69 @@ struct OCRSettingsView: View {
     private var cloudSummary: String {
         let allowed = OCRProvider.allCases.filter { settings.ocrConsent[$0.rawValue] == true && OCRCredentialStore.has($0) }
         return allowed.isEmpty ? L10n.tr("ocr.privacy.noneAllowed") : allowed.map(\.title).joined(separator: "、")
+    }
+}
+
+/// One on-device recognition model: download, pause, use and delete, like the speech models.
+private struct OCRLocalModelRow: View {
+    let entry: LocalModelEntry
+    let center: LocalModelCenter
+    @Bindable var model: SettingsModel
+    let askDelete: () -> Void
+
+    private var selected: Bool { model.screenshotSettings.ocrEngine == PaddleOCREngine.engineID && model.screenshotSettings.ocrLocalModel == entry.id }
+    private var usable: Bool { LocalModelCatalog.usableOCR(entry) }
+    private static func size(_ bytes: Int64) -> String { ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file) }
+
+    var body: some View {
+        let state = center.state(entry.id)
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(entry.name())
+                Text(entry.detail()).font(.callout).foregroundStyle(.secondary)
+                stateLine(state)
+            }
+            Spacer()
+            trailing(state)
+        }
+        .frame(minHeight: 36)
+    }
+
+    @ViewBuilder private func stateLine(_ state: LocalModelState) -> some View {
+        switch state {
+        case .installed(let version): Text(L10n.format("local.installed", version)).font(.caption).foregroundStyle(.secondary)
+        case .downloading(let done, let total): Text(L10n.format("local.progress", Self.size(done), Self.size(total))).font(.caption).foregroundStyle(.secondary)
+        case .paused(let done, let total): Text(L10n.format("local.paused", Self.size(done), Self.size(total))).font(.caption).foregroundStyle(.secondary)
+        case .failed(let message): Text(message).font(.caption).foregroundStyle(.orange)
+        case .verifying: Text(L10n.tr("local.verifying")).font(.caption).foregroundStyle(.secondary)
+        case .installing: Text(L10n.tr("local.installing")).font(.caption).foregroundStyle(.secondary)
+        case .notInstalled: EmptyView()
+        }
+    }
+
+    @ViewBuilder private func trailing(_ state: LocalModelState) -> some View {
+        switch state {
+        case .notInstalled:
+            Button(L10n.format("local.download", Self.size(entry.downloadSize))) { center.download(entry) }.buttonStyle(.bordered).disabled(!usable)
+        case .downloading(let done, let total):
+            ProgressView(value: Double(done), total: Double(max(total, 1))).frame(width: 110)
+            Button(L10n.tr("local.pause")) { center.pause(entry.id) }.buttonStyle(.bordered)
+            Button(L10n.tr("local.cancel")) { center.cancel(entry.id) }.buttonStyle(.borderless)
+        case .paused:
+            Button(L10n.tr("local.resume")) { center.resume(entry.id) }.buttonStyle(.bordered)
+            Button(L10n.tr("local.cancel")) { center.cancel(entry.id) }.buttonStyle(.borderless)
+        case .verifying, .installing:
+            ProgressView().controlSize(.small)
+        case .failed:
+            Button(L10n.tr("local.retry")) { center.clearFailure(entry.id); center.download(entry) }.buttonStyle(.bordered).disabled(!usable)
+        case .installed:
+            Menu {
+                Button(L10n.tr("local.delete"), role: .destructive) { askDelete() }
+            } label: { Image(systemName: "ellipsis.circle") }.menuStyle(.borderlessButton).fixedSize()
+            Button { model.selectLocalOCRModel(entry.id) } label: { Image(systemName: selected ? "largecircle.fill.circle" : "circle") }
+                .buttonStyle(.plain).disabled(!usable).accessibilityLabel(entry.name())
+                .accessibilityValue(selected ? L10n.tr("ui.fa48e8938940") : L10n.tr("engine.notSelected"))
+        }
     }
 }
 

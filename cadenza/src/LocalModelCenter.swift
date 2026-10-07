@@ -133,7 +133,7 @@ final class LocalModelCenter {
 
     private func recomputeUpdates() {
         var u: [String: LocalModelEntry] = [:]
-        for e in entries { if let rec = installed[e.id], LocalModelVersion.isNewer(e.version, than: rec.version), LocalModelCatalog.usable(e) { u[e.id] = e } }
+        for e in entries { if let rec = installed[e.id], LocalModelVersion.isNewer(e.version, than: rec.version), LocalModelCatalog.downloadable(e) { u[e.id] = e } }
         updates = u
     }
 
@@ -143,7 +143,7 @@ final class LocalModelCenter {
 
     func download(_ entry: LocalModelEntry) {
         guard jobs[entry.id] == nil else { return }
-        guard LocalModelCatalog.usable(entry) else { active[entry.id] = .failed(LocalModelError.unsupported.localizedDescription); return }
+        guard LocalModelCatalog.downloadable(entry) else { active[entry.id] = .failed(LocalModelError.unsupported.localizedDescription); return }
         let need = entry.downloadSize + entry.installedSize
         let free = Self.freeBytes(at: root)
         guard free >= need + need / 10 else { active[entry.id] = .failed(LocalModelError.insufficientDisk(need: need, free: free).localizedDescription); return }

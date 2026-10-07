@@ -33,6 +33,41 @@ Pin floats the picture above other windows. Scroll zooms, ⌥+scroll changes opa
 | Baidu AI Cloud OCR | `aip.baidubce.com` | API Key + Secret Key; optional high-accuracy mode |
 | Tencent Cloud OCR | `ocr.tencentcloudapi.com` | Secret ID + Secret Key + region (TC3-HMAC-SHA256 signing) |
 | Google Cloud Vision | `vision.googleapis.com` | API Key (sent in a header) |
+| PP-OCR model set (optional download) | this Mac, offline | one download in Settings → Text Recognition; needs a build with the onnxruntime headers (`tools/fetch-sherpa-onnx.sh`) |
+
+### On-device models (PP-OCR)
+
+A PP-OCR set is three files: a text detection model (`det.onnx`), a recognition model (`rec.onnx`) and its dictionary (`dict.txt`).
+They are installed, selected and deleted in Settings → Text Recognition with the same machinery as the speech models
+(`LocalModelCenter`: resumable download, SHA-256 and size checks, verification before activation, atomic install). A model entry
+has `kind: "ppocr"`, `languages: []`, the three files under exactly those names, and `requiredFiles` listing them:
+
+```json
+{ "id": "ppocr-mobile-zh-en", "version": "1.0.0", "kind": "ppocr", "languages": [],
+  "files": [ { "name": "det.onnx", "urls": ["https://…"], "sha256": "…", "size": 0 },
+             { "name": "rec.onnx", "urls": ["https://…"], "sha256": "…", "size": 0 },
+             { "name": "dict.txt", "urls": ["https://…"], "sha256": "…", "size": 0 } ],
+  "requiredFiles": ["det.onnx", "rec.onnx", "dict.txt"], "…": "see docs/LOCAL-MODELS.md for the other fields" }
+```
+
+`swift tools/manifest-tool.swift hash <file>` prints the SHA-256 and size to fill in. Before a set is activated the engine loads it
+and checks that the dictionary fits the recognition model and that the detector answers at the size of its input; a set that does
+not fit is rejected.
+
+How it reads (`PPOCR.swift`, `PPOCREngine.swift`, following the PaddleOCR reference pipeline): the picture is resized to a multiple of
+32 (long side at most 960) and normalized in BGR order; the detection map is thresholded at 0.3 and each connected group becomes a
+rectangle (score at least 0.6, grown by the unclip ratio 1.5); each rectangle is cut out, turned a quarter turn if it is tall, resized
+to height 48 and read by the recognition model; the characters come from CTC greedy decoding, and lines below 0.5 confidence are dropped.
+
+The built-in entry is the PP-OCRv4 mobile Chinese and English set: detection and recognition models (ONNX, converted by the RapidOCR project, pinned to a repository commit, Apache-2.0, about 15.6 MB together) and the PaddleOCR v2.7.1 character dictionary.
+
+Known limits: lines are found as upright rectangles, so slanted text is read less reliably, and there is no 180° direction classifier. The recognition model sometimes drops the space between English words (it predicts it for some words and not for others), so Apple Vision is the better choice for English-only text; a fixed rule that guesses the spaces from the character spacing would break words in other fonts, so none is applied.
+If the chosen set is not installed, cannot be loaded or fails while reading, Apple Vision reads the text and the screenshot view says why
+(or the error is shown when "fall back" is off).
+
+Acceptance with a real set that is already on disk, which downloads nothing: `Cadenza --selftest-local-ocr-real` reads three generated pictures with the
+installed set (or the folder in `CADENZA_OCR_MODEL_DIR`) and prints the text and time per picture. `Cadenza --selftest-local-ocr-download` additionally downloads the built-in set into a temporary folder with the app's own downloader, checks and activates it, reads a picture and deletes it again (it needs the network). The automatic tests use small
+hand-made ONNX models, which prove the plumbing but not the accuracy of a real model.
 
 An online engine is used only when the keys are saved (macOS Keychain, `ocr.<provider>.<field>`) **and** the per-provider upload switch is on. *Test connection* is click-only and sends one small test image. If the service fails, there is no network, or upload is not allowed, **Fall back to this Mac** (on by default) recognizes with Apple Vision and the screenshot view says why. See `PRIVACY.md`.
 

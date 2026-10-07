@@ -32,6 +32,7 @@ enum SelfTest {
         CharacterFixtures.run(check)
         PrivacyFixtures.run(check)
         LegacyMigrationFixtures.run(check)
+        OCRLocalFixtures.run(check)
         testConfigValidation()
         testCustomShortcuts()
         testOnboardingReadiness()

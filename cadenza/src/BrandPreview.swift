@@ -26,6 +26,16 @@ enum BrandPreview {
             default: break
             }
         }
+        if page == "ocr", let state = CommandLine.arguments.first(where:{$0.hasPrefix("--preview-local-ocr=")})?.split(separator:"=").last.map(String.init),
+           let entry = LocalModelCatalog.builtin.first(where: LocalModelCatalog.isOCR) {
+            // Demo state only: nothing is downloaded or written.
+            switch state {
+            case "downloading": LocalModelCenter.shared.previewStates=[entry.id:.downloading(done:6_200_000,total:entry.downloadSize)]
+            case "installed": LocalModelCenter.shared.previewStates=[entry.id:.installed(version:entry.version)];_=store.mutate{$0.screenshot.ocrEngine=PaddleOCREngine.engineID;$0.screenshot.ocrLocalModel=entry.id}
+            case "failed": LocalModelCenter.shared.previewStates=[entry.id:.failed(LocalModelError.checksumMismatch("rec.onnx").localizedDescription)]
+            default: break
+            }
+        }
         controller.showSwift(tab)
         if page == "about" {
             switch CommandLine.arguments.first(where:{$0.hasPrefix("--preview-update-state=")})?.split(separator:"=").last.map(String.init) {
