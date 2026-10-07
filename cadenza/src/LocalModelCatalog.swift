@@ -164,6 +164,26 @@ enum LocalModelCatalog {
             ],
             requiredFiles: ["model.int8.onnx", "tokens.txt", "silero_vad.onnx"], platforms: ["macos", "windows"]),
         LocalModelEntry(
+            id: "ppocr-v5-mobile-zh-en", version: "1.0.0",
+            displayName: ["en": "Chinese and English (PP-OCRv5 mobile) · recommended", "zh-Hans": "中英文（PP-OCRv5 移动版）· 推荐"],
+            summary: ["en": "Newer and more accurate than the PP-OCRv4 set below. Reads Chinese and English text lines, including small print and busy backgrounds, and keeps the spaces between English words better. Runs on this Mac and works offline.",
+                      "zh-Hans": "比下面的 PP-OCRv4 更新、更准。识别中英文文字行，对小字和复杂背景更稳，英文单词之间的空格也保留得更好。完全在本机运行，可离线使用。"],
+            kind: "ppocr", languages: [],
+            downloadSize: 21_524_894, installedSize: 22_000_000, minAppVersion: "1.0.0",
+            license: "Apache-2.0 (see the model package)", changelog: "PP-OCRv5 mobile detection and recognition models (ONNX, converted by the RapidOCR project, release v3.9.2) and the PaddleOCR PP-OCRv5 character dictionary.",
+            files: [
+                LocalModelFile(name: "det.onnx",
+                               urls: ["https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv5/det/ch_PP-OCRv5_det_mobile.onnx"],
+                               sha256: "4d97c44a20d30a81aad087d6a396b08f786c4635742afc391f6621f5c6ae78ae", size: 4_819_576),
+                LocalModelFile(name: "rec.onnx",
+                               urls: ["https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile.onnx"],
+                               sha256: "5825fc7ebf84ae7a412be049820b4d86d77620f204a041697b0494669b1742c5", size: 16_631_306),
+                LocalModelFile(name: "dict.txt",
+                               urls: ["https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/paddle/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile/ppocrv5_dict.txt"],
+                               sha256: "d1979e9f794c464c0d2e0b70a7fe14dd978e9dc644c0e71f14158cdf8342af1b", size: 74_012)
+            ],
+            requiredFiles: ["det.onnx", "rec.onnx", "dict.txt"], platforms: ["macos"]),
+        LocalModelEntry(
             id: "ppocr-v4-mobile-zh-en", version: "1.0.0",
             displayName: ["en": "Chinese and English (PP-OCRv4 mobile)", "zh-Hans": "中英文（PP-OCRv4 移动版）"],
             summary: ["en": "Reads Chinese and English text lines, including small print and busy backgrounds. Runs on this Mac and works offline. It can miss the spaces between English words, so Apple Vision suits English-only text better.",
