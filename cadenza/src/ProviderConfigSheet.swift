@@ -122,6 +122,9 @@ struct ProviderConfigSheet:View {
                     VStack(alignment:.leading,spacing:10){
                         ForEach(0..<3,id:\.self){index in HStack(alignment:.top){Text("\(index+1).").monospacedDigit().foregroundStyle(.secondary);Text(L10n.tr((engine == .deepgram ? "deepgram.step.":"provider.step.")+String(index+1)))}}
                         if let url=ProviderConnectionProbe.consoleURL(engine){Link(destination:url){Label(L10n.tr("provider.console."+engine.rawValue),systemImage:"arrow.up.right.square")}.buttonStyle(.borderedProminent)}
+                        if let url=ProviderHelp.credentialGuideURL(engine:engine,language:L10n.language){
+                            Link(destination:url){Label(L10n.tr("provider.credentialGuide"),systemImage:"book")}.buttonStyle(.bordered)
+                        }
                     }.padding(.vertical,4)
                 } header:{Text(L10n.tr("provider.getCredentials"))}
                 Section {

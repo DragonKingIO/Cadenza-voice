@@ -269,6 +269,9 @@ struct OCRProviderSheet: View {
             }
             HStack {
                 Button(L10n.tr("ocr.sheet.console")) { if let url = URL(string: draft.provider.consoleURL) { NSWorkspace.shared.open(url) } }.buttonStyle(.borderless)
+                Link(destination: ProviderHelp.credentialGuideURL(ocrProvider: draft.provider, language: L10n.language)) {
+                    Label(L10n.tr("provider.credentialGuide"), systemImage: "book")
+                }.buttonStyle(.borderless)
                 if !draft.saved.isEmpty { Button(L10n.tr("ocr.sheet.clear"), role: .destructive) { draft.clearCredentials() }.buttonStyle(.borderless) }
                 Spacer()
                 if draft.testing { ProgressView().controlSize(.small) }
