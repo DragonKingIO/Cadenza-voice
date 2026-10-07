@@ -66,8 +66,7 @@ Unzip it, open the app, and allow the permissions it asks for:
 | Speech Recognition | Only for Apple's built-in recognition |
 | Screen & System Audio Recording | Only for screenshots |
 
-A copy you built yourself opens normally. Releases will be signed ad hoc and **not notarized** (the project has no budget for an
-Apple Developer ID), so macOS blocks the first launch of a downloaded copy: open System Settings → Privacy & Security and choose
+A copy you built yourself opens normally. Releases are signed ad hoc and **not notarized**, so macOS blocks the first launch of a downloaded copy: open System Settings → Privacy & Security and choose
 **Open Anyway**. Next steps: [Getting started](https://dragonkingio.github.io/cadenza-site/getting-started/) ·
 [Development guide](cadenza/docs/DEVELOPING.md).
 

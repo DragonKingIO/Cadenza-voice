@@ -63,8 +63,7 @@ Requires macOS 14 or later (Apple silicon or Intel).
 - …
 ```
 
-## Why no notarization
+## Notarization
 
-Notarization needs a paid Apple Developer ID. The project is a volunteer open-source effort without a budget for it, so it
-ships ad hoc builds and says so plainly. Anyone can build from source. If a sponsor or the community later covers the
-fee, releases can be notarized without changing the app.
+Releases are signed ad hoc and not notarized, and say so plainly. Anyone can build from source. If releases are notarized
+later, the app does not change.
