@@ -7,6 +7,9 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
+### Changed
+- Speech settings: "Recognition settings" is no longer a separate tab. Its options (language, number formatting, voice-detection sensitivity, CPU use, update source and import) now sit under the model list on the Local models page.
+
 ## [1.1.0] - 2026-10-07
 
 Still an **early preview**.
