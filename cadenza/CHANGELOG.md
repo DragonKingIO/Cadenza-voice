@@ -7,6 +7,9 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
+### Compatibility
+- CI now runs the package on Apple silicon with macOS 14, 15 and 26 and on Intel with macOS 15 and 26, so the claims about Intel and older systems are checked on real systems at every change. That run found that Vision's QR code detector finds nothing on macOS 14 in that environment; QR codes now fall back to Core Image's detector when Vision finds none.
+
 ### Fixed
 - **Dictated text "kept for you" instead of typed into the text field, after reinstalling or running tests.** macOS keeps one permission record per app identifier, tied to the code signature that was granted. Any other copy with the same identifier but a different signature (a test build, a release candidate) that only asked "am I allowed?" made macOS distrust the record, and the installed app silently lost its Accessibility grant while still believing it had it. Now every permission question goes through one place, and self-tests, previews, benchmarks and resource checks never ask the system. The app also notices a grant that no longer answers, and says so ("Accessibility permission is off … grant the permission again") instead of a generic failure. A source check (`tools/check-tcc-calls.sh`, run by the build and by CI) fails if code asks for a permission directly. If the app already lost the grant, turn Accessibility off and on again for it once in System Settings → Privacy & Security, then restart it.
 
