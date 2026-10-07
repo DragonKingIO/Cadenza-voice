@@ -40,14 +40,17 @@ final class ResumableDownloader: NSObject, URLSessionDataDelegate {
     func start(progress: @escaping (Int64) -> Void, completion: @escaping (Result<Void, Error>) -> Void) {
         queue.async {
             self.progress = progress; self.completion = completion
+            if self.stopping { return }
             try? FileManager.default.createDirectory(at: self.partURL.deletingLastPathComponent(), withIntermediateDirectories: true)
             self.attemptCurrent()
         }
     }
 
     /// 暂停/取消：保留 .part，完成回调以 .cancelled 结束
-    func stop() {
+    /// `then` runs on the downloader's queue once it has stopped, so a caller can clean up after the last possible write.
+    func stop(then done: (() -> Void)? = nil) {
         queue.async {
+            defer { done?() }
             guard !self.finished else { return }
             self.stopping = true
             if let t = self.task { t.cancel() } else { self.finish(.failure(LocalModelError.cancelled)) }
@@ -89,6 +92,7 @@ final class ResumableDownloader: NSObject, URLSessionDataDelegate {
         return lower==offset && upper>=lower && upper<length && length==total
     }
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+        if stopping { completionHandler(.cancel); return }   // never create the .part file after a stop
         guard let http = response as? HTTPURLResponse else { lastError = LocalModelError.network("response"); pending = .nextAddress; completionHandler(.cancel); return }
         switch http.statusCode {
         case 206 where expectingRange:

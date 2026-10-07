@@ -224,8 +224,13 @@ final class LocalModelCenter {
     }
 
     func cancel(_ id: String) {
-        if let job = jobs[id] { job.cancelled = true; job.downloader?.stop(); jobs[id] = nil }
-        if let e = entry(id) { try? FileManager.default.removeItem(at: staging(e)) }
+        let staged = entry(id).map { staging($0) }
+        if let job = jobs[id] {
+            job.cancelled = true; jobs[id] = nil
+            // The downloader creates its folder on its own queue, which can happen after the removal below; clean up again once it has stopped.
+            job.downloader?.stop { if let staged { try? FileManager.default.removeItem(at: staged) } }
+        }
+        if let staged { try? FileManager.default.removeItem(at: staged) }
         active[id] = nil
         publish()
     }
