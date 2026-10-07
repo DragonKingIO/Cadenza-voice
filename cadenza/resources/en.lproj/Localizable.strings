@@ -1115,7 +1115,6 @@
 "engine.tab.local" = "Local models";
 "engine.tab.cloud" = "Cloud services";
 "engine.tab.system" = "Built into Mac";
-"engine.tab.tuning" = "Recognition settings";
 "engine.current" = "In use";
 "local.language.auto" = "Automatic (Mandarin when the app is set to Chinese)";
 "local.recognition.itn.detail" = "Writes spoken numbers as digits, for example three ten as 3:10. SenseVoice only.";
