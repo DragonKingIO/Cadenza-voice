@@ -799,7 +799,7 @@ struct PrivacyView: View {
                 LabeledContent(L10n.tr("ui.714cac30e2ff")) {
                     HStack {
                         PermissionStatus(granted:model.micAuthorized)
-                        if !model.micAuthorized {Button(L10n.tr("permission.grant")) { if AVCaptureDevice.authorizationStatus(for:.audio) == .notDetermined {AVCaptureDevice.requestAccess(for:.audio){_ in DispatchQueue.main.async{model.sync()}}}else{openPrivacyPane("Privacy_Microphone")} }.buttonStyle(.borderless)}
+                        if !model.micAuthorized {Button(L10n.tr("permission.grant")) { if TCC.micStatus() == .notDetermined {TCC.requestMic{_ in DispatchQueue.main.async{model.sync()}}}else{openPrivacyPane("Privacy_Microphone")} }.buttonStyle(.borderless)}
                     }
                 }
                 LabeledContent(L10n.tr("ui.b8f88aeead15")) {
@@ -810,7 +810,7 @@ struct PrivacyView: View {
                 }
                 if model.engine == .apple {
                     LabeledContent(L10n.tr("permission.speech")) {
-                        HStack {PermissionStatus(granted:model.speechAuthorized);if !model.speechAuthorized {Button(L10n.tr("permission.grant")){if SFSpeechRecognizer.authorizationStatus() == .notDetermined {SFSpeechRecognizer.requestAuthorization{_ in DispatchQueue.main.async{model.sync()}}}else{openPrivacyPane("Privacy_SpeechRecognition")}}.buttonStyle(.borderless)}}
+                        HStack {PermissionStatus(granted:model.speechAuthorized);if !model.speechAuthorized {Button(L10n.tr("permission.grant")){if TCC.speechStatus() == .notDetermined {TCC.requestSpeech{_ in DispatchQueue.main.async{model.sync()}}}else{openPrivacyPane("Privacy_SpeechRecognition")}}.buttonStyle(.borderless)}}
                     }
                 }
                 LabeledContent(L10n.tr("permission.screen")) {

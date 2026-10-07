@@ -91,8 +91,8 @@ final class OnboardingModel {
     func openPrivacyPane(_ suffix: String) {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?" + suffix) { NSWorkspace.shared.open(url) }
     }
-    func grantMic() { AVCaptureDevice.authorizationStatus(for: .audio) == .notDetermined ? requestPermissions() : openPrivacyPane("Privacy_Microphone") }
-    func grantSpeech() { SFSpeechRecognizer.authorizationStatus() == .notDetermined ? requestPermissions() : openPrivacyPane("Privacy_SpeechRecognition") }
+    func grantMic() { TCC.micStatus() == .notDetermined ? requestPermissions() : openPrivacyPane("Privacy_Microphone") }
+    func grantSpeech() { TCC.speechStatus() == .notDetermined ? requestPermissions() : openPrivacyPane("Privacy_SpeechRecognition") }
     func grantAccessibility() { openPrivacyPane("Privacy_Accessibility") }
     func grantMonitoring() { openPrivacyPane("Privacy_ListenEvent") }
 
@@ -233,9 +233,9 @@ struct OnboardingView: View {
             title(L10n.tr("onboard.permissions.title"))
             Text(L10n.tr("onboard.permissions.lead")).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             card {
-                permissionRow(L10n.tr("ui.714cac30e2ff"), L10n.tr("ui.e0d4c05278a5"), granted: model.mic, undetermined: AVCaptureDevice.authorizationStatus(for: .audio) == .notDetermined, action: model.grantMic)
+                permissionRow(L10n.tr("ui.714cac30e2ff"), L10n.tr("ui.e0d4c05278a5"), granted: model.mic, undetermined: TCC.micStatus() == .notDetermined, action: model.grantMic)
                 Divider()
-                permissionRow(L10n.tr("ui.654a661d7492"), L10n.tr("ui.8dafd7521162"), granted: model.speech, required: model.engine == .apple, undetermined: SFSpeechRecognizer.authorizationStatus() == .notDetermined, action: model.grantSpeech)
+                permissionRow(L10n.tr("ui.654a661d7492"), L10n.tr("ui.8dafd7521162"), granted: model.speech, required: model.engine == .apple, undetermined: TCC.speechStatus() == .notDetermined, action: model.grantSpeech)
                 Divider()
                 permissionRow(L10n.tr("ui.b8f88aeead15"), L10n.tr("onboard.permissions.accessibility"), granted: model.accessibility, action: model.grantAccessibility)
                 Divider()

@@ -9,6 +9,9 @@ if [ "$(basename "$PWD")" != "cadenza" ] || [ ! -f ../BRAND.md ]; then
     exit 6
 fi
 
+# Permission questions must go through src/TCC.swift (see the comment there), or test runs can wipe the installed app's grants.
+./tools/check-tcc-calls.sh || exit 7
+
 INSTALL_APP="/Applications/随言.app"
 STAGE_ONLY=false
 if [ "${1:-}" = "--stage-only" ]; then STAGE_ONLY=true; fi

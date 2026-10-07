@@ -7,6 +7,9 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
+### Fixed
+- **Dictated text "kept for you" instead of typed into the text field, after reinstalling or running tests.** macOS keeps one permission record per app identifier, tied to the code signature that was granted. Any other copy with the same identifier but a different signature (a test build, a release candidate) that only asked "am I allowed?" made macOS distrust the record, and the installed app silently lost its Accessibility grant while still believing it had it. Now every permission question goes through one place, and self-tests, previews, benchmarks and resource checks never ask the system. The app also notices a grant that no longer answers, and says so ("Accessibility permission is off … grant the permission again") instead of a generic failure. A source check (`tools/check-tcc-calls.sh`, run by the build and by CI) fails if code asks for a permission directly. If the app already lost the grant, turn Accessibility off and on again for it once in System Settings → Privacy & Security, then restart it.
+
 ### Added
 - **Tidy the text** (Settings → Voice input). Recognized text can be cleaned before it is inserted: hesitation sounds (呃, 嗯, um, uh), stuttered repeats ("我我我想", "I I think"), stray spaces and doubled marks. *Standard* is on by default; *Thorough* also drops spoken fillers that only fill a pause ("那个，", "然后，", "you know,"); *Off* inserts exactly what the recognizer wrote. Long text can optionally be split into paragraphs (off by default, because a line break typed into a chat box can send the message). It is a fixed set of rules on this Mac, with no model and no network. Words that belong to a sentence are kept: 额度, 呃逆, "err on the side", a 嗯 that is a whole answer, links, e-mail addresses and `code`.
 

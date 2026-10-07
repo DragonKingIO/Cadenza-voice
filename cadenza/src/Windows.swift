@@ -592,10 +592,10 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     @objc private func cloudSwitchChanged(_ sender: NSButton) { change { $0.allowCloudRecognition = sender.state == .on } }
     @objc private func consentSwitchChanged(_ sender: NSButton) { change { $0.iflytekConsent = sender.state == .on } }
     @objc private func micPermissionAction() {
-        if AVCaptureDevice.authorizationStatus(for: .audio) == .notDetermined { AVCaptureDevice.requestAccess(for: .audio) { [weak self] _ in DispatchQueue.main.async { self?.refresh() } } } else { openMic() }
+        if TCC.micStatus() == .notDetermined { TCC.requestMic { [weak self] _ in DispatchQueue.main.async { self?.refresh() } } } else { openMic() }
     }
     @objc private func speechPermissionAction() {
-        if SFSpeechRecognizer.authorizationStatus() == .notDetermined { SFSpeechRecognizer.requestAuthorization { [weak self] _ in DispatchQueue.main.async { self?.refresh() } } } else { openSpeech() }
+        if TCC.speechStatus() == .notDetermined { TCC.requestSpeech { [weak self] _ in DispatchQueue.main.async { self?.refresh() } } } else { openSpeech() }
     }
     @objc private func consentChanged(_ sender: NSButton) { change { $0.iflytekConsent = sender.state == .on } }
     @objc private func cloudChanged(_ sender: NSButton) { change { $0.allowCloudRecognition = sender.state == .on } }
@@ -759,12 +759,12 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     @objc private func showPrivacy() { showInformation(L10n.tr("ui.9d06d61ee41f"), L10n.tr("ui.d44d88981483")) }
     @objc private func showFeedback() {
         guard let window = window else { return }
-        let info = L10n.format("ui.992c69be18d8", String(describing: Brand.name)) + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? L10n.tr("ui.0d1c116274f9")) + "\nmacOS " + ProcessInfo.processInfo.operatingSystemVersionString + L10n.tr("ui.46a469f64904") + (configStore?.config.engine ?? L10n.tr("ui.4d8c1c5b4283")) + L10n.tr("ui.0707e7e430f5") + (CGPreflightListenEventAccess() ? L10n.tr("ui.521e65ffc7d0") : L10n.tr("ui.94bc3d40defe"))
+        let info = L10n.format("ui.992c69be18d8", String(describing: Brand.name)) + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? L10n.tr("ui.0d1c116274f9")) + "\nmacOS " + ProcessInfo.processInfo.operatingSystemVersionString + L10n.tr("ui.46a469f64904") + (configStore?.config.engine ?? L10n.tr("ui.4d8c1c5b4283")) + L10n.tr("ui.0707e7e430f5") + (TCC.listenAllowed() ? L10n.tr("ui.521e65ffc7d0") : L10n.tr("ui.94bc3d40defe"))
         let alert = NSAlert(); alert.messageText = L10n.tr("ui.9397bd8233f0"); alert.informativeText = info + L10n.tr("ui.0ef87c15708a"); alert.addButton(withTitle: L10n.tr("ui.045e09f57e10")); alert.addButton(withTitle: L10n.tr("ui.2cd0f3be8738"))
         alert.beginSheetModal(for: window) { response in if response == .alertFirstButtonReturn { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(info, forType: .string) } }
     }
-    @objc private func openMic() { if AVCaptureDevice.authorizationStatus(for:.audio) == .notDetermined { requestPermissions() } else { openPrivacy("Privacy_Microphone") } }
-    @objc private func openSpeech() { if configStore?.config.engine == "apple" && SFSpeechRecognizer.authorizationStatus() == .notDetermined { requestPermissions() } else { openPrivacy("Privacy_SpeechRecognition") } }
+    @objc private func openMic() { if TCC.micStatus() == .notDetermined { requestPermissions() } else { openPrivacy("Privacy_Microphone") } }
+    @objc private func openSpeech() { if configStore?.config.engine == "apple" && TCC.speechStatus() == .notDetermined { requestPermissions() } else { openPrivacy("Privacy_SpeechRecognition") } }
     @objc private func openAX() { openPrivacy("Privacy_Accessibility") }
     @objc private func openListen() { openPrivacy("Privacy_ListenEvent") }
     private func openPrivacy(_ page: String) { if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?" + page) { NSWorkspace.shared.open(url) } }
@@ -887,8 +887,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             permissionActions[i].isEnabled = !busy
         }
         if permissionActions.count == 4 {
-            permissionActions[0].title = AVCaptureDevice.authorizationStatus(for: .audio) == .notDetermined ? L10n.tr("ui.436a02934223") : L10n.tr("ui.37aa6ad6a36d")
-            permissionActions[1].title = SFSpeechRecognizer.authorizationStatus() == .notDetermined ? L10n.tr("ui.436a02934223") : L10n.tr("ui.37aa6ad6a36d")
+            permissionActions[0].title = TCC.micStatus() == .notDetermined ? L10n.tr("ui.436a02934223") : L10n.tr("ui.37aa6ad6a36d")
+            permissionActions[1].title = TCC.speechStatus() == .notDetermined ? L10n.tr("ui.436a02934223") : L10n.tr("ui.37aa6ad6a36d")
         }
         permissionState?.stringValue = !permissions[3] ? L10n.tr("ui.83b50db4a9a1") : !permissions[2] ? L10n.tr("ui.68c4f35b477f") : L10n.tr("ui.51764548701e")
 

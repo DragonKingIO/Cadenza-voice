@@ -280,7 +280,7 @@ struct VoiceCompareView: View {
             } else {
                 Button(L10n.tr(compare.seconds(i) == nil ? "compare.record" : "compare.rerecord")) {
                     micAllowed = HoldNativeEngine.micAuthorized()
-                    if AVCaptureDevice.authorizationStatus(for: .audio) == .notDetermined { AVCaptureDevice.requestAccess(for: .audio) { _ in DispatchQueue.main.async { micAllowed = HoldNativeEngine.micAuthorized() } } }
+                    if TCC.micStatus() == .notDetermined { TCC.requestMic { _ in DispatchQueue.main.async { micAllowed = HoldNativeEngine.micAuthorized() } } }
                     else { compare.startRecording(i) }
                 }.buttonStyle(.bordered).disabled(compare.recordingIndex != nil || compare.analyzing || busyElsewhere || !micAllowed)
             }

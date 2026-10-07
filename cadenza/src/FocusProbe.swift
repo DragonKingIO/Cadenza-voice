@@ -84,7 +84,7 @@ enum ForegroundIdentity {
     static func capture()->Snapshot? {resolve().snapshot}
     static func resolve(skipApplicationForDiagnostic:Bool=false)->Resolution {
         func failure(_ reason:String)->Resolution {Resolution(snapshot:nil,failure:reason)}
-        guard AXIsProcessTrusted() else{return failure("ax-untrusted")}
+        guard FocusProbe.accessibilityTrusted else{return failure("ax-untrusted")}
         guard !IsSecureEventInputEnabled() else{return failure("secure-input")}
         guard let front=NSWorkspace.shared.frontmostApplication,
               let bundleURL=front.bundleURL,let expected=Bundle(url:bundleURL)?.executableURL else{return failure("workspace-front-unavailable")}
@@ -131,7 +131,8 @@ enum TrialFocusOwnership {
 }
 
 enum FocusProbe {
-    static var accessibilityTrusted: Bool { AXIsProcessTrusted() }
+    /// Allowed by the system and actually answering (see `TCC.axWorking`).
+    static var accessibilityTrusted: Bool { TCC.axWorkingCached() }
 
     static func protectedTarget(role: String?, subrole: String?, secureInput: Bool) -> Bool {
         secureInput || role == "AXSecureTextField" || subrole == "AXSecureTextField"

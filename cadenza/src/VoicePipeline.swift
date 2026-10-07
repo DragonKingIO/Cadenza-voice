@@ -63,6 +63,9 @@ final class VoicePipeline {
     var insertIntoWindow: (String,FocusIdentity) -> Bool = {TextInserter.sendUnicode($0,target:$1,windowBound:true)}
     var now: () -> Date = Date.init
     var snapshotFocus: () -> FocusIdentity? = FocusProbe.snapshot
+    /// True when the system says Accessibility is off or the grant no longer answers. Test and preview runs ask no questions
+    /// (see `TCC`), so they are never "lost".
+    var accessibilityLost: () -> Bool = { !TCC.isolated && !FocusProbe.accessibilityTrusted }
     var onStateChange: (() -> Void)?
     /// Fired on the main thread after any session has been torn down (used by the local developer API).
     var onSessionFinished: (() -> Void)?
@@ -177,7 +180,7 @@ final class VoicePipeline {
             sessionRecorder = factory()
         } else if ASREngine(rawValue:config.engine) == .local {
             guard HoldNativeEngine.micAuthorized() else{lastResult=L10n.format("ui.3f8508000a35", String(describing: Brand.name));lastIsError=true;resultAction = .privacy
-                if AVCaptureDevice.authorizationStatus(for:.audio) == .notDetermined {AVCaptureDevice.requestAccess(for:.audio){_ in DispatchQueue.main.async{self.notifyUI()}}};notifyUI();return}
+                if TCC.micStatus() == .notDetermined {TCC.requestMic{_ in DispatchQueue.main.async{self.notifyUI()}}};notifyUI();return}
             guard LocalTranscriberLoader.supported else{lastResult=L10n.tr("local.err.unsupportedBuild");lastIsError=true;notifyUI();return}
             let ready=LocalModelCenter.shared.installedEntries.filter{LocalModelCatalog.usable($0)}
             guard let model=FallbackPolicy.resolvePrimary(settings:config.localModel,ready:ready,recognitionLocale:config.recognitionLocale) else{lastResult=L10n.tr(ready.isEmpty ? "local.err.notInstalled":"local.err.noLanguageModel");lastIsError=true;notifyUI();return}
@@ -186,7 +189,7 @@ final class VoicePipeline {
             guard config.options(provider).consent else{lastResult=L10n.tr("ui.eadd4394cde5");lastIsError=true;notifyUI();return}
             guard let credentials=provider.credentials() else{lastResult=L10n.tr("ui.af6ae89316e3");lastIsError=true;notifyUI();return}
             guard HoldNativeEngine.micAuthorized() else{lastResult=L10n.format("ui.3f8508000a35", String(describing: Brand.name));lastIsError=true;resultAction = .privacy
-                if AVCaptureDevice.authorizationStatus(for:.audio) == .notDetermined {AVCaptureDevice.requestAccess(for:.audio){_ in DispatchQueue.main.async{self.notifyUI()}}};notifyUI();return}
+                if TCC.micStatus() == .notDetermined {TCC.requestMic{_ in DispatchQueue.main.async{self.notifyUI()}}};notifyUI();return}
             let options=config.recordingOptions(provider),language=IflytekRecorder.resolveLanguage(config.iflytekLanguage,forSourceID:input.currentID())
             let makeCloud:(CloudPCMCapturing)->HoldRecordingSession={CloudASRRecorder(provider:provider,options:options,credentials:credentials,language:language,capture:$0)}
             // 回退：云端失败或没网时改用本地模型；没有可用本地模型或未启用则保持原行为
@@ -368,6 +371,8 @@ final class VoicePipeline {
     private func retainWithoutClipboard(_ text: String) {
         guard !text.isEmpty else { return }
         coordinatedCopied=false
+        // Without a working Accessibility grant no target can be verified, so say that instead of a generic failure.
+        if accessibilityLost() {lastResult=L10n.format("retained.noAccessibility",String(describing:Brand.name));lastIsError=true;resultAction = .privacy;return}
         lastResult=L10n.tr("ui.input.retained-no-clipboard");lastIsError=true;resultAction = .result
     }
 

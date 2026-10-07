@@ -6,7 +6,7 @@ import Darwin
 /// Bounded metadata only. Does not activate a window, read text or write attributes.
 enum TargetAXDiagnostics {
     static func wechat(pid:pid_t) {
-        guard pid>0,AXIsProcessTrusted(),!IsSecureEventInputEnabled() else{Log.write("wechat-ax-diagnostic refused=trust-or-secure");return}
+        guard pid>0,TCC.axTrusted(),!IsSecureEventInputEnabled() else{Log.write("wechat-ax-diagnostic refused=trust-or-secure");return}
         var path=[CChar](repeating:0,count:4096)
         guard proc_pidpath(pid,&path,UInt32(path.count))>0,
               URL(fileURLWithPath:String(cString:path)).resolvingSymlinksInPath() == URL(fileURLWithPath:"/Applications/微信.app/Contents/MacOS/WeChat").resolvingSymlinksInPath() else{Log.write("wechat-ax-diagnostic refused=kernel-path");return}

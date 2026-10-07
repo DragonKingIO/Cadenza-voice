@@ -192,7 +192,7 @@ final class ListenTrigger {
     func startBindings(hold:HotkeySpec?,toggle:HotkeySpec?,retry:Bool=false,coordinated:Bool=false)->Bool {
         stop()
         guard hold != nil || toggle != nil else {status=L10n.tr("ui.b80d8b6934e5");return true}
-        guard CGPreflightListenEventAccess() else {status=L10n.tr("ui.4a4068c85293");return false}
+        guard TCC.listenAllowed() else {status=L10n.tr("ui.4a4068c85293");return false}
         self.spec=hold;if let hold=hold {kind=Self.classify(hold)};if coordinated {router=CoordinatedShortcutRouter(primary:hold,secondary:toggle)}else{cycle=DualShortcutCycle(hold:hold,toggle:toggle)}
         let currentGeneration=generation
         let mask:NSEvent.EventTypeMask=[.keyDown,.keyUp,.flagsChanged]
@@ -233,7 +233,7 @@ final class ListenTrigger {
             guard let self=self,self.generation == retryGeneration else {timer.invalidate();return}
             attempts+=1
             if attempts>150 {timer.invalidate();self.retryTimer=nil;return}
-            if CGPreflightListenEventAccess() {
+            if TCC.listenAllowed() {
                 if let reason=ShortcutPolicy.reason(s) {timer.invalidate();self.status=reason;return}
                 _=self.start(s)
             }

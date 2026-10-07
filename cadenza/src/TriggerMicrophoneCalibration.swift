@@ -6,7 +6,7 @@ enum TriggerMicrophoneCalibration {
     /// Each sample has one user-marked condition, no automatic mixed-phase labeling.
     static func sample(label:String,seconds:Int)->Int32 {
         guard ["quiet","fan-music","keyboard-mouse","normal","whisper","far"].contains(label),[30,60].contains(seconds) else{return 2}
-        guard AVCaptureDevice.authorizationStatus(for:.audio) == .authorized else{print("calibration permission-required=true");return 3}
+        guard TCC.micStatus() == .authorized else{print("calibration permission-required=true");return 3}
         let capture=CloudPCMCapture(),lock=NSLock();var detector=SpeechEnergyDetector()
         var rms:[Float]=[],durations:[Double]=[],total=0.0,detected=0.0,onsets=0
         capture.onPCM={data in
@@ -45,7 +45,7 @@ enum TriggerMicrophoneCalibration {
     }
     static func run(environment:String)->Int32 {
         guard ["quiet","noise"].contains(environment) else {print("calibration invalid environment");return 2}
-        guard AVCaptureDevice.authorizationStatus(for:.audio) == .authorized else {
+        guard TCC.micStatus() == .authorized else {
             print("calibration microphone permission required; allow the app in System Settings before retrying");return 3
         }
         let capture=CloudPCMCapture(),lock=NSLock();var detector=SpeechEnergyDetector()
