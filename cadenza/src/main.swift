@@ -39,6 +39,16 @@ if let index=CommandLine.arguments.firstIndex(of:"--calibrate-trigger-mic"),Comm
     exit(TriggerMicrophoneCalibration.run(environment:CommandLine.arguments[index+1]))
 }
 
+if CommandLine.arguments.contains("--selftest-appearance") {
+    var count = 0, failed = 0
+    AppearanceTransitionFixtures.run { name, ok in
+        count += 1; if !ok { failed += 1 }
+        print("[appearance] \(ok ? "PASS" : "FAIL") \(name)")
+    }
+    print("[appearance] checks=\(count) failures=\(failed)")
+    exit(failed == 0 ? 0 : 1)
+}
+
 if CommandLine.arguments.contains("--selftest-settings-ui") {
     var count=0,failed=0
     SettingsUIFixtures.run{name,ok in count+=1;if !ok{failed+=1};print("[settings-ui] \(ok ? "PASS":"FAIL") \(name)")}

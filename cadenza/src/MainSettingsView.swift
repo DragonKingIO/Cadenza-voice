@@ -405,7 +405,7 @@ struct MainSettingsView: View {
         }
         .onGeometryChange(for:CGFloat.self){$0.size.height} action:{parentHeight=$0}
         .tint(Color(nsColor:.controlAccentColor))
-        .preferredColorScheme(model.appearanceMode == "dark" ? .dark:model.appearanceMode == "light" ? .light:nil)
+        // AppKit owns the appearance for both chrome and hosted content.
         .id(model.languageRevision)
     }
 
