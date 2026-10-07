@@ -1333,3 +1333,5 @@
 "ppocr.err.runtime" = "This build has no on-device inference library.";
 "ocr.local.header" = "On-device models";
 "ocr.local.footer" = "These models run on this Mac and the picture never leaves it. Download one once and it works offline. If it cannot be used, Apple Vision reads the text instead and tells you why.";
+
+"provider.credentialGuide" = "View setup tutorial";
