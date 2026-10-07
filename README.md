@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/status-early%20preview-3fa597" alt="Status: early preview">
 </p>
 
-https://github.com/user-attachments/assets/7a4794f5-be45-410d-828e-dcc23733d7d5
+<!-- Intro video: drag the MP4 into a GitHub issue/PR comment box to get a user-attachments URL, then put it on its own line here. Never commit the MP4 (cadenza/docs/MEDIA.md). -->
 
 Hold a key (Left Option by default), speak, and let go: the text appears where your cursor is. Many voice input services
 upload every recording to the vendor's servers. Cadenza recognizes speech locally by default, and because it is open

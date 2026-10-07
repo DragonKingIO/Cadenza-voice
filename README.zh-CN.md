@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/status-early%20preview-3fa597" alt="状态：早期预览">
 </p>
 
-https://github.com/user-attachments/assets/a60e81d9-32d2-4f48-a59d-9e9d79568d2f
+<!-- 介绍视频：把 MP4 拖进 GitHub 的 issue 或 PR 评论框得到 user-attachments 链接，再单独放一行在这里。不要把 MP4 提交进仓库（见 cadenza/docs/MEDIA.md）。 -->
 
 按住一个键（默认左 Option）说话，松开，文字就出现在光标处。很多语音输入服务会把你的每段录音上传到厂商的服务器；随言默认在本地识别，而且是开源的，什么会离开本机，谁都可以查。
 
