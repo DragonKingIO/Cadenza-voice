@@ -178,22 +178,12 @@ enum AccuracyBenchmark {
         let config = ConfigStore(fileURL: AppPaths.configFile).config
         guard config.options(provider).consent, let credentials = provider.credentials() else { return nil }
         let language = IflytekRecorder.resolveLanguage(config.iflytekLanguage, forSourceID: nil)
+        let options = config.recordingOptions(provider)
         return Engine(name: provider.rawValue, parallel: false, make: { { samples in
-            let source = ExternalPCMSource()
-            let recorder = CloudASRRecorder(provider: provider, options: config.recordingOptions(provider), credentials: credentials, language: language, capture: source)
-            var result: String?, finished = false
-            recorder.onFinal = { result = $0; finished = true }
-            guard recorder.begin() else { return "" }
-            var pcm = Data()
-            for s in samples { var v = Int16(max(-1, min(1, s)) * 32767).littleEndian; withUnsafeBytes(of: &v) { pcm.append(contentsOf: $0) } }
-            var offset = 0
-            // A person speaks in real time and the recorder buffers about 8 s, so feed at 4x real time.
-            while offset < pcm.count { source.push(pcm.subdata(in: offset..<min(offset + 3200, pcm.count))); offset += 3200; Thread.sleep(forTimeInterval: 0.025) }
-            recorder.end()
-            let end = Date().addingTimeInterval(30)
-            while !finished && Date() < end { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
-            recorder.abort()
-            return result ?? ""
+            switch CloudClipTranscriber.transcribe(samples, provider: provider, options: options, credentials: credentials, language: language) {
+            case .text(let text): return text
+            case .failed: return ""
+            }
         } })
     }
 

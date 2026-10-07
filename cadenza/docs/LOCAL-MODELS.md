@@ -116,3 +116,14 @@ loads it, reads two synthesized sentences and deletes it again; with `CADENZA_MO
 Automatic selection never depends on install order: among installed models for the language, the recommended one wins.
 A model the user picked explicitly ("Use") is always honoured. To compare models on the same sentences, run
 `Cadenza --local-accuracy-probe` (developer tool; uses the system voice, so it isolates the model, not the microphone).
+
+## Compare with your own voice
+
+Settings → Speech → Local models → "Compare models with my voice" records a few sentences in memory and runs them through
+every way of recognizing that is set up: installed local models that cover the app's language, cloud services that have saved
+credentials **and** upload consent (`CompareCandidates.cloudReady`), and the Mac's built-in recognizer when it can run on the
+device. Anything not downloaded or not configured is not listed. Cloud services receive the recordings only while ticked and
+are marked "Uploads recording"; the app locked to local recognition lists none. A cloud service runs through the same
+recorder as a real dictation (`CloudClipTranscriber`), so a failure (no network, rejected credentials, no answer in 30 s) is
+shown as a failure, never as a 100% error rate. For cloud services the time column is the wait after the audio ends, not
+decoding time.

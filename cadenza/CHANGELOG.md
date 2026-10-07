@@ -7,7 +7,11 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
+### Added
+- **Tidy the text** (Settings → Voice input). Recognized text can be cleaned before it is inserted: hesitation sounds (呃, 嗯, um, uh), stuttered repeats ("我我我想", "I I think"), stray spaces and doubled marks. *Standard* is on by default; *Thorough* also drops spoken fillers that only fill a pause ("那个，", "然后，", "you know,"); *Off* inserts exactly what the recognizer wrote. Long text can optionally be split into paragraphs (off by default, because a line break typed into a chat box can send the message). It is a fixed set of rules on this Mac, with no model and no network. Words that belong to a sentence are kept: 额度, 呃逆, "err on the side", a 嗯 that is a whole answer, links, e-mail addresses and `code`.
+
 ### Changed
+- "Compare models with my voice" now compares every way of recognizing that is actually set up: downloaded local models, cloud services with saved credentials and upload consent, and the Mac's built-in recognition when it runs on the device. Nothing that is not downloaded or not configured is listed. Each way has a tick box, cloud services are marked "Uploads recording" with a notice naming where the recordings go, and a service that fails (no network, rejected credentials) shows why instead of a score. The recordings still exist only in memory. When the app is locked to local recognition no cloud service is offered.
 - Speech settings: "Recognition settings" is no longer a separate tab. Its options (language, number formatting, voice-detection sensitivity, CPU use, update source and import) now sit under the model list on the Local models page.
 
 ### Speech recognition

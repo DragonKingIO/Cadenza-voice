@@ -82,6 +82,8 @@ struct BridgeConfig: Codable {
     /// 截图与 OCR。新增键，旧配置缺失时用默认（不占用任何快捷键）。
     var screenshot = ScreenshotSettings()
     var localASRMappings: [LocalASRMapping] = []
+    /// 文字整理（去口头禅、重复、分段）。新增键，旧配置缺失时用默认。
+    var polish = TextPolishSettings()
     var microphoneUID = ""
     var inputMode = "hold"
     var triggerCoordinatorEnabled = false
@@ -205,7 +207,7 @@ struct BridgeConfig: Codable {
 
     enum CodingKeys: String, CodingKey {
         case triggerCoordinatorEnabled, triggerThresholdSec, triggerNoSpeechSec, triggerPostSpeechSec
-        case localModel, screenshot
+        case localModel, screenshot, polish
         case cloudASR, localASRMappings, appearanceMode, microphoneUID, inputMode, holdShortcutEnabled, toggleShortcutEnabled, toggleTrigger
         case enabled, mode, trigger, triggerConsume, diagnosticTrigger, iflytekSourceID, iflytekVoiceHotkey
         case requireSuitableFocus, focusPollMs, recordingTimeoutSec, commitWaitSec, recognitionLocale
@@ -221,6 +223,7 @@ struct BridgeConfig: Codable {
         cloudASR = try d.decodeIfPresent([String:CloudASROptions].self,forKey:.cloudASR) ?? [:]
         localModel = try d.decodeIfPresent(LocalModelSettings.self,forKey:.localModel) ?? LocalModelSettings()
         screenshot = try d.decodeIfPresent(ScreenshotSettings.self,forKey:.screenshot) ?? ScreenshotSettings()
+        polish = try d.decodeIfPresent(TextPolishSettings.self,forKey:.polish) ?? TextPolishSettings()
         localASRMappings = try d.decodeIfPresent([LocalASRMapping].self,forKey:.localASRMappings) ?? []
         appearanceMode = try d.decodeIfPresent(String.self,forKey:.appearanceMode) ?? "system"
         microphoneUID = try d.decodeIfPresent(String.self, forKey: .microphoneUID) ?? ""
@@ -256,6 +259,7 @@ struct BridgeConfig: Codable {
         try d.encode(cloudASR,forKey:.cloudASR)
         try d.encode(localModel,forKey:.localModel)
         try d.encode(screenshot,forKey:.screenshot)
+        try d.encode(polish,forKey:.polish)
         try d.encode(localASRMappings,forKey:.localASRMappings)
         try d.encode(appearanceMode,forKey:.appearanceMode)
         try d.encode(microphoneUID, forKey: .microphoneUID)

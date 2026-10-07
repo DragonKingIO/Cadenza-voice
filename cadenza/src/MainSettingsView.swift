@@ -32,16 +32,25 @@ final class SettingsModel {
     var requestedEngineTab: EngineTab?
     var compare: VoiceCompare?
     var showingCompare = false
-    /// Models that the voice comparison can use (installed, usable, covering the app's language).
-    var compareCandidates: [LocalModelEntry] { LocalTranscriberLoader.supported ? VoiceCompare.candidates(locale: store?.config.recognitionLocale ?? "zh-CN") : [] }
+    /// Ways of recognizing speech that the voice comparison can use: installed local models that cover the app's language,
+    /// cloud services with saved credentials and upload consent, and the Mac's built-in recognition when it runs on the device.
+    /// Looked up at most every few seconds: it reads saved credentials, and the settings page redraws twice a second.
+    var compareCandidates: [CompareCandidate] {
+        guard let config = store?.config else { return [] }
+        if let cached = compareCache, Date().timeIntervalSince(cached.at) < 3, cached.locale == config.recognitionLocale { return cached.list }
+        let list = CompareCandidates.available(config: config, locale: config.recognitionLocale)
+        compareCache = (Date(), config.recognitionLocale, list)
+        return list
+    }
+    @ObservationIgnored private var compareCache: (at: Date, locale: String, list: [CompareCandidate])?
     func openCompare() {
         guard !listening, !recognizing else { return }
         let cfg = store?.config
         let locale = cfg?.recognitionLocale ?? "zh-CN"
-        let models = compareCandidates
-        guard !models.isEmpty else { return }
-        compare = VoiceCompare(prompts: VoiceCompare.prompts(forLocale: locale), models: models, microphoneUID: cfg?.microphoneUID ?? "",
-                               loader: VoiceCompareLoader.make(options: cfg?.localModel.recognition ?? LocalRecognitionOptions(), locale: locale))
+        let candidates = compareCandidates
+        guard let cfg, !candidates.isEmpty else { return }
+        compare = VoiceCompare(prompts: VoiceCompare.prompts(forLocale: locale), candidates: candidates, microphoneUID: cfg.microphoneUID,
+                               recognizer: VoiceCompareRecognizer.make(config: cfg, locale: locale))
         showingCompare = true
     }
     var engine: ASREngine = .apple
@@ -82,6 +91,7 @@ final class SettingsModel {
     /// true = 开始录制新的截图快捷键（暂停旧热键），false = 结束
     var onScreenshotRecording: ((Bool) -> Void)?
     var appearanceMode="system"
+    var polish=TextPolishSettings()
     var engineAvailable = true
     var shortcutEnabled = true
     var toggleAvailable = false
@@ -106,6 +116,7 @@ final class SettingsModel {
         guard let store else { return }
         let cfg = store.config
         appearanceMode=cfg.appearanceMode
+        polish=cfg.polish
         engine = ASREngine(rawValue: cfg.engine) ?? .apple
         localOnlyOn = LocalOnlyMode.enabled
         if engine != .apple && engine != .local { UserDefaults.standard.set(engine.rawValue, forKey: Self.lastCloudKey) }
@@ -440,9 +451,30 @@ struct VoiceInputPage: View {
                 SummaryRow(title:L10n.tr("ui.3c7b79b73494"),value:model.inputModeIndex == 1 ? L10n.tr("ui.c3c686d13dc5"):L10n.tr("ui.e4947a64758a")){model.tab = .shortcuts}
                 SummaryRow(title:L10n.tr("ui.ee2638183d3e"),value:model.inputModeIndex == 1 ? model.toggleBinding:model.holdBinding){model.tab = .shortcuts}
             } header:{Text(L10n.tr("settings.current"))}
+            TextPolishSection(model:model)
         }
         .onExitCommand {if model.listening{model.cancelTry()}}
         .onReceive(timer){_ in model.tick();model.sync()}
+    }
+}
+/// Rule-based tidying of the recognized text: no model, no network, nothing leaves this Mac.
+struct TextPolishSection:View {
+    @Bindable var model:SettingsModel
+    var body:some View {
+        Section {
+            Picker(L10n.tr("polish.level"),selection:Binding(get:{model.polish.level},set:{value in model.persist{$0.polish.level=value}})) {
+                Text(L10n.tr("polish.level.off")).tag(TextPolishLevel.off)
+                Text(L10n.tr("polish.level.standard")).tag(TextPolishLevel.standard)
+                Text(L10n.tr("polish.level.thorough")).tag(TextPolishLevel.thorough)
+            }
+            .pickerStyle(.segmented)
+            Toggle(L10n.tr("polish.paragraphs"),isOn:Binding(get:{model.polish.paragraphs},set:{value in model.persist{$0.polish.paragraphs=value}}))
+        } header:{Text(L10n.tr("polish.header"))} footer:{
+            VStack(alignment:.leading,spacing:6) {
+                Text(L10n.tr("polish.hint."+model.polish.level.rawValue))
+                if model.polish.paragraphs {Text(L10n.tr("polish.paragraphs.hint"))}
+            }.font(.callout).foregroundStyle(.primary)
+        }
     }
 }
 struct SummaryRow:View {
