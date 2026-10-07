@@ -1350,8 +1350,8 @@
 "polish.level.standard" = "Standard";
 "polish.level.thorough" = "Thorough";
 "polish.hint.off" = "Text is inserted exactly as the recognizer wrote it.";
-"polish.hint.standard" = "Removes hesitation sounds (呃, 嗯, um, uh) and stuttered repeats such as “我我我想” or “I I think”, and fixes stray spaces and doubled marks. Runs on this Mac; nothing is uploaded.";
-"polish.hint.thorough" = "Everything in Standard, and also spoken fillers that only fill a pause, such as “那个，”, “就是，”, “然后，” or “you know,”. This can change the tone, so read the result at first.";
+"polish.hint.standard" = "Removes hesitation sounds (“um”, “uh” and their Chinese equivalents) and stuttered repeats such as “I I think”, and fixes stray spaces and doubled marks. Runs on this Mac; nothing is uploaded.";
+"polish.hint.thorough" = "Everything in Standard, and also spoken fillers that only fill a pause, such as “you know,” or “I mean,” and their Chinese equivalents. This can change the tone, so read the result at first.";
 "polish.paragraphs" = "Split long text into paragraphs";
 "polish.paragraphs.hint" = "Applies to text of about 80 characters and more. A line break typed into a chat box can send the message, so leave this off if you dictate into chat apps.";
 "compare.who" = "What to compare";
