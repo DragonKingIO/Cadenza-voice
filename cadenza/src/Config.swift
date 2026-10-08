@@ -86,6 +86,8 @@ struct BridgeConfig: Codable {
     var polish = TextPolishSettings()
     /// 可选的 AI 润色（对话补全接口）。新增键，旧配置缺失时用默认（关闭）。
     var refine = TextRefineSettings()
+    /// 词库开关与词库包选择。新增键，旧配置缺失时用默认。
+    var vocabulary = VocabularySettings()
     var microphoneUID = ""
     var inputMode = "hold"
     var triggerCoordinatorEnabled = false
@@ -209,7 +211,7 @@ struct BridgeConfig: Codable {
 
     enum CodingKeys: String, CodingKey {
         case triggerCoordinatorEnabled, triggerThresholdSec, triggerNoSpeechSec, triggerPostSpeechSec
-        case localModel, screenshot, polish, refine
+        case localModel, screenshot, polish, refine, vocabulary
         case cloudASR, localASRMappings, appearanceMode, microphoneUID, inputMode, holdShortcutEnabled, toggleShortcutEnabled, toggleTrigger
         case enabled, mode, trigger, triggerConsume, diagnosticTrigger, iflytekSourceID, iflytekVoiceHotkey
         case requireSuitableFocus, focusPollMs, recordingTimeoutSec, commitWaitSec, recognitionLocale
@@ -227,6 +229,7 @@ struct BridgeConfig: Codable {
         screenshot = try d.decodeIfPresent(ScreenshotSettings.self,forKey:.screenshot) ?? ScreenshotSettings()
         polish = try d.decodeIfPresent(TextPolishSettings.self,forKey:.polish) ?? TextPolishSettings()
         refine = try d.decodeIfPresent(TextRefineSettings.self,forKey:.refine) ?? TextRefineSettings()
+        vocabulary = try d.decodeIfPresent(VocabularySettings.self,forKey:.vocabulary) ?? VocabularySettings()
         localASRMappings = try d.decodeIfPresent([LocalASRMapping].self,forKey:.localASRMappings) ?? []
         appearanceMode = try d.decodeIfPresent(String.self,forKey:.appearanceMode) ?? "system"
         microphoneUID = try d.decodeIfPresent(String.self, forKey: .microphoneUID) ?? ""
@@ -264,6 +267,7 @@ struct BridgeConfig: Codable {
         try d.encode(screenshot,forKey:.screenshot)
         try d.encode(polish,forKey:.polish)
         try d.encode(refine,forKey:.refine)
+        try d.encode(vocabulary,forKey:.vocabulary)
         try d.encode(localASRMappings,forKey:.localASRMappings)
         try d.encode(appearanceMode,forKey:.appearanceMode)
         try d.encode(microphoneUID, forKey: .microphoneUID)
@@ -312,7 +316,8 @@ final class ConfigStore {
 
     private static let isolatedSelfTestFile=FileManager.default.temporaryDirectory.appendingPathComponent("trigger-regression-"+UUID().uuidString).appendingPathComponent("config.json")
     init(fileURL requestedFileURL:URL=AppPaths.configFile,writeFile:@escaping(Data,URL)throws->Void={data,url in try data.write(to:url,options:.atomic)}) {
-        let fileURL=CommandLine.arguments.contains("--selftest") && requestedFileURL == AppPaths.configFile ? Self.isolatedSelfTestFile:requestedFileURL
+        // Every self-test suite works on a scratch config; only "--selftest" used to, so the others read and could pick up the person's own settings.
+        let fileURL=CommandLine.arguments.contains(where:{$0.hasPrefix("--selftest")}) && requestedFileURL == AppPaths.configFile ? Self.isolatedSelfTestFile:requestedFileURL
         self.fileURL=fileURL;self.writeFile=writeFile
         if FileManager.default.fileExists(atPath: fileURL.path),
            let data = try? Data(contentsOf: fileURL),

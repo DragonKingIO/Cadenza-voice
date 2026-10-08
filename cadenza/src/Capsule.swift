@@ -53,20 +53,35 @@ enum KeychainStore {
     static let service = "Cadenza"
     private(set) static var lastStatus: OSStatus = errSecSuccess
 
+    /// Self-tests and previews never touch the real Keychain: a read of an item made by another build can stop on a system
+    /// prompt that nobody sees, and a write would change the person's saved credentials. They get a private in-memory store.
+    private static let memoryLock = NSLock()
+    private static var memory: [String: String] = [:]
+
+    /// The name macOS shows when it asks to open a saved credential. If the text cannot be found (a build or a process without
+    /// the language files), the raw lookup key would end up in the item and in the system prompt; use a plain name instead.
+    static var itemLabel: String {
+        let text = L10n.format("ui.5b50196b3cb3", String(describing: Brand.name))
+        return isRawKey(text) ? String(describing: Brand.name) + " · Credentials" : text
+    }
+    /// A lookup key shown as if it were text ("ui.5b50196b3cb3").
+    static func isRawKey(_ s: String) -> Bool { s.range(of: "^ui\\.[0-9a-f]{6,16}$", options: .regularExpression) != nil }
+
     @discardableResult
     static func set(_ value: String, for key: String) -> Bool {
+        if TCC.isolated { memoryLock.lock(); memory[key] = value; memoryLock.unlock(); lastStatus = errSecSuccess; return true }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: key,
         ]
         let update = SecItemUpdate(query as CFDictionary,
-                                  [kSecValueData as String: Data(value.utf8), kSecAttrLabel as String: L10n.format("ui.5b50196b3cb3", String(describing: Brand.name))] as CFDictionary)
+                                  [kSecValueData as String: Data(value.utf8), kSecAttrLabel as String: KeychainStore.itemLabel] as CFDictionary)
         lastStatus = update
         if update == errSecSuccess { return true }
         guard update == errSecItemNotFound else { return false }
         var attrs = query
-        attrs[kSecAttrLabel as String] = L10n.format("ui.5b50196b3cb3", String(describing: Brand.name))
+        attrs[kSecAttrLabel as String] = KeychainStore.itemLabel
         attrs[kSecValueData as String] = Data(value.utf8)
         lastStatus = SecItemAdd(attrs as CFDictionary, nil)
         return lastStatus == errSecSuccess
@@ -79,6 +94,7 @@ enum KeychainStore {
     /// Removes one stored item. A missing item counts as removed.
     @discardableResult
     static func delete(_ key: String) -> Bool {
+        if TCC.isolated { memoryLock.lock(); memory[key] = nil; memoryLock.unlock(); lastStatus = errSecSuccess; return true }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -90,6 +106,7 @@ enum KeychainStore {
     }
 
     private static func read(_ key: String) -> String? {
+        if TCC.isolated { memoryLock.lock(); defer { memoryLock.unlock() }; return memory[key] }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -108,6 +125,7 @@ enum KeychainStore {
     /// Attribute-only migration. Never change secrets, ACLs or prompt for authentication.
     @discardableResult
     static func migrateLegacyLabels() -> (renamed: Int, pending: Int) {
+        if TCC.isolated { return (0, 0) }
         var renamed=0, pending=0
         for engine in ASREngine.allCases {
             for field in engine.credentialFields {
@@ -120,6 +138,7 @@ enum KeychainStore {
 
     @discardableResult
     private static func migrateLegacyLabel(for key: String) -> Int {
+        if TCC.isolated { return 0 }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -135,10 +154,10 @@ enum KeychainStore {
         guard lookupStatus == errSecSuccess else { return -1 }
         guard let attributes = result as? [String: Any],
               let label = attributes[kSecAttrLabel as String] as? String,
-              ["言随","随言","VoiceBridge","Cadenza"].contains(where:{label.hasPrefix($0)}),
-              label != L10n.format("ui.5b50196b3cb3", Brand.name) else { return 0 }
+              ["言随","随言","VoiceBridge","Cadenza"].contains(where:{label.hasPrefix($0)}) || isRawKey(label),
+              label != KeychainStore.itemLabel else { return 0 }
         let status = SecItemUpdate(query as CFDictionary,
-                                   [kSecAttrLabel as String: L10n.format("ui.5b50196b3cb3", String(describing: Brand.name))] as CFDictionary)
+                                   [kSecAttrLabel as String: KeychainStore.itemLabel] as CFDictionary)
         Log.write("keychain-label-migration status=\(status) attributes-only=true")
         return status == errSecSuccess ? 1 : -1
     }
@@ -147,12 +166,13 @@ enum KeychainStore {
     /// Only human-readable descriptions change; trusted apps, authorizations,
     /// partition entries and prompt flags are preserved exactly.
     static func migrateAccessDescriptions() -> (renamed:Int,pending:Int) {
+        if TCC.isolated { return (0, 0) }
         var allowed:DarwinBoolean=false
         guard SecKeychainGetUserInteractionAllowed(&allowed) == errSecSuccess else{return(0,1)}
         guard SecKeychainSetUserInteractionAllowed(false) == errSecSuccess else{return(0,1)}
         defer {_ = SecKeychainSetUserInteractionAllowed(allowed.boolValue)}
         var renamed=0,pending=0
-        let name=L10n.format("ui.5b50196b3cb3",Brand.name)
+        let name=KeychainStore.itemLabel
         for engine in ASREngine.allCases {for field in engine.credentialFields {
             let q:[String:Any]=[kSecClass as String:kSecClassGenericPassword,kSecAttrService as String:service,kSecAttrAccount as String:engine.rawValue+"."+field.0,kSecReturnRef as String:true,kSecUseAuthenticationUI as String:kSecUseAuthenticationUIFail]
             var result:CFTypeRef?
@@ -183,10 +203,11 @@ enum KeychainStore {
         return(renamed,pending)
     }
     static func legacyAccessDescription(_ description:String,current:String)->Bool {
-        description != current && ["言随 ·","随言 ·","VoiceBridge","Cadenza ·"].contains(where:{description.hasPrefix($0)})
+        description != current && (["言随 ·","随言 ·","VoiceBridge","Cadenza ·"].contains(where:{description.hasPrefix($0)}) || isRawKey(description))
     }
 
     static func has(_ key: String) -> Bool {
+        if TCC.isolated { memoryLock.lock(); defer { memoryLock.unlock() }; return memory[key] != nil }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,

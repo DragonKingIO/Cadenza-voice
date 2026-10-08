@@ -124,6 +124,9 @@ cp PRIVACY.md PRIVACY.zh-CN.md TERMS.md TERMS.zh-CN.md "$APP/Contents/Resources/
 cp docs/LOCAL-API.md "$APP/Contents/Resources/legal/LOCAL-API.md"
 rm -rf "$APP/Contents/Resources/character"
 if [ -d resources/character ]; then ditto resources/character "$APP/Contents/Resources/character"; fi
+# Shared vocabulary packs (cadenza/vocab); the app ignores a pack that is not valid, and --selftest fails on one.
+rm -rf "$APP/Contents/Resources/vocab"
+if [ -d vocab ]; then mkdir -p "$APP/Contents/Resources/vocab"; cp vocab/*.json "$APP/Contents/Resources/vocab/"; fi
 for LANGUAGE_DIR in resources/en.lproj resources/zh-Hans.lproj; do
     ditto "$LANGUAGE_DIR" "$APP/Contents/Resources/$(basename "$LANGUAGE_DIR")"
 done

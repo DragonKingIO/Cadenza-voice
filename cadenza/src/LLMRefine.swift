@@ -379,17 +379,16 @@ enum LLMClient {
 /// What the dictation pipeline calls. The real one reads the saved key; tests substitute their own.
 protocol TextRefining {
     /// Calls `done` once, on any queue: the refined text, or nil to keep the text as it is, with a reason for the person.
-    func refine(_ text: String, settings: TextRefineSettings, done: @escaping (String?, String?) -> Void)
+    func refine(_ text: String, settings: TextRefineSettings, glossary: [String], done: @escaping (String?, String?) -> Void)
 }
 
 struct LLMTextRefiner: TextRefining {
     var transport: LLMTransport = NativeLLMTransport()
     var key: (String) -> String? = { KeychainStore.get($0) }
-    var glossary: () -> [String] = { [] }
 
-    func refine(_ text: String, settings: TextRefineSettings, done: @escaping (String?, String?) -> Void) {
+    func refine(_ text: String, settings: TextRefineSettings, glossary terms: [String], done: @escaping (String?, String?) -> Void) {
         let started = ProcessInfo.processInfo.systemUptime
-        let apiKey = key(settings.keyName), terms = glossary()
+        let apiKey = key(settings.keyName)
         Task {
             let result = await LLMClient.refine(text, settings: settings, apiKey: apiKey, glossary: terms, transport: transport)
             let seconds = ProcessInfo.processInfo.systemUptime - started

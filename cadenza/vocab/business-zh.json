@@ -1,0 +1,100 @@
+{
+ "schema": 1,
+ "id": "business-zh",
+ "name": {
+  "en": "Business (Chinese and English)",
+  "zh-Hans": "商务（中英文）"
+ },
+ "description": {
+  "en": "Everyday business, finance and product terms and acronyms.",
+  "zh-Hans": "日常商务、财务和产品术语及缩写。"
+ },
+ "license": "CC0-1.0",
+ "default": false,
+ "entries": [
+  {
+   "term": "颗粒度"
+  },
+  {
+   "term": "里程碑"
+  },
+  {
+   "term": "资产负债表"
+  },
+  {
+   "term": "毛利率"
+  },
+  {
+   "term": "现金流"
+  },
+  {
+   "term": "供应链"
+  },
+  {
+   "term": "市盈率"
+  },
+  {
+   "term": "尽职调查"
+  },
+  {
+   "term": "股权激励"
+  },
+  {
+   "term": "KPI",
+   "aliases": [
+    "k p i"
+   ]
+  },
+  {
+   "term": "OKR",
+   "aliases": [
+    "o k r"
+   ]
+  },
+  {
+   "term": "ROI",
+   "aliases": [
+    "r o i"
+   ]
+  },
+  {
+   "term": "SaaS",
+   "aliases": [
+    "sass"
+   ]
+  },
+  {
+   "term": "B2B",
+   "aliases": [
+    "b to b"
+   ]
+  },
+  {
+   "term": "B2C",
+   "aliases": [
+    "b to c"
+   ]
+  },
+  {
+   "term": "PRD"
+  },
+  {
+   "term": "MVP",
+   "aliases": [
+    "m v p"
+   ]
+  },
+  {
+   "term": "CRM"
+  },
+  {
+   "term": "ERP"
+  },
+  {
+   "term": "SKU"
+  },
+  {
+   "term": "GMV"
+  }
+ ]
+}

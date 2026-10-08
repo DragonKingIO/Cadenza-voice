@@ -37,6 +37,7 @@ enum SelfTest {
         ClipRecognitionFixtures.run(check)
         TCCFixtures.run(check)
         LLMRefineFixtures.run(check)
+        VocabularyFixtures.run(check)
         testConfigValidation()
         testCustomShortcuts()
         testOnboardingReadiness()
@@ -516,6 +517,8 @@ enum SelfTest {
         check("直接输入目标变化停止发送", !TextInserter.sendUnicode("测试",target:focus,current:{nil},emit:{_,_ in emitted+=1;return true}) && emitted == 0)
         emitted=0;var snapshots=0
         check("分块输入中途失焦停止后续块", !TextInserter.sendUnicode(String(repeating:"字",count:41),target:focus,current:{snapshots+=1;return snapshots == 1 ? focus:nil},emit:{_,_ in emitted+=1;return true}) && emitted == 1)
+        check("钥匙串条目名称是原始文案键时视为旧名称并改正", KeychainStore.isRawKey("ui.5b50196b3cb3") && KeychainStore.legacyAccessDescription("ui.5b50196b3cb3",current:"随言 · 识别凭据") && !KeychainStore.isRawKey("随言 · 识别凭据") && !KeychainStore.isRawKey("ui.hello world") && !KeychainStore.isRawKey("cdhash:abc"))
+        check("钥匙串条目名称永远不是文案键", !KeychainStore.isRawKey(KeychainStore.itemLabel) && !KeychainStore.itemLabel.isEmpty)
         check("旧授权名称匹配而内部权限串不匹配", KeychainStore.legacyAccessDescription("言随 · 讯飞凭据",current:"随言 · 识别凭据") && !KeychainStore.legacyAccessDescription("cdhash:abc",current:"随言 · 识别凭据"))
         pipeline.snapshotFocus = { focus }
         pipeline.holdStarted(source: .menu, target: focus)
@@ -554,6 +557,24 @@ enum SelfTest {
         settle { pipeline.session == nil }
         check("没开润色时不调用模型", inserted.last == "没开润色的文字")
         pipeline.textRefiner = LLMTextRefiner()
+        // Vocabulary: a mis-recognized term is fixed before insertion (scratch files, not the person's own)
+        let vocabularyStore = VocabularyStore.shared
+        let savedVocabularyFile = vocabularyStore.userFile, savedVocabularyDirectories = vocabularyStore.packDirectories
+        let vocabularyScratch = FileManager.default.temporaryDirectory.appendingPathComponent("cadenza-vocab-pipeline-\(UUID().uuidString.prefix(8))", isDirectory: true)
+        vocabularyStore.userFile = vocabularyScratch.appendingPathComponent("vocabulary.json"); vocabularyStore.packDirectories = [vocabularyScratch.appendingPathComponent("none")]; vocabularyStore.reload()
+        vocabularyStore.setUser([VocabEntry(term: "GitHub", aliases: ["吉特哈勃"])])
+        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        recorders.last?.onFinal?("把它提交到吉特哈勃上")
+        settle { pipeline.session == nil }
+        check("词库在插入前纠正识别出的专业词", inserted.last == "把它提交到GitHub上")
+        store.mutate { $0.vocabulary.enabled = false }
+        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        recorders.last?.onFinal?("把它提交到吉特哈勃上")
+        settle { pipeline.session == nil }
+        check("词库关闭时不改识别结果", inserted.last == "把它提交到吉特哈勃上")
+        store.mutate { $0.vocabulary = VocabularySettings() }
+        vocabularyStore.userFile = savedVocabularyFile; vocabularyStore.packDirectories = savedVocabularyDirectories; vocabularyStore.reload()
+        try? FileManager.default.removeItem(at: vocabularyScratch)
         inserted = ["外部结果"]   // the checks below count insertions from this point
         pipeline.holdStarted(source: .menu, target: focus)
         pipeline.holdEnded()

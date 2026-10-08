@@ -140,7 +140,7 @@ enum LegacyMigration {
     static func migrateKeychainInBackground() {
         guard keychainAttemptAllowed() else { return }
         DispatchQueue.global(qos: .utility).async {
-            let result = migrateKeychain(from: legacyKeychainService, to: KeychainStore.service, label: L10n.format("ui.5b50196b3cb3", String(describing: Brand.name)))
+            let result = migrateKeychain(from: legacyKeychainService, to: KeychainStore.service, label: KeychainStore.itemLabel)
             if result.moved > 0 || result.kept > 0 { Log.write("legacy-keychain-migration moved=\(result.moved) kept=\(result.kept)") }
             if result.kept > 0 { UserDefaults.standard.set(UserDefaults.standard.integer(forKey: keychainAttemptsKey) + 1, forKey: keychainAttemptsKey) }
         }

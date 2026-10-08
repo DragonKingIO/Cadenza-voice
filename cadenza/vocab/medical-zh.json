@@ -1,0 +1,169 @@
+{
+ "schema": 1,
+ "id": "medical-zh",
+ "name": {
+  "en": "Medicine (Chinese)",
+  "zh-Hans": "医学（中文）"
+ },
+ "description": {
+  "en": "Common Chinese drug names, diseases and examinations. Fixes words written with other characters that sound the same.",
+  "zh-Hans": "常见的药品、疾病和检查名称。纠正同音别字。"
+ },
+ "license": "CC0-1.0",
+ "default": false,
+ "entries": [
+  {
+   "term": "阿司匹林"
+  },
+  {
+   "term": "布洛芬"
+  },
+  {
+   "term": "对乙酰氨基酚"
+  },
+  {
+   "term": "阿莫西林"
+  },
+  {
+   "term": "头孢克肟"
+  },
+  {
+   "term": "二甲双胍"
+  },
+  {
+   "term": "格列美脲"
+  },
+  {
+   "term": "阿托伐他汀"
+  },
+  {
+   "term": "硝苯地平"
+  },
+  {
+   "term": "氨氯地平"
+  },
+  {
+   "term": "奥美拉唑"
+  },
+  {
+   "term": "雷贝拉唑"
+  },
+  {
+   "term": "氯雷他定"
+  },
+  {
+   "term": "地塞米松"
+  },
+  {
+   "term": "左氧氟沙星"
+  },
+  {
+   "term": "阿奇霉素"
+  },
+  {
+   "term": "胰岛素"
+  },
+  {
+   "term": "青霉素"
+  },
+  {
+   "term": "布地奈德"
+  },
+  {
+   "term": "沙丁胺醇"
+  },
+  {
+   "term": "硝酸甘油"
+  },
+  {
+   "term": "华法林"
+  },
+  {
+   "term": "美托洛尔"
+  },
+  {
+   "term": "缬沙坦"
+  },
+  {
+   "term": "氯吡格雷"
+  },
+  {
+   "term": "高血压"
+  },
+  {
+   "term": "糖尿病"
+  },
+  {
+   "term": "冠心病"
+  },
+  {
+   "term": "心肌梗死"
+  },
+  {
+   "term": "脑卒中"
+  },
+  {
+   "term": "慢性阻塞性肺疾病"
+  },
+  {
+   "term": "支气管哮喘"
+  },
+  {
+   "term": "肺结核"
+  },
+  {
+   "term": "乙型肝炎"
+  },
+  {
+   "term": "脂肪肝"
+  },
+  {
+   "term": "胃食管反流"
+  },
+  {
+   "term": "幽门螺杆菌"
+  },
+  {
+   "term": "类风湿关节炎"
+  },
+  {
+   "term": "甲状腺功能亢进"
+  },
+  {
+   "term": "甲状腺结节"
+  },
+  {
+   "term": "骨质疏松"
+  },
+  {
+   "term": "肾结石"
+  },
+  {
+   "term": "带状疱疹"
+  },
+  {
+   "term": "核磁共振"
+  },
+  {
+   "term": "心电图"
+  },
+  {
+   "term": "血常规"
+  },
+  {
+   "term": "尿常规"
+  },
+  {
+   "term": "肝功能"
+  },
+  {
+   "term": "肾功能"
+  },
+  {
+   "term": "糖化血红蛋白"
+  },
+  {
+   "term": "肿瘤标志物"
+  }
+ ]
+}

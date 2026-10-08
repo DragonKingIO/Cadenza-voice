@@ -43,6 +43,10 @@ The hybrid buffer gate is connected in source behind a disabled-by-default devel
 
 Off by default. When you turn it on and choose a service, the **recognized text** (never the audio) is sent to that service's address after recognition, to remove fillers and fix punctuation. Nothing else is sent: no audio, no settings, no earlier text. A service on this Mac (Ollama, LM Studio, any `localhost` address) does not send the text anywhere else. For a service that is not on this Mac you must also switch on "Allow sending the recognized text to this service"; plain `http://` is refused for such addresses, the API key is stored in the macOS Keychain (never in the settings file), and turning on "Only on this Mac" blocks the service. If the service fails, is slow, or its answer does not look like your text, the text is inserted without polishing. The log records only the service name, the number of characters and the time taken, never the text or the key.
 
+## Vocabulary
+
+Your own terms are stored in `vocabulary.json` in the app's data folder on this Mac; the shared packs are files inside the app. Correcting terms runs on this Mac and sends nothing. Only when AI polish is on, the terms that appear in the dictated text (and your own terms) are included in the request to the service you chose, as a glossary, together with the text. Import and export read and write only the file you choose.
+
 ## Text tidying
 
 The "Tidy the text" setting (Settings → Voice input) removes hesitation sounds and stuttered repeats from recognized text, and can split long text into paragraphs. It is a fixed set of rules that runs on this Mac: no model, no network, nothing is sent or stored.
