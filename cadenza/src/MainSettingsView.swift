@@ -95,6 +95,7 @@ final class SettingsModel {
     var refine=TextRefineSettings()
     var vocabulary=VocabularySettings()
     var translate=TranslateSettings()
+    var llmProfiles:[LLMProfile]=[]
     var engineAvailable = true
     var shortcutEnabled = true
     var toggleAvailable = false
@@ -123,6 +124,7 @@ final class SettingsModel {
         refine=cfg.refine
         vocabulary=cfg.vocabulary
         translate=cfg.translate
+        llmProfiles=cfg.llmProfiles
         engine = ASREngine(rawValue: cfg.engine) ?? .apple
         localOnlyOn = LocalOnlyMode.enabled
         if engine != .apple && engine != .local { UserDefaults.standard.set(engine.rawValue, forKey: Self.lastCloudKey) }
@@ -460,6 +462,8 @@ struct VoiceInputPage: View {
             } header:{Text(L10n.tr("settings.current"))}
             TextPolishSection(model:model)
             TextRefineSection(model:model)
+            TranslateSection(model:model)
+            LLMModelsSection(model:model)
         }
         .onExitCommand {if model.listening{model.cancelTry()}}
         .onReceive(timer){_ in model.tick();model.sync()}

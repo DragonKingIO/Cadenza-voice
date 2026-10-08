@@ -7,12 +7,16 @@ import Foundation
 struct TranslateSettings: Codable, Equatable {
     /// The language to translate into, by its English name ("Japanese"). Empty = translation is off.
     var target = ""
+    /// The "my AI models" profile translation runs on; empty = the same service as AI polish (older configurations).
+    var profileID = ""
     init() {}
-    enum CodingKeys: String, CodingKey { case target }
+    enum CodingKeys: String, CodingKey { case target, profileID }
     init(from decoder: Decoder) throws {
         let d = try decoder.container(keyedBy: CodingKeys.self)
         let t = ((try? d.decodeIfPresent(String.self, forKey: .target)) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         target = TranslationLanguages.valid(t) ? t : ""
+        let pid = (try? d.decodeIfPresent(String.self, forKey: .profileID)) ?? ""
+        profileID = pid.range(of: "^[a-z0-9]{0,16}$", options: .regularExpression) != nil ? pid : ""
     }
     var active: Bool { !target.isEmpty }
 }

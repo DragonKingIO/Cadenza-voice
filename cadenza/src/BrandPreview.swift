@@ -78,19 +78,14 @@ enum BrandPreview {
             controller.settingsModel?.providerDraftFactory={engine in ProviderSettingsDraft(store:store,engine:engine,busy:{false},changed:{},writer:SettingsUIFixtures.Writer(),read:{_ in nil},has:{_ in true})}
             controller.settingsModel?.configuring=provider
         }
-        if CommandLine.arguments.contains("--preview-translate") {
-            // Synthetic setting only: no key, no network.
-            var refine=TextRefineSettings();refine.preset="deepseek"
-            if let p=LLMPresets.preset("deepseek"){refine.baseURL=p.baseURL;refine.model=p.model}
-            _=store.mutate{$0.refine=refine;$0.translate.target="Japanese"}
-            controller.settingsModel?.sync()
-        }
-        if CommandLine.arguments.contains("--preview-refine") {
-            // Synthetic setting only: no key, no network.
-            var refine=TextRefineSettings();refine.enabled=true;refine.preset="deepseek"
-            if let p=LLMPresets.preset("deepseek"){refine.baseURL=p.baseURL;refine.model=p.model}
-            if CommandLine.arguments.contains("--preview-refine-local"),let p=LLMPresets.preset("ollama"){refine.preset=p.id;refine.baseURL=p.baseURL;refine.model=p.model}
-            _=store.mutate{$0.refine=refine}
+        if CommandLine.arguments.contains("--preview-translate") || CommandLine.arguments.contains("--preview-refine") {
+            // Synthetic settings only: no key, no network.
+            var deepseek=LLMProfile.make(preset:"deepseek",existing:[]);deepseek.id="aaa";deepseek.keyName=LLMProfile.keyName(for:"aaa");deepseek.model="deepseek-chat";deepseek.consent=true
+            var local=LLMProfile.make(preset:"ollama",existing:[deepseek]);local.id="bbb";local.keyName=LLMProfile.keyName(for:"bbb");local.model="qwen2.5:7b";local.name="Qwen 本机"
+            _=store.mutate{
+                $0.llmProfiles=[deepseek,local];$0.refine.enabled=true;$0.refine.profileID="aaa";$0.translate.profileID="bbb"
+                if CommandLine.arguments.contains("--preview-translate"){$0.translate.target="Japanese"}
+            }
             controller.settingsModel?.sync()
         }
         if CommandLine.arguments.contains("--preview-compare"),let model=controller.settingsModel {

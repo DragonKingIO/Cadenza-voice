@@ -280,9 +280,10 @@ final class VoicePipeline {
                 // Voice translation: the translation is what gets inserted; any failure inserts the untranslated text and says why.
                 let translate=self.config.translate
                 if let text=corrected,translate.active,self.recorder?.capturedAudioHasSignal != false,!text.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty {
-                    guard self.config.refine.configured else{self.refineNote=L10n.format("translate.kept",L10n.tr("translate.err.noService"));finish(text);return}
+                    let service=self.config.llmService(.translate)
+                    guard service.configured else{self.refineNote=L10n.format("translate.kept",L10n.tr("translate.err.noService"));finish(text);return}
                     self.refining=true;self.refineNote=nil;self.notifyUI()
-                    self.textTranslator.translate(text,target:translate.target,settings:self.config.refine,glossary:VocabularyStore.shared.glossary(for:text,self.config.vocabulary)){[weak self] translated,note in
+                    self.textTranslator.translate(text,target:translate.target,settings:service,glossary:VocabularyStore.shared.glossary(for:text,self.config.vocabulary)){[weak self] translated,note in
                         DispatchQueue.main.async {
                             guard let self=self,self.session?.id == sid else{return}
                             self.refining=false;self.refineNote=note.map{L10n.format("translate.kept",$0)}
@@ -292,7 +293,7 @@ final class VoicePipeline {
                     return
                 }
                 // Optional AI polishing: only text goes out, only when the person turned it on, and any failure keeps the text as it is.
-                let refine=self.config.refine
+                let refine=self.config.llmService(.polish)
                 if let text=corrected,refine.enabled,refine.configured,self.recorder?.capturedAudioHasSignal != false,!text.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty {
                     self.refining=true;self.refineNote=nil;self.notifyUI()
                     self.textRefiner.refine(text,settings:refine,glossary:VocabularyStore.shared.glossary(for:text,self.config.vocabulary)){[weak self] refined,note in
