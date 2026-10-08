@@ -20,6 +20,26 @@ struct LocalModelInstalled: Codable, Equatable {
 }
 
 @Observable
+/// Tells a late clean-up whether the staging folder of a model has been used again since the clean-up was ordered.
+/// Cancelling a download removes its staging folder now and again once the downloader has stopped. If the person imports the
+/// model's files in between, that second removal would delete what was just imported.
+final class StagingEpoch {
+    private let lock = NSLock()
+    private var marks: [String: Int] = [:]
+
+    /// Records that the staging folder of `id` is about to be written or removed on purpose. Returns the new mark.
+    @discardableResult func bump(_ id: String) -> Int {
+        lock.lock(); defer { lock.unlock() }
+        marks[id, default: 0] += 1
+        return marks[id]!
+    }
+    /// Runs `action` only if nothing has bumped `id` since `mark`. The check and the action are one step: a bump waits for it.
+    func performIfCurrent(_ id: String, mark: Int, _ action: () -> Void) {
+        lock.lock(); defer { lock.unlock() }
+        if marks[id, default: 0] == mark { action() }
+    }
+}
+
 final class LocalModelCenter {
     static let shared = LocalModelCenter()
 
@@ -63,6 +83,7 @@ final class LocalModelCenter {
     private var recordURL: URL { root.appendingPathComponent("installed.json") }
     private var remoteCacheURL: URL { root.appendingPathComponent("remote-manifest.json") }
     private func versionDir(_ id: String, _ version: String) -> URL { root.appendingPathComponent("\(id)-\(version)", isDirectory: true) }
+    private let epochs = StagingEpoch()
     private func staging(_ e: LocalModelEntry) -> URL { root.appendingPathComponent(".downloads/\(e.id)-\(e.version)", isDirectory: true) }
 
     func entry(_ id: String) -> LocalModelEntry? { entries.first { $0.id == id } }
@@ -147,6 +168,7 @@ final class LocalModelCenter {
         let need = entry.downloadSize + entry.installedSize
         let free = Self.freeBytes(at: root)
         guard free >= need + need / 10 else { active[entry.id] = .failed(LocalModelError.insufficientDisk(need: need, free: free).localizedDescription); return }
+        epochs.bump(entry.id)
         let job = Job(entry); jobs[entry.id] = job
         active[entry.id] = .downloading(done: 0, total: job.total)
         startFile(job)
@@ -228,7 +250,12 @@ final class LocalModelCenter {
         if let job = jobs[id] {
             job.cancelled = true; jobs[id] = nil
             // The downloader creates its folder on its own queue, which can happen after the removal below; clean up again once it has stopped.
-            job.downloader?.stop { if let staged { try? FileManager.default.removeItem(at: staged) } }
+            let mark = epochs.bump(id)
+            job.downloader?.stop { [weak self] in
+                guard let self, let staged else { return }
+                // Not if the files were imported or the download restarted in the meantime.
+                self.epochs.performIfCurrent(id, mark: mark) { try? FileManager.default.removeItem(at: staged) }
+            }
         }
         if let staged { try? FileManager.default.removeItem(at: staged) }
         active[id] = nil
@@ -341,6 +368,7 @@ final class LocalModelCenter {
                           let f = hit.files.first(where: { $0.sha256.lowercased() == hash }) else { throw LocalModelError.checksumMismatch(url.lastPathComponent) }
                     if let t = target, t.id != hit.id { throw LocalModelError.checksumMismatch(url.lastPathComponent) }
                     target = hit
+                    self.epochs.bump(hit.id)   // a clean-up ordered by an earlier cancel must not remove what is copied now
                     let dir = self.staging(hit)
                     try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
                     let dest = dir.appendingPathComponent(f.name)

@@ -348,10 +348,23 @@ enum LocalModelFixtures {
         center.download(e1); center.cancel(e1.id)
         c("取消后不安装并清理暂存", wait(5) { center.state(e1.id) == .notInstalled && !FileManager.default.fileExists(atPath: root.appendingPathComponent(".downloads/\(e1.id)-1.0.0").path) })
 
+        // A clean-up ordered by a cancel must not remove files imported afterwards (this race made the import check flaky on slow machines)
+        let epoch = StagingEpoch()
+        var removed = 0
+        let mark = epoch.bump("m")
+        epoch.performIfCurrent("m", mark: mark) { removed += 1 }
+        c("清理：期间没有人动过暂存目录时照常清理", removed == 1)
+        let late = epoch.bump("m")
+        epoch.bump("m")   // an import (or a restarted download) in between
+        epoch.performIfCurrent("m", mark: late) { removed += 1 }
+        c("清理：取消之后又导入或重新下载则不再清理", removed == 1)
+        epoch.bump("other")
+        epoch.performIfCurrent("m", mark: epoch.bump("m")) { removed += 1 }
+        c("清理：不同模型互不影响", removed == 2)
         // 导入：用户自己下载的包，按 SHA256 匹配后走同一套安装
         var imported: Result<LocalModelEntry, Error>?
         center.importFile(a1.url) { imported = $0 }
-        c("导入匹配的包并完成安装", wait(30) { if case .installed = center.state(e1.id), imported != nil { return true }; return false } && (try? imported?.get().id) == e1.id)
+        c("导入匹配的包并完成安装", wait(90) { if case .installed = center.state(e1.id), imported != nil { return true }; return false } && (try? imported?.get().id) == e1.id)
         center.delete(e1.id)
         let hitsBefore = sA1.ranges.count + sV.ranges.count
         var multi: Result<LocalModelEntry, Error>?

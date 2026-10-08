@@ -1397,3 +1397,17 @@
 "refine.err.rejected" = "返回的内容不像你说的话，没有采用。";
 "refine.testSample" = "呃，那个，我我想明天下午三点开会，你帮我订一下会议室。";
 "refine.key.prompt" = "sk-…";
+"refine.models.fetch" = "获取模型";
+"refine.models.pick" = "选择…";
+"refine.models.found" = "找到 %@ 个模型，请选择一个。";
+"refine.err.noModelList" = "这个服务不提供模型列表，请手动填写模型名称。";
+"refine.err.noModels" = "这个服务里还没有模型。Ollama 或 LM Studio 请先下载或加载一个。";
+"refine.group.0" = "本机";
+"refine.group.1" = "一个密钥，多个模型";
+"refine.group.2" = "国际";
+"refine.group.3" = "国内";
+"refine.group.other" = "其他";
+"refine.model.hint" = "点“获取模型”从列表里选，也可以直接输入名称。";
+"refine.note.opencode" = "这里只能用 OpenCode 通过对话补全接口提供的模型（开源模型）；它的 Claude 和 GPT 模型走的是别的接口。";
+"refine.note.anthropic" = "通过 Anthropic 的 OpenAI 兼容层使用 Claude。Anthropic 说明这个兼容层面向测试，不建议用于正式环境。";
+"refine.note.doubao" = "火山方舟通常要把接入点 ID（ep-…）填作模型名称，请从方舟控制台复制。";
