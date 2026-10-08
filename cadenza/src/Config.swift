@@ -421,7 +421,7 @@ extension BridgeConfig {
     func recordingOptions(_ engine:ASREngine)->CloudASROptions {
         var o=options(engine)
         if engine == .deepgram {o.language=DeepgramAPI.effectiveLanguage(o.language,recognitionLocale:recognitionLocale)}
-        return o
+        return VocabularyHotwords.apply(engine,to:o,settings:vocabulary)
     }
     func options(_ engine:ASREngine)->CloudASROptions {
         var o=cloudASR[engine.rawValue] ?? .defaults(engine)

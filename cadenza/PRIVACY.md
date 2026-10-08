@@ -45,7 +45,7 @@ Off by default. When you turn it on and choose a service, the **recognized text*
 
 ## Vocabulary
 
-Your own terms are stored in `vocabulary.json` in the app's data folder on this Mac; the shared packs are files inside the app. Correcting terms runs on this Mac and sends nothing. Only when AI polish is on, the terms that appear in the dictated text (and your own terms) are included in the request to the service you chose, as a glossary, together with the text. Import and export read and write only the file you choose.
+Your own terms are stored in `vocabulary.json` in the app's data folder on this Mac; the shared packs are files inside the app. Correcting terms runs on this Mac and sends nothing. If you use a cloud recognition service that accepts hot words (Tencent, Volcengine, Deepgram for English), your terms and the terms of the packs you switched on are sent to that service before the recording, as hot words, together with your recording and only to the service you already allowed to receive it; the switch "Also give the terms to cloud recognition services" in Settings → Vocabulary turns this off, and then your own terms stay on this Mac. Only when AI polish is on, the terms that appear in the dictated text (and your own terms) are included in the request to the service you chose, as a glossary, together with the text. Import and export read and write only the file you choose.
 
 ## Text tidying
 

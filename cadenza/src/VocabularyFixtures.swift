@@ -95,6 +95,36 @@ enum VocabularyFixtures {
         c("store: invalid or repeated terms are refused and nothing changes", !store.setUser([VocabEntry(term: "a"), VocabEntry(term: "A")]) && !store.setUser([VocabEntry(term: "")]) && store.user.count == 2)
         c("store: the glossary has the person's terms and the pack terms that occur", { let g = store.glossary(for: "we use GitHub and Kubernetes today", VocabularySettings()); return g.contains("随言") && g.contains("GitHub") && g.contains("Kubernetes") }()
           && !store.glossary(for: "nothing here", VocabularySettings()).contains("Kubernetes"))
+
+        // Hot words for cloud recognizers
+        let hotSettings = VocabularySettings()
+        _ = store.setUser([VocabEntry(term: "随言", aliases: ["岁言"]), VocabEntry(term: "VS Code"), VocabEntry(term: "Node.js")])
+        func options(_ engine: ASREngine, hotwords: String = "", language: String? = nil) -> CloudASROptions { var o = CloudASROptions.defaults(engine); o.consent = true; o.hotwords = hotwords; if let language { o.language = language }; return o }
+        let volc = VocabularyHotwords.apply(.volcengine, to: options(.volcengine, hotwords: "我的词"), settings: hotSettings, store: store).hotwords.split(separator: "\n").map(String.init)
+        c("hot words: Volcengine gets the person's own terms first, after their own field", volc.prefix(4) == ["我的词", "随言", "VS Code", "Node.js"] && volc.contains("GitHub") && volc.contains("Kubernetes"))
+        let tencent = VocabularyHotwords.apply(.tencent, to: options(.tencent, hotwords: "旧词|10"), settings: hotSettings, store: store).hotwords.split(separator: ",").map(String.init)
+        c("hot words: Tencent gets word|weight, the person's own heavier", tencent.first == "旧词|10" && tencent.contains("随言|8") && tencent.contains("GitHub|5") && tencent.contains("Kubernetes|5"))
+        c("hot words: Tencent leaves out what its rules refuse (spaces, dots)", !tencent.contains { $0.hasPrefix("VS Code") || $0.hasPrefix("Node.js") })
+        c("hot words: and what is sent passes the provider's own check", ASROptionPolicy.validate(.tencent, VocabularyHotwords.apply(.tencent, to: options(.tencent), settings: hotSettings, store: store)) == nil && ASROptionPolicy.validate(.volcengine, VocabularyHotwords.apply(.volcengine, to: options(.volcengine), settings: hotSettings, store: store)) == nil)
+        let deepgram = VocabularyHotwords.apply(.deepgram, to: options(.deepgram, language: "en"), settings: hotSettings, store: store)
+        c("hot words: Deepgram gets key terms one per line for English", deepgram.hotwords.split(separator: "\n").contains("随言") && ASROptionPolicy.validate(.deepgram, deepgram) == nil)
+        c("hot words: Deepgram sends them as keyterm parameters", DeepgramAPI.request(options: deepgram, key: "k")?.url?.query?.contains("keyterm=GitHub") == true)
+        c("hot words: but not for Chinese, where support is not confirmed", VocabularyHotwords.apply(.deepgram, to: options(.deepgram, language: "zh-CN"), settings: hotSettings, store: store).hotwords.isEmpty
+          && DeepgramAPI.request(options: options(.deepgram, language: "zh-CN"), key: "k")?.url?.query?.contains("keyterm") == false)
+        var off = hotSettings; off.sendToCloud = false
+        var disabled = hotSettings; disabled.enabled = false
+        c("hot words: nothing when the person turned it off", VocabularyHotwords.apply(.volcengine, to: options(.volcengine), settings: off, store: store) == options(.volcengine) && VocabularyHotwords.apply(.tencent, to: options(.tencent), settings: disabled, store: store) == options(.tencent))
+        c("hot words: engines without a hot-word field are untouched", [ASREngine.iflytek, .baidu, .aliyun, .apple, .local].allSatisfy { VocabularyHotwords.apply($0, to: options($0), settings: hotSettings, store: store) == options($0) })
+        c("hot words: the saved options are not changed, only the copy for this recording", { let o = options(.volcengine, hotwords: "我的词"); _ = VocabularyHotwords.apply(.volcengine, to: o, settings: hotSettings, store: store); return o.hotwords == "我的词" }())
+        _ = store.setUser((0..<300).map { VocabEntry(term: "词条数量测试\($0)") })
+        c("hot words: the caps of each provider hold", VocabularyHotwords.apply(.volcengine, to: options(.volcengine), settings: hotSettings, store: store).hotwords.split(separator: "\n").count <= 50
+          && VocabularyHotwords.apply(.tencent, to: options(.tencent), settings: hotSettings, store: store).hotwords.split(separator: ",").count <= 128
+          && VocabularyHotwords.apply(.deepgram, to: options(.deepgram, language: "en"), settings: hotSettings, store: store).hotwords.split(separator: "\n").count <= 100)
+        var broken = options(.tencent, hotwords: "坏的"); broken.model = "16k_zh"
+        c("hot words: a result the provider would refuse is not used", VocabularyHotwords.apply(.tencent, to: broken, settings: hotSettings, store: store) == broken)
+        c("hot words: key term rules", DeepgramAPI.validKeyterms("") && DeepgramAPI.validKeyterms("a\nb") && !DeepgramAPI.validKeyterms("a\n\nb") && !DeepgramAPI.validKeyterms(" a") && !DeepgramAPI.validKeyterms((0..<101).map(String.init).joined(separator: "\n")) && !DeepgramAPI.validKeyterms(String(repeating: "x", count: 61)))
+        c("hot words: settings default and broken data", VocabularySettings().sendToCloud && (try? JSONDecoder().decode(VocabularySettings.self, from: Data(#"{"sendToCloud":"x"}"#.utf8)))?.sendToCloud == true)
+        c("hot words: candidates put the person's terms first, then pack terms with aliases", { _ = store.setUser([VocabEntry(term: "随言")]); let list = store.hotwordCandidates(hotSettings); return list.first?.term == "随言" && list.first?.user == true && list.dropFirst().first?.term == "GitHub" && list.contains { $0.term == "Kubernetes" && !$0.user } }())
         try? FileManager.default.removeItem(at: dir)
 
         // Import and export

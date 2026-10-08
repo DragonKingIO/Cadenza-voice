@@ -64,8 +64,13 @@ struct VocabularyView: View {
         SettingsPage {
             Section {
                 Toggle(L10n.tr("vocab.enable"), isOn: Binding(get: { model.vocabulary.enabled }, set: { v in model.persist { $0.vocabulary.enabled = v } }))
+                Toggle(L10n.tr("vocab.cloud"), isOn: Binding(get: { model.vocabulary.sendToCloud }, set: { v in model.persist { $0.vocabulary.sendToCloud = v } }))
+                    .disabled(!model.vocabulary.enabled)
             } footer: {
-                Text(L10n.tr("vocab.hint")).font(.callout).foregroundStyle(.primary)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L10n.tr("vocab.hint"))
+                    Text(L10n.tr("vocab.cloud.hint"))
+                }.font(.callout).foregroundStyle(.primary)
             }
             Section {
                 HStack {
