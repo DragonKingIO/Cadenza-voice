@@ -22,9 +22,13 @@ struct TextRefineSettings: Codable, Equatable {
     /// Permission to send the recognized text to a service that is not on this Mac.
     var consent = false
     var timeoutSec = 8.0
+    /// The "my AI models" profile this use runs on; empty = the address, model and consent above (older configurations).
+    var profileID = ""
+    /// Set when the service comes from a profile: the Keychain account of its key. Not saved here.
+    var keyAccount = ""
 
     init() {}
-    enum CodingKeys: String, CodingKey { case enabled, preset, baseURL, model, style, consent, timeoutSec }
+    enum CodingKeys: String, CodingKey { case enabled, preset, baseURL, model, style, consent, timeoutSec, profileID }
     init(from decoder: Decoder) throws {
         let d = try decoder.container(keyedBy: CodingKeys.self)
         enabled = (try? d.decodeIfPresent(Bool.self, forKey: .enabled)) ?? false
@@ -35,11 +39,13 @@ struct TextRefineSettings: Codable, Equatable {
         consent = (try? d.decodeIfPresent(Bool.self, forKey: .consent)) ?? false
         let t = (try? d.decodeIfPresent(Double.self, forKey: .timeoutSec)) ?? 8
         timeoutSec = t.isFinite ? min(30, max(2, t)) : 8
+        let pid = (try? d.decodeIfPresent(String.self, forKey: .profileID)) ?? ""
+        profileID = pid.range(of: "^[a-z0-9]{0,16}$", options: .regularExpression) != nil ? pid : ""
     }
 
     /// The service is on this Mac: nothing leaves it.
     var isLocal: Bool { LLMEndpoint.isLoopback(baseURL) }
-    var keyName: String { "llm." + preset }
+    var keyName: String { keyAccount.isEmpty ? "llm." + preset : keyAccount }
     var configured: Bool { LLMEndpoint.url(baseURL) != nil && !model.trimmingCharacters(in: .whitespaces).isEmpty }
 }
 

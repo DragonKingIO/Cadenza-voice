@@ -45,7 +45,7 @@ Off by default. When you turn it on and choose a service, the **recognized text*
 
 ## Voice translation (optional)
 
-Off by default. When you choose a language to translate into (Settings → Voice input, or the menu bar), what you say is recognized as usual and the **recognized text** (never the audio) is sent to the AI service you set up for AI polish, which returns the translation; the translation is inserted. The rules are the same as for AI polish: a service that is not on this Mac needs your permission, an API key in the Keychain and an `https://` address, "Only on this Mac" blocks it, and if the service fails or its answer does not look like a translation (wrong language, numbers or names changed, a refusal) the text is inserted untranslated. The log records the service, character counts and time, never the text.
+Off by default. When you choose a language to translate into (Settings → Voice input, or the menu bar), what you say is recognized as usual and the **recognized text** (never the audio) is sent to the model you chose for translation under "My AI models" (it can be a different one than AI polish uses), which returns the translation; the translation is inserted. The rules are the same as for AI polish, and are kept per model: a service that is not on this Mac needs your permission, an API key in the Keychain and an `https://` address, "Only on this Mac" blocks it, and if the service fails or its answer does not look like a translation (wrong language, numbers or names changed, a refusal) the text is inserted untranslated. The log records the service, character counts and time, never the text.
 
 ## Vocabulary
 

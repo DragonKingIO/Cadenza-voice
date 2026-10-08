@@ -90,6 +90,8 @@ struct BridgeConfig: Codable {
     var vocabulary = VocabularySettings()
     /// 语音翻译：目标语言（空 = 关闭）。新增键，旧配置缺失时用默认。
     var translate = TranslateSettings()
+    /// 我添加的 AI 模型（对话补全服务）；润色与翻译各选其一。新增键，旧配置缺失时由旧的单一服务迁移而来。
+    var llmProfiles: [LLMProfile] = []
     var microphoneUID = ""
     var inputMode = "hold"
     var triggerCoordinatorEnabled = false
@@ -206,6 +208,7 @@ struct BridgeConfig: Codable {
         if c.recordingTimeoutSec <= 0 { errs.append(L10n.tr("ui.c9954390c4b6")) }
         if c.commitWaitSec <= 0 { errs.append(L10n.tr("ui.937c7820df19")) }
         if !c.localModel.recognition.valid {errs.append(L10n.tr("local.err.options"))}
+        if LLMProfiles.problem(c.llmProfiles) != nil {errs.append(L10n.tr("llm.err.profiles"))}
         if !LocalASRCorrection.valid(c.localASRMappings){errs.append(L10n.tr("ui.c67ce92c6e74"))}
         for (key,_) in c.cloudASR {if let e=ASREngine(rawValue:key),let reason=ASROptionPolicy.validate(e,c.options(e)){errs.append(reason)}}
         return errs
@@ -213,7 +216,7 @@ struct BridgeConfig: Codable {
 
     enum CodingKeys: String, CodingKey {
         case triggerCoordinatorEnabled, triggerThresholdSec, triggerNoSpeechSec, triggerPostSpeechSec
-        case localModel, screenshot, polish, refine, vocabulary, translate
+        case localModel, screenshot, polish, refine, vocabulary, translate, llmProfiles
         case cloudASR, localASRMappings, appearanceMode, microphoneUID, inputMode, holdShortcutEnabled, toggleShortcutEnabled, toggleTrigger
         case enabled, mode, trigger, triggerConsume, diagnosticTrigger, iflytekSourceID, iflytekVoiceHotkey
         case requireSuitableFocus, focusPollMs, recordingTimeoutSec, commitWaitSec, recognitionLocale
@@ -233,6 +236,7 @@ struct BridgeConfig: Codable {
         refine = try d.decodeIfPresent(TextRefineSettings.self,forKey:.refine) ?? TextRefineSettings()
         vocabulary = try d.decodeIfPresent(VocabularySettings.self,forKey:.vocabulary) ?? VocabularySettings()
         translate = try d.decodeIfPresent(TranslateSettings.self,forKey:.translate) ?? TranslateSettings()
+        llmProfiles = (try? d.decodeIfPresent([LLMProfile].self,forKey:.llmProfiles)) ?? []
         localASRMappings = try d.decodeIfPresent([LocalASRMapping].self,forKey:.localASRMappings) ?? []
         appearanceMode = try d.decodeIfPresent(String.self,forKey:.appearanceMode) ?? "system"
         microphoneUID = try d.decodeIfPresent(String.self, forKey: .microphoneUID) ?? ""
@@ -261,6 +265,7 @@ struct BridgeConfig: Codable {
         allowCloudRecognition = try d.decodeIfPresent(Bool.self, forKey: .allowCloudRecognition) ?? base.allowCloudRecognition
         engine = try d.decodeIfPresent(String.self, forKey: .engine) ?? base.engine
         iflytekConsent = try d.decodeIfPresent(Bool.self, forKey: .iflytekConsent) ?? base.iflytekConsent
+        migrateLLMProfiles()
     }
 
     func encode(to encoder: Encoder) throws {
@@ -272,6 +277,7 @@ struct BridgeConfig: Codable {
         try d.encode(refine,forKey:.refine)
         try d.encode(vocabulary,forKey:.vocabulary)
         try d.encode(translate,forKey:.translate)
+        try d.encode(llmProfiles,forKey:.llmProfiles)
         try d.encode(localASRMappings,forKey:.localASRMappings)
         try d.encode(appearanceMode,forKey:.appearanceMode)
         try d.encode(microphoneUID, forKey: .microphoneUID)

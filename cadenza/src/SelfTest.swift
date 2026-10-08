@@ -39,6 +39,7 @@ enum SelfTest {
         LLMRefineFixtures.run(check)
         VocabularyFixtures.run(check)
         TranslateFixtures.run(check)
+        LLMProfilesFixtures.run(check)
         testConfigValidation()
         testCustomShortcuts()
         testOnboardingReadiness()
@@ -593,6 +594,25 @@ enum SelfTest {
         settle { pipeline.session == nil }
         check("没开翻译时不调用翻译", inserted.last == "没开翻译的话")
         store.mutate { $0.refine = TextRefineSettings() }
+        // Polish and translation run on their own models
+        final class Seen { var polish = "", translate = "" }
+        let seen = Seen()
+        func profile(_ id: String, _ model: String) -> LLMProfile { LLMProfile(id: id, name: id, preset: "ollama", baseURL: "http://localhost:11434/v1", model: model) }
+        store.mutate { $0.llmProfiles = [profile("aaa", "polish-model"), profile("bbb", "translate-model")]; $0.refine = TextRefineSettings(); $0.refine.enabled = true; $0.refine.profileID = "aaa"; $0.translate.profileID = "bbb"; $0.translate.target = "English" }
+        pipeline.textTranslator = TranslateFixtures.FakeTranslator(result: "Translated.", note: nil, seen: { seen.translate = $0.model })
+        pipeline.textRefiner = LLMRefineFixtures.FakeRefiner(result: "不应用润色", note: nil, seen: { seen.polish = $0.model })
+        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        recorders.last?.onFinal?("用各自的模型")
+        settle { pipeline.session == nil }
+        check("翻译用自己的模型，且翻译时不再润色", seen.translate == "translate-model" && seen.polish == "" && inserted.last == "Translated.")
+        store.mutate { $0.translate.target = "" }
+        pipeline.textRefiner = LLMRefineFixtures.FakeRefiner(result: "润色后。", note: nil, seen: { seen.polish = $0.model })
+        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        recorders.last?.onFinal?("只润色")
+        settle { pipeline.session == nil }
+        check("润色用自己选的模型", seen.polish == "polish-model" && inserted.last == "润色后。")
+        store.mutate { $0.llmProfiles = []; $0.refine = TextRefineSettings(); $0.translate = TranslateSettings() }
+        pipeline.textRefiner = LLMTextRefiner()
         pipeline.textTranslator = LLMTextTranslator()
         // Vocabulary: a mis-recognized term is fixed before insertion (scratch files, not the person's own)
         let vocabularyStore = VocabularyStore.shared

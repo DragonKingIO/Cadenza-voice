@@ -21,7 +21,9 @@ enum LLMRefineFixtures {
     struct FakeRefiner: TextRefining {
         var result: String?
         var note: String?
+        var seen: ((TextRefineSettings) -> Void)?
         func refine(_ text: String, settings: TextRefineSettings, glossary: [String], done: @escaping (String?, String?) -> Void) {
+            seen?(settings)
             DispatchQueue.global().asyncAfter(deadline: .now() + 0.25) { done(result, note) }
         }
     }
