@@ -13,6 +13,7 @@ real contributions. 中文说明见本文末尾。
 | Translate the app into your language | **Add a language** form first: adding a third language still needs some code work, see [Adding a language](cadenza/docs/DEVELOPING.md#adding-a-language). |
 | Propose a speech model | **Model request** form. We need the license, size, checksum and benchmark numbers. |
 | Add a cloud speech service | **Cloud provider** form, then [Adding a cloud provider](cadenza/docs/DEVELOPING.md#adding-a-cloud-provider). |
+| Add terms to the shared vocabulary | Edit or add a JSON file in [`cadenza/vocab`](cadenza/vocab/README.md) and open a pull request. No code needed; `--selftest` checks the file. |
 | Improve the docs | Edit any `.md` file and open a pull request. Small fixes need no issue. |
 | Fix a bug or build a feature | [Developing Cadenza](cadenza/docs/DEVELOPING.md), then follow the pull request steps below. |
 | Report a security problem | **Do not open a public issue.** See [SECURITY.md](SECURITY.md). |
