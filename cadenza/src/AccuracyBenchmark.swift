@@ -341,3 +341,40 @@ enum ModelSpeedBenchmark {
         return 0
     }
 }
+
+/// `--bench-fillers`: do the installed local models already leave out hesitation sounds and stutters, or does the tidy step
+/// have work to do? Speaks sentences that contain them with the system voices and shows what each model writes and what the
+/// tidy step changes. Synthetic voices say fillers more cleanly than people do, so this is a lower bound.
+enum FillerProbe {
+    static let sentences: [(text: String, voice: String)] = [
+        ("呃，我想明天下午三点开会。", "Tingting"), ("嗯，那个，你帮我订一下会议室。", "Tingting"), ("我我我想问一下这个这个功能怎么用。", "Tingting"),
+        ("就是，然后，我们先看一下预算。", "Tingting"), ("额，这个方案的话，嗯，成本可能有点高。", "Tingting"), ("我觉得，呃，可以先做第一版。", "Tingting"),
+        ("Um, I think we should ship it on Friday.", "Samantha"), ("So, uh, I I think the plan works.", "Samantha"),
+        ("You know, we should, like, review the budget first.", "Samantha"),
+    ]
+    static func run() -> Int32 {
+        let engines = AccuracyBenchmark.localEngines()
+        guard !engines.isEmpty else { print("fillers: no local model installed"); return 0 }
+        var standard = TextPolishSettings(); standard.level = .standard
+        var thorough = TextPolishSettings(); thorough.level = .thorough
+        let hesitation = try! NSRegularExpression(pattern: "呃|嗯|额|\\b(?:um+|uh+|erm?)\\b", options: .caseInsensitive)
+        for engine in engines {
+            let transcribe = engine.make()
+            var kept = 0, changedStandard = 0, changedThorough = 0, total = 0
+            print("== \(engine.name)")
+            for (text, voice) in sentences {
+                guard let samples = AccuracyBenchmark.speech(text, voice: voice, rate: nil) else { print("  (could not speak) \(text)"); continue }
+                let raw = transcribe(samples)
+                let s = TextPolish.apply(raw, standard), t = TextPolish.apply(raw, thorough)
+                total += 1
+                let hasFiller = hesitation.firstMatch(in: raw, range: NSRange(location: 0, length: (raw as NSString).length)) != nil
+                if hasFiller { kept += 1 }
+                if s != raw { changedStandard += 1 }
+                if t != raw { changedThorough += 1 }
+                print("  said : \(text)\n  wrote: \(raw)\n  std  : \(s == raw ? "(unchanged)" : s)\n  thor : \(t == raw ? "(unchanged)" : t)")
+            }
+            print("  -> \(engine.name): \(total) sentences, hesitation sounds kept by the model in \(kept), changed by Standard in \(changedStandard), by Thorough in \(changedThorough)")
+        }
+        return 0
+    }
+}

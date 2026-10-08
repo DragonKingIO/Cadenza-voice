@@ -25,23 +25,46 @@ struct TextPolishSettings: Codable, Equatable {
     }
 }
 
+/// What the tidy step did to one recognized text: counts only, never the text, so it can go into the log.
+struct PolishReport: Equatable {
+    var hesitations = 0
+    var repeats = 0
+    var connectors = 0
+    var paragraphs = false
+    var changed = false
+}
+
 enum TextPolish {
-    static func apply(_ text: String, _ settings: TextPolishSettings) -> String {
-        guard !text.isEmpty, settings.level != .off || settings.paragraphs else { return text }
+    static func apply(_ text: String, _ settings: TextPolishSettings) -> String { applyReporting(text, settings).text }
+
+    static func applyReporting(_ text: String, _ settings: TextPolishSettings) -> (text: String, report: PolishReport) {
+        var report = PolishReport()
+        guard !text.isEmpty, settings.level != .off || settings.paragraphs else { return (text, report) }
         var out = text
         if settings.level != .off {
             out = mapUnprotected(out) { segment in
+                report.hesitations += count(zhHesitations + [enHesitation], in: segment)
                 var t = removeHesitations(segment)
+                report.repeats += count([zhChars, zhWords, enWords], in: t)
                 t = collapseRepeats(t)
-                if settings.level == .thorough { t = removeConnectors(t) }
+                if settings.level == .thorough {
+                    report.connectors += count([zhConnectors, enConnectors], in: t)
+                    t = removeConnectors(t)
+                }
                 return tidy(t)
             }
             out = replace(leadingMarks, in: out, with: "").trimmingCharacters(in: .whitespaces)
             // A recording that was only "嗯。" has nothing left once the filler is gone; keep what was said.
-            if out.rangeOfCharacter(from: .alphanumerics) == nil { return text }
+            if out.rangeOfCharacter(from: .alphanumerics) == nil { return (text, PolishReport()) }
         }
-        if settings.paragraphs { out = paragraphs(out) }
-        return out
+        if settings.paragraphs { let split = paragraphs(out); report.paragraphs = split != out; out = split }
+        report.changed = out != text
+        return (out, report)
+    }
+
+    private static func count(_ expressions: [NSRegularExpression], in text: String) -> Int {
+        let range = NSRange(location: 0, length: (text as NSString).length)
+        return expressions.reduce(0) { $0 + $1.numberOfMatches(in: text, range: range) }
     }
 
     // MARK: Protected spans
@@ -70,12 +93,14 @@ enum TextPolish {
         r.stringByReplacingMatches(in: text, range: NSRange(location: 0, length: (text as NSString).length), withTemplate: template)
     }
 
-    /// 呃 is never part of a word except 呃逆 (hiccup), so it goes anywhere. 嗯 and 唔 only go at the start of a clause, and
-    /// 额 only when a comma follows it, because 额度 and 金额 are words. A 嗯 that is a whole sentence ("你来吗？嗯。") is an answer, so it stays.
+    /// 呃 is never part of a word except 呃逆 (hiccup), so it goes anywhere. 嗯 and 唔 go at the start of a clause or between two words, and
+    /// 额 only when a comma follows it, because 额度 and 金额 are words. A 嗯 between two words goes too. A 嗯 that is a whole sentence ("你来吗？嗯。") is an answer, so it stays.
     private static let zhHesitations = [
         re("呃(?!逆)[呃啊]*[，、,…]*[ \\t]*"),
         re("(?<![\\p{Han}A-Za-z0-9])(?>[嗯唔]+[嗯唔啊]*)(?![。！？.!?])[，、,…]*[ \\t]*"),
         re("(?<![\\p{Han}A-Za-z0-9])额[，、,…]+[ \\t]*"),
+        // Models often write 嗯 between two words with no mark around it ("方案的话嗯成本"); 嗯哼 is a word.
+        re("(?<=\\p{Han})(?>[嗯唔]+)(?![哼哈])(?=[\\p{Han}，、,])[，、,]?"),
     ]
     private static let enHesitation = re("(?<![\\p{L}\\p{N}'’-])(?:u+m+|u+h+|erm?)(?![\\p{L}\\p{N}'’-])[,.…]*[ \\t]*", .caseInsensitive)
 
@@ -107,7 +132,7 @@ enum TextPolish {
 
     private static let zhChars = re("([我你他她这那就])\\1+")
     private static let zhWords = re("(我们|你们|他们|因为|所以|但是|如果|这个|那个|然后|我觉得|我想|就是说)\\1+")
-    private static let enWords = re("\\b(i|we|the|a|to|and|it)\\s+\\1\\b", .caseInsensitive)
+    private static let enWords = re("\\b(i|we|the|a|to|and|it)(?:\\s+\\1\\b)+", .caseInsensitive)
 
     private static func collapseRepeats(_ text: String) -> String {
         var t = replace(zhChars, in: text, with: "$1")
