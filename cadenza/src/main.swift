@@ -39,6 +39,7 @@ if let index=CommandLine.arguments.firstIndex(of:"--calibrate-trigger-mic"),Comm
     exit(TriggerMicrophoneCalibration.run(environment:CommandLine.arguments[index+1]))
 }
 
+if CommandLine.arguments.contains("--selftest-refine-real") {exit(LLMRefineFixtures.real())}
 if CommandLine.arguments.contains("--selftest-appearance") {
     var count = 0, failed = 0
     AppearanceTransitionFixtures.run { name, ok in

@@ -36,6 +36,7 @@ enum SelfTest {
         TextPolishFixtures.run(check)
         ClipRecognitionFixtures.run(check)
         TCCFixtures.run(check)
+        LLMRefineFixtures.run(check)
         testConfigValidation()
         testCustomShortcuts()
         testOnboardingReadiness()
@@ -522,6 +523,38 @@ enum SelfTest {
         recorders.last?.onFinal?("外部结果")
         pump()
         check("菜单原目标身份确认后只插入一次", inserted == ["外部结果"] && pipeline.session == nil)
+        // AI polishing in the pipeline: refined text is inserted, any failure inserts the plain text, a cancelled session inserts nothing
+        func settle(_ done: () -> Bool) { let end = Date().addingTimeInterval(3); while !done() && Date() < end { RunLoop.main.run(until: Date().addingTimeInterval(0.02)) } }
+        var refineSettings = TextRefineSettings(); refineSettings.enabled = true; refineSettings.preset = "ollama"; refineSettings.baseURL = "http://localhost:11434/v1"; refineSettings.model = "m"
+        store.mutate { $0.refine = refineSettings }
+        pipeline.textRefiner = LLMRefineFixtures.FakeRefiner(result: "润色后的文字。", note: nil)
+        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        recorders.last?.onFinal?("呃润色前的文字")
+        pump()
+        check("润色期间会话保持并标记等待", pipeline.refining && pipeline.session != nil && inserted.count == 1)
+        settle { pipeline.session == nil }
+        check("润色成功插入润色后的文字", inserted.last == "润色后的文字。" && !pipeline.refining && pipeline.lastTranscript == "润色后的文字。")
+        pipeline.textRefiner = LLMRefineFixtures.FakeRefiner(result: nil, note: "服务响应太慢。")
+        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        recorders.last?.onFinal?("呃润色失败的文字")
+        settle { pipeline.session == nil }
+        check("润色失败插入未润色的文字并说明原因", inserted.last == "润色失败的文字" && pipeline.lastResult.contains("服务响应太慢。") && !pipeline.refining)
+        let before = inserted.count
+        pipeline.textRefiner = LLMRefineFixtures.FakeRefiner(result: "不应出现的文字", note: nil)
+        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        recorders.last?.onFinal?("取消前的文字")
+        pump()
+        pipeline.forceEnd(reason: "test")
+        settle { false }
+        check("润色期间取消会话后不再插入", inserted.count == before && pipeline.session == nil && !pipeline.refining)
+        store.mutate { var c = $0.refine; c.enabled = false; $0.refine = c }
+        pipeline.textRefiner = LLMRefineFixtures.FakeRefiner(result: "不应被调用", note: nil)
+        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        recorders.last?.onFinal?("没开润色的文字")
+        settle { pipeline.session == nil }
+        check("没开润色时不调用模型", inserted.last == "没开润色的文字")
+        pipeline.textRefiner = LLMTextRefiner()
+        inserted = ["外部结果"]   // the checks below count insertions from this point
         pipeline.holdStarted(source: .menu, target: focus)
         pipeline.holdEnded()
         pipeline.snapshotFocus = { nil }

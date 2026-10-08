@@ -78,6 +78,14 @@ enum BrandPreview {
             controller.settingsModel?.providerDraftFactory={engine in ProviderSettingsDraft(store:store,engine:engine,busy:{false},changed:{},writer:SettingsUIFixtures.Writer(),read:{_ in nil},has:{_ in true})}
             controller.settingsModel?.configuring=provider
         }
+        if CommandLine.arguments.contains("--preview-refine") {
+            // Synthetic setting only: no key, no network.
+            var refine=TextRefineSettings();refine.enabled=true;refine.preset="deepseek"
+            if let p=LLMPresets.preset("deepseek"){refine.baseURL=p.baseURL;refine.model=p.model}
+            if CommandLine.arguments.contains("--preview-refine-local"),let p=LLMPresets.preset("ollama"){refine.preset=p.id;refine.baseURL=p.baseURL;refine.model=p.model}
+            _=store.mutate{$0.refine=refine}
+            controller.settingsModel?.sync()
+        }
         if CommandLine.arguments.contains("--preview-compare"),let model=controller.settingsModel {
             // Synthetic data only: scripted recognizers, no microphone, no models, no network, no credentials.
             let entries=Array(LocalModelCatalog.builtin.prefix(2)),prompts=VoiceCompare.prompts(forLocale:"zh-CN")
