@@ -71,6 +71,18 @@ final class VoicePipeline {
     private(set) var refining = false
     /// Why the text was inserted without polishing, shown after the result.
     private(set) var refineNote: String?
+    /// Everything done to recognized text before it is inserted, without a network: stray marks, the tidy step, the vocabulary and
+    /// the person's own replacements. The log gets what the tidy step did as counts, so each engine's need for it can be read off
+    /// real use without ever recording what was said.
+    private func tidyAndCorrect(_ raw: String) -> String {
+        let cleaned = ASRPunctuationCleanup.apply(raw)
+        let tidied = TextPolish.applyReporting(cleaned, config.polish)
+        let r = tidied.report
+        let engine = config.engine == "local" ? "local/" + config.localModel.primaryModelID : config.engine
+        Log.write("polish engine=\(engine) level=\(config.polish.level.rawValue) hesitations=\(r.hesitations) repeats=\(r.repeats) connectors=\(r.connectors) paragraphs=\(r.paragraphs) changed=\(r.changed) chars=\(raw.count)->\(tidied.text.count)")
+        return LocalASRCorrection.apply(vocabulary(tidied.text), maps: config.localASRMappings)
+    }
+
     /// Fixes mis-recognized terms from the vocabulary (the person's own and the packs they switched on).
     private func vocabulary(_ text: String) -> String { VocabularyStore.shared.apply(text, config.vocabulary) }
     var accessibilityLost: () -> Bool = { !TCC.isolated && !FocusProbe.accessibilityTrusted }
@@ -261,7 +273,7 @@ final class VoicePipeline {
                     _ = self.coordinatedCancel?();self.note(L10n.tr("ui.cc54a5947876"),isError:true);self.onStateChange?();return
                 }
                 let coordinated=self.coordinatedSession
-                let corrected=text.map{LocalASRCorrection.apply(self.vocabulary(TextPolish.apply(ASRPunctuationCleanup.apply($0),self.config.polish)),maps:self.config.localASRMappings)}
+                let corrected=text.map{self.tidyAndCorrect($0)}
                 let finish:(String?)->Void={[weak self] final in self?.holdFinalized(text:final);if coordinated {self?.coordinatedFinal?(self?.lastTranscript)}}
                 // Optional AI polishing: only text goes out, only when the person turned it on, and any failure keeps the text as it is.
                 let refine=self.config.refine

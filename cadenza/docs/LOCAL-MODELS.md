@@ -127,3 +127,23 @@ are marked "Uploads recording"; the app locked to local recognition lists none. 
 recorder as a real dictation (`CloudClipTranscriber`), so a failure (no network, rejected credentials, no answer in 30 s) is
 shown as a failure, never as a 100% error rate. For cloud services the time column is the wait after the audio ends, not
 decoding time.
+
+## Do the models already leave out hesitation sounds?
+
+`Cadenza --bench-fillers` speaks nine sentences that contain "呃", "嗯", "那个", stutters and English "um", "uh", "like" with the
+system voices, has each installed local model write them, and shows what the "Tidy the text" step (Standard and Thorough) changes.
+Synthetic voices say fillers more cleanly than people do, so the figures are a lower bound. Measured on one Mac:
+
+| Model | Hesitation sounds the model wrote (of 9) | Changed by Standard | What the model does by itself |
+|---|---|---|---|
+| SenseVoice | 3 | 4 | Drops English "Um," but writes "uh" as "a" and 呃 as 饿 (a real word, so nothing can remove it); keeps 呃, 嗯 and every stutter ("我我我想", "这个这个") |
+| FireRed ASR2 | 4 | 5 | Keeps all of them; writes no punctuation |
+| Parakeet TDT v3 | 4 | 4 | English only; keeps "uh" and "I I I" |
+
+So none of the installed models filters these by itself, and the tidy step has real work to do for each. Skipping it per engine
+would not help; the step only fires where the text has something to fix. For Apple's recognizer and the cloud services the
+app cannot measure this itself, so each dictation writes one log line with counts only (`polish engine=… hesitations=… repeats=…
+connectors=… changed=… chars=a->b`, never the text); read your own log to see which engine needs it. Cloud services have their own
+filters too (Settings → Speech → Cloud → "Filter filler words": Tencent `filter_modal`, Aliyun `disfluency`, Volcengine `enable_ddc`).
+The measurement found two gaps, now closed: a 嗯 between two words with no mark around it ("方案的话嗯成本"), and three repeats in
+a row in English ("I I I think").
