@@ -67,6 +67,8 @@ final class VoicePipeline {
     /// (see `TCC`), so they are never "lost".
     /// Polishes text with a language model when the person turned that on. Replaced in tests.
     var textRefiner: TextRefining = LLMTextRefiner()
+    /// Translates text into the chosen language when translation is on. Replaced in tests.
+    var textTranslator: TextTranslating = LLMTextTranslator()
     /// True while the polished text is awaited; the recognition time-out must not fire then.
     private(set) var refining = false
     /// Why the text was inserted without polishing, shown after the result.
@@ -275,6 +277,20 @@ final class VoicePipeline {
                 let coordinated=self.coordinatedSession
                 let corrected=text.map{self.tidyAndCorrect($0)}
                 let finish:(String?)->Void={[weak self] final in self?.holdFinalized(text:final);if coordinated {self?.coordinatedFinal?(self?.lastTranscript)}}
+                // Voice translation: the translation is what gets inserted; any failure inserts the untranslated text and says why.
+                let translate=self.config.translate
+                if let text=corrected,translate.active,self.recorder?.capturedAudioHasSignal != false,!text.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty {
+                    guard self.config.refine.configured else{self.refineNote=L10n.format("translate.kept",L10n.tr("translate.err.noService"));finish(text);return}
+                    self.refining=true;self.refineNote=nil;self.notifyUI()
+                    self.textTranslator.translate(text,target:translate.target,settings:self.config.refine,glossary:VocabularyStore.shared.glossary(for:text,self.config.vocabulary)){[weak self] translated,note in
+                        DispatchQueue.main.async {
+                            guard let self=self,self.session?.id == sid else{return}
+                            self.refining=false;self.refineNote=note.map{L10n.format("translate.kept",$0)}
+                            finish(translated ?? text)
+                        }
+                    }
+                    return
+                }
                 // Optional AI polishing: only text goes out, only when the person turned it on, and any failure keeps the text as it is.
                 let refine=self.config.refine
                 if let text=corrected,refine.enabled,refine.configured,self.recorder?.capturedAudioHasSignal != false,!text.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty {
@@ -282,7 +298,7 @@ final class VoicePipeline {
                     self.textRefiner.refine(text,settings:refine,glossary:VocabularyStore.shared.glossary(for:text,self.config.vocabulary)){[weak self] refined,note in
                         DispatchQueue.main.async {
                             guard let self=self,self.session?.id == sid else{return}
-                            self.refining=false;self.refineNote=note
+                            self.refining=false;self.refineNote=note.map{L10n.format("refine.kept",$0)}
                             finish(refined ?? text)
                         }
                     }
@@ -397,7 +413,7 @@ final class VoicePipeline {
                 Log.write("HOLD-INSERT retained reason=write-not-verified len=\(transcript.count)")
             }
             if let notice=recorder?.fallbackNotice {lastResult += "；" + notice}
-            if let note=refineNote {lastResult += "；" + L10n.format("refine.kept",note)}
+            if let note=refineNote {lastResult += "；" + note}
         }
         finishSession()
     }

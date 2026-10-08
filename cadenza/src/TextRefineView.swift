@@ -13,8 +13,26 @@ struct TextRefineSection: View {
     @State private var modelNote: String?
 
     private var settings: TextRefineSettings { model.refine }
+    private static let otherTag = "\u{1}other"
     private var preset: LLMPreset? { LLMPresets.preset(settings.preset) }
     private var needsKey: Bool { !settings.isLocal && (preset?.needsKey ?? true) }
+    @State private var customMode = false
+    /// What the language picker shows: off, one of the listed languages, or "other" while the person types a language of their own.
+    private var targetChoice: String {
+        let t = model.translate.target
+        if customMode { return Self.otherTag }
+        if t.isEmpty { return "" }
+        return TranslationLanguages.language(t) != nil ? t : Self.otherTag
+    }
+    private func setTarget(_ choice: String) {
+        if choice == Self.otherTag {
+            customMode = true
+            if TranslationLanguages.language(model.translate.target) != nil { model.persist { $0.translate.target = "" } }
+        } else {
+            customMode = false
+            model.persist { $0.translate.target = choice }
+        }
+    }
 
     private func presetBinding() -> Binding<String> {
         Binding(get: { settings.preset }, set: { id in
@@ -30,7 +48,16 @@ struct TextRefineSection: View {
     var body: some View {
         Section {
             Toggle(L10n.tr("refine.enable"), isOn: Binding(get: { settings.enabled }, set: { value in model.persist { $0.refine.enabled = value } }))
-            if settings.enabled {
+            Picker(L10n.tr("translate.target"), selection: Binding(get: { targetChoice }, set: { setTarget($0) })) {
+                Text(L10n.tr("translate.off")).tag("")
+                ForEach(TranslationLanguages.all) { Text($0.display).tag($0.id) }
+                Text(L10n.tr("translate.other")).tag(Self.otherTag)
+            }
+            if targetChoice == Self.otherTag {
+                TextField(L10n.tr("translate.custom"), text: Binding(get: { model.translate.target }, set: { v in model.persist { $0.translate.target = TranslationLanguages.valid(v) ? v : $0.translate.target } }),
+                          prompt: Text(L10n.tr("translate.custom.prompt"))).textFieldStyle(.roundedBorder).autocorrectionDisabled()
+            }
+            if settings.enabled || model.translate.active {
                 Picker(L10n.tr("refine.service"), selection: presetBinding()) {
                     ForEach(LLMPreset.Group.allCases, id: \.self) { group in
                         Section(L10n.tr("refine.group.\(group.rawValue)")) {
@@ -97,8 +124,8 @@ struct TextRefineSection: View {
         } header: { Text(L10n.tr("refine.header")) } footer: {
             VStack(alignment: .leading, spacing: 6) {
                 Text(L10n.tr("refine.hint"))
-                if settings.enabled, settings.isLocal { Text(L10n.tr("refine.hint.local")) }
-                else if settings.enabled { Text(L10n.tr("refine.hint.cloud")) }
+                if model.translate.active { Text(L10n.tr("translate.hint")) }
+                if settings.enabled || model.translate.active { Text(settings.isLocal ? L10n.tr("refine.hint.local") : L10n.tr("refine.hint.cloud")) }
             }.font(.callout).foregroundStyle(.primary)
         }
         .onAppear { refreshKeyState() }

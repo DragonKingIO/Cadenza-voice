@@ -1364,7 +1364,7 @@
 "compare.err.failed" = "服务没有返回结果。";
 "compare.err.timeout" = "等了太久没有回应，请检查网络后重试。";
 "retained.noAccessibility" = "%@ 的辅助功能权限已失效，文字没能填入，已为你保留；请重新授权。";
-"refine.header" = "AI 润色（可选）";
+"refine.header" = "AI 润色与翻译（可选）";
 "refine.enable" = "用 AI 模型润色文字";
 "refine.service" = "服务";
 "refine.thisMac" = "本机";
@@ -1435,3 +1435,14 @@
 "vocab.packs.hint" = "词库包是社区整理、随应用一起发布的词表。打开你用得到的领域。任何人都可以在 GitHub 上补充（cadenza/vocab 文件夹）。词库包里的词条只纠正写法，不会改动普通词语。";
 "vocab.cloud" = "同时把词条交给云端识别服务";
 "vocab.cloud.hint" = "腾讯、火山引擎和 Deepgram 支持热词，开启后它们在识别录音前就会收到你的词条和词库包里的词。这些词只发给你已经允许接收录音的那一家服务，并且只在你使用它的时候发送。关闭后，你自己的词条只留在这台 Mac 上。";
+"translate.target" = "把听写翻译成";
+"translate.off" = "关闭";
+"translate.other" = "其他语言…";
+"translate.custom" = "语言";
+"translate.custom.prompt" = "例如：拉丁语、威尔士语";
+"translate.hint" = "说出的话先识别，再翻译，插入的是翻译后的文字。它用下面的 AI 服务，所以模型会的语言都能用；常用语言也在菜单栏里。翻译失败时会照原样插入未翻译的文字，并在结果行说明原因。";
+"translate.kept" = "已跳过翻译（%@），按原话插入";
+"translate.err.noService" = "还没有设置 AI 服务";
+"menu.translate" = "翻译成";
+"menu.translate.off" = "关闭";
+"menu.translate.manage" = "更多语言…";

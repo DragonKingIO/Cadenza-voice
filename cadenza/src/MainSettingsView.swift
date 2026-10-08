@@ -94,6 +94,7 @@ final class SettingsModel {
     var polish=TextPolishSettings()
     var refine=TextRefineSettings()
     var vocabulary=VocabularySettings()
+    var translate=TranslateSettings()
     var engineAvailable = true
     var shortcutEnabled = true
     var toggleAvailable = false
@@ -121,6 +122,7 @@ final class SettingsModel {
         polish=cfg.polish
         refine=cfg.refine
         vocabulary=cfg.vocabulary
+        translate=cfg.translate
         engine = ASREngine(rawValue: cfg.engine) ?? .apple
         localOnlyOn = LocalOnlyMode.enabled
         if engine != .apple && engine != .local { UserDefaults.standard.set(engine.rawValue, forKey: Self.lastCloudKey) }
