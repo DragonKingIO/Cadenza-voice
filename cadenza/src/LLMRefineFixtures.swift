@@ -102,6 +102,8 @@ enum LLMRefineFixtures {
         c("check: the formal style may smooth more than the clean style", { if case .success = RefinePrompt.check("我觉得这个方案成本太高，周期也太长了。", original: "我觉得这个方案不太行成本太高了而且周期也长", style: .formal) { return true }; return false }()
           && { if case .failure = RefinePrompt.check("我觉得这个方案成本太高，周期也太长了。", original: "我觉得这个方案不太行成本太高了而且周期也长", style: .clean) { return true }; return false }())
         c("recall: identical, partial and unrelated", RefinePrompt.recall(of: "我想开会", in: "我想开会。") == 1 && RefinePrompt.recall(of: "呃我想开会", in: "我想开会") == 1 && RefinePrompt.recall(of: "我想开会", in: "今天天气") == 0)
+        c("check: a glossary correction of a mis-heard word is accepted", verdict("把这个提交到 GitHub 上，然后通知小王看一下 pull request 三号。", "把这个提交到吉特哈勃上然后通知小王看一下 pull request 三号", ["GitHub"]))
+        c("check: a glossary term cannot excuse a rewrite", !verdict("请把代码推到 GitHub，小王会处理。", "把这个提交到吉特哈勃上然后通知小王看一下 pull request 三号", ["GitHub"]))
         c("check: an empty answer is refused", !verdict("  ", "我想开会好吗"))
         c("check: a glossary term in the speech must survive", !verdict("我们用吉特哈勃管理代码。", "我们用 GitHub 管理代码", ["GitHub"]) && verdict("我们用 GitHub 管理代码。", "我们用 GitHub 管理代码", ["GitHub"]))
         c("check: a short transcript may change length freely", verdict("好的。", "嗯好"))

@@ -184,7 +184,12 @@ enum RefinePrompt {
         let inCore = original.filter { $0.isLetter || $0.isNumber }.count, outCore = out.filter { $0.isLetter || $0.isNumber }.count
         let ratio = Double(outCore) / Double(max(1, inCore))
         if inCore >= 6, ratio < (style == .clean ? 0.5 : 0.4) || ratio > (style == .clean ? 1.2 : 1.5) { return .failure(.rejected("length")) }
-        if inCore >= 6, recall(of: original, in: out) < (style == .clean ? 0.75 : 0.5) { return .failure(.rejected("rewritten")) }
+        // A glossary term the model put in place of a mis-heard word is a wanted change: credit its letters as kept.
+        let inserted = glossary.filter { out.lowercased().contains($0.lowercased()) && !lowerIn.contains($0.lowercased()) }
+        var credit = 0.0
+        var withoutTerms = out
+        for term in inserted { credit += Double(min(term.filter { $0.isLetter || $0.isNumber }.count, 8)) / Double(max(1, inCore)); withoutTerms = withoutTerms.replacingOccurrences(of: term, with: "", options: .caseInsensitive) }
+        if inCore >= 6, min(1, recall(of: original, in: withoutTerms) + credit) < (style == .clean ? 0.75 : 0.5) { return .failure(.rejected("rewritten")) }
         if hanShare(original) > 0.5 && hanShare(out) < 0.2 || hanShare(original) < 0.1 && hanShare(out) > 0.5 { return .failure(.rejected("language")) }
         let outDigits = digits(out)
         for run in digits(original) where !outDigits.contains(where: { $0.contains(run) }) { return .failure(.rejected("numbers")) }
