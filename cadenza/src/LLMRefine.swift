@@ -44,27 +44,59 @@ struct TextRefineSettings: Codable, Equatable {
 }
 
 struct LLMPreset: Identifiable, Equatable {
+    enum Group: Int, CaseIterable { case thisMac, gateway, international, china }
     let id: String
     let name: String
+    let group: Group
     let baseURL: String
+    /// A suggestion only. Empty means "choose one with Get models": names change faster than this list.
     let model: String
     let needsKey: Bool
+    /// A localized note shown under the service when there is something to know about it.
+    let noteKey: String?
     var isLocal: Bool { LLMEndpoint.isLoopback(baseURL) }
+    init(_ id: String, _ name: String, _ group: Group, _ baseURL: String, model: String = "", needsKey: Bool = true, note: String? = nil) {
+        self.id = id; self.name = name; self.group = group; self.baseURL = baseURL; self.model = model; self.needsKey = needsKey; self.noteKey = note
+    }
 }
 
 enum LLMPresets {
-    /// Addresses follow each provider's chat-completions documentation. The model is only a suggestion: the field stays editable.
+    /// Every service that speaks the chat-completions protocol, which is almost all of them. Addresses are taken from each
+    /// provider's own documentation. Anything missing can be added as "Other".
     static let all: [LLMPreset] = [
-        LLMPreset(id: "deepseek", name: "DeepSeek", baseURL: "https://api.deepseek.com/v1", model: "deepseek-chat", needsKey: true),
-        LLMPreset(id: "qwen", name: "Qwen (DashScope)", baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen-plus", needsKey: true),
-        LLMPreset(id: "zhipu", name: "Zhipu (GLM)", baseURL: "https://open.bigmodel.cn/api/paas/v4", model: "glm-4-flash", needsKey: true),
-        LLMPreset(id: "kimi", name: "Kimi (Moonshot)", baseURL: "https://api.moonshot.cn/v1", model: "moonshot-v1-8k", needsKey: true),
-        LLMPreset(id: "siliconflow", name: "SiliconFlow", baseURL: "https://api.siliconflow.cn/v1", model: "Qwen/Qwen2.5-7B-Instruct", needsKey: true),
-        LLMPreset(id: "openai", name: "OpenAI", baseURL: "https://api.openai.com/v1", model: "gpt-4o-mini", needsKey: true),
-        LLMPreset(id: "ollama", name: "Ollama", baseURL: "http://localhost:11434/v1", model: "qwen2.5:7b", needsKey: false),
-        LLMPreset(id: "lmstudio", name: "LM Studio", baseURL: "http://localhost:1234/v1", model: "local-model", needsKey: false),
+        // On this Mac: nothing leaves it.
+        LLMPreset("ollama", "Ollama", .thisMac, "http://localhost:11434/v1", needsKey: false),
+        LLMPreset("lmstudio", "LM Studio", .thisMac, "http://localhost:1234/v1", needsKey: false),
+        LLMPreset("llamacpp", "llama.cpp server", .thisMac, "http://localhost:8080/v1", needsKey: false),
+        LLMPreset("jan", "Jan", .thisMac, "http://localhost:1337/v1", needsKey: false),
+        // One key, many models.
+        LLMPreset("openrouter", "OpenRouter", .gateway, "https://openrouter.ai/api/v1"),
+        LLMPreset("opencode", "OpenCode Zen", .gateway, "https://opencode.ai/zen/v1", note: "refine.note.opencode"),
+        // International
+        LLMPreset("openai", "OpenAI", .international, "https://api.openai.com/v1"),
+        LLMPreset("anthropic", "Anthropic (Claude)", .international, "https://api.anthropic.com/v1", model: "claude-haiku-4-5-20251001", note: "refine.note.anthropic"),
+        LLMPreset("gemini", "Google Gemini", .international, "https://generativelanguage.googleapis.com/v1beta/openai"),
+        LLMPreset("xai", "xAI (Grok)", .international, "https://api.x.ai/v1"),
+        LLMPreset("mistral", "Mistral", .international, "https://api.mistral.ai/v1"),
+        LLMPreset("groq", "Groq", .international, "https://api.groq.com/openai/v1"),
+        LLMPreset("together", "Together AI", .international, "https://api.together.xyz/v1"),
+        LLMPreset("fireworks", "Fireworks AI", .international, "https://api.fireworks.ai/inference/v1"),
+        LLMPreset("perplexity", "Perplexity", .international, "https://api.perplexity.ai"),
+        LLMPreset("cohere", "Cohere", .international, "https://api.cohere.ai/compatibility/v1"),
+        LLMPreset("kimi-global", "Kimi (Moonshot, global)", .international, "https://api.moonshot.ai/v1"),
+        // China
+        LLMPreset("deepseek", "DeepSeek", .china, "https://api.deepseek.com/v1", model: "deepseek-chat"),
+        LLMPreset("qwen", "Qwen (DashScope)", .china, "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen-plus"),
+        LLMPreset("zhipu", "Zhipu (GLM)", .china, "https://open.bigmodel.cn/api/paas/v4", model: "glm-4-flash"),
+        LLMPreset("kimi", "Kimi (Moonshot, China)", .china, "https://api.moonshot.cn/v1"),
+        LLMPreset("doubao", "Doubao (Volcengine Ark)", .china, "https://ark.cn-beijing.volces.com/api/v3", note: "refine.note.doubao"),
+        LLMPreset("hunyuan", "Hunyuan (Tencent)", .china, "https://hunyuan.cloud.tencent.com/openai/v1"),
+        LLMPreset("qianfan", "Qianfan (Baidu)", .china, "https://qianfan.baidubce.com/v2"),
+        LLMPreset("stepfun", "StepFun", .china, "https://api.stepfun.com/v1"),
+        LLMPreset("siliconflow", "SiliconFlow", .china, "https://api.siliconflow.cn/v1", model: "Qwen/Qwen2.5-7B-Instruct"),
     ]
     static func preset(_ id: String) -> LLMPreset? { all.first { $0.id == id } }
+    static func presets(in group: LLMPreset.Group) -> [LLMPreset] { all.filter { $0.group == group } }
 }
 
 enum LLMEndpoint {
@@ -79,6 +111,12 @@ enum LLMEndpoint {
         while path.hasSuffix("/") { path.removeLast() }
         if !path.hasSuffix("/chat/completions") { path += "/chat/completions" }
         parts.path = path
+        return parts.url
+    }
+    /// The model-list URL for the same base address (`…/v1` → `…/v1/models`), under the same address rules.
+    static func modelsURL(_ base: String) -> URL? {
+        guard let chat = url(base), var parts = URLComponents(url: chat, resolvingAgainstBaseURL: false) else { return nil }
+        parts.path = String(parts.path.dropLast("/chat/completions".count)) + "/models"
         return parts.url
     }
     static func isLoopbackHost(_ host: String) -> Bool {
@@ -101,6 +139,10 @@ enum RefineFailure: Error, Equatable {
     case unauthorized
     case http(Int)
     case invalidResponse
+    /// The service has no model list; the model name has to be typed.
+    case noModelList
+    /// The service answered with an empty list: nothing is installed or loaded there yet.
+    case noModels
     /// The answer was discarded because it did not look like the same text, cleaned.
     case rejected(String)
 }
@@ -253,6 +295,50 @@ enum LLMClient {
         return nil
     }
 
+    // MARK: Model list
+
+    /// Names that are not chat models are left out of the list.
+    private static let notChatModels = ["embed", "whisper", "tts", "dall-e", "image", "moderation", "rerank", "audio", "speech", "transcribe"]
+
+    /// Reads OpenAI-style (`data[].id`, also LM Studio and Ollama's /v1) and Ollama-native (`models[].name`) answers.
+    static func parseModels(_ data: Data) throws -> [String] {
+        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw RefineFailure.invalidResponse }
+        let entries = (object["data"] as? [[String: Any]]) ?? (object["models"] as? [[String: Any]]) ?? []
+        let names = entries.compactMap { ($0["id"] as? String) ?? ($0["name"] as? String) }
+            .filter { name in !name.isEmpty && name.count <= 200 && !notChatModels.contains { name.lowercased().contains($0) } }
+        let unique = Array(Set(names)).sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+        guard !unique.isEmpty else { throw entries.isEmpty ? RefineFailure.noModels : RefineFailure.invalidResponse }
+        return Array(unique.prefix(300))
+    }
+
+    /// Asks the service which models it offers. Sends the API key and nothing else: no text, so no consent is needed,
+    /// but the "only on this Mac" lock still blocks a service that is not on this Mac.
+    static func listModels(settings: TextRefineSettings, apiKey: String?, localOnly: Bool = LocalOnlyMode.enabled,
+                           transport: LLMTransport = NativeLLMTransport()) async -> Result<[String], RefineFailure> {
+        guard let url = LLMEndpoint.modelsURL(settings.baseURL) else { return .failure(.notConfigured) }
+        if !settings.isLocal {
+            if localOnly { return .failure(.lockedToThisMac) }
+            if (LLMPresets.preset(settings.preset)?.needsKey ?? true) && (apiKey ?? "").isEmpty { return .failure(.missingKey) }
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        if let key = apiKey, !key.isEmpty { request.setValue("Bearer " + key, forHTTPHeaderField: "Authorization") }
+        do {
+            let (data, status) = try await transport.send(request, timeout: 10)
+            guard (200...299).contains(status) else {
+                if [404, 405, 501].contains(status) { return .failure(.noModelList) }
+                return .failure(status == 401 || status == 403 ? .unauthorized : .http(status))
+            }
+            return .success(try parseModels(data))
+        } catch let failure as RefineFailure {
+            return .failure(failure)
+        } catch let error as URLError {
+            return .failure(error.code == .timedOut ? .timeout : .network)
+        } catch {
+            return .failure(.network)
+        }
+    }
+
     static func refine(_ text: String, settings: TextRefineSettings, apiKey: String?, glossary: [String] = [], localOnly: Bool = LocalOnlyMode.enabled,
                        transport: LLMTransport = NativeLLMTransport()) async -> Result<String, RefineFailure> {
         if let blocked = gate(settings, localOnly: localOnly, key: apiKey) { return .failure(blocked) }
@@ -283,6 +369,8 @@ enum LLMClient {
         case .unauthorized: return L10n.tr("refine.err.unauthorized")
         case .http(let code): return L10n.format("refine.err.http", String(code))
         case .invalidResponse: return L10n.tr("refine.err.invalid")
+        case .noModelList: return L10n.tr("refine.err.noModelList")
+        case .noModels: return L10n.tr("refine.err.noModels")
         case .rejected: return L10n.tr("refine.err.rejected")
         }
     }

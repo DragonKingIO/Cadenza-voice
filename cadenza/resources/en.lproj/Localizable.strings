@@ -1397,3 +1397,17 @@
 "refine.err.rejected" = "The answer did not look like your text, so it was not used.";
 "refine.testSample" = "Um, so I I would like to book the meeting room for tomorrow at three.";
 "refine.key.prompt" = "sk-…";
+"refine.models.fetch" = "Get models";
+"refine.models.pick" = "Choose…";
+"refine.models.found" = "%@ models found. Choose one.";
+"refine.err.noModelList" = "This service does not offer a model list. Type the model name.";
+"refine.err.noModels" = "The service lists no models. For Ollama or LM Studio, download or load one first.";
+"refine.group.0" = "On this Mac";
+"refine.group.1" = "One key, many models";
+"refine.group.2" = "International";
+"refine.group.3" = "China";
+"refine.group.other" = "Other";
+"refine.model.hint" = "Press Get models to choose one, or type the name.";
+"refine.note.opencode" = "Only models that OpenCode serves through chat completions work here (the open-source ones). Its Claude and GPT models use other interfaces.";
+"refine.note.anthropic" = "Claude through Anthropic's OpenAI-compatible layer, which Anthropic describes as meant for testing rather than production.";
+"refine.note.doubao" = "Volcengine Ark usually needs an endpoint ID (ep-…) as the model name; copy it from the Ark console.";
