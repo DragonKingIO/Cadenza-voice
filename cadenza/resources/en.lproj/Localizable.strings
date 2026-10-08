@@ -1364,7 +1364,7 @@
 "compare.err.failed" = "The service did not return a result.";
 "compare.err.timeout" = "No answer in time. Check the connection and try again.";
 "retained.noAccessibility" = "Accessibility permission for %@ is off, so the text could not be entered. It has been kept for you; grant the permission again.";
-"refine.header" = "AI polish (optional)";
+"refine.header" = "AI polish and translation (optional)";
 "refine.enable" = "Polish the text with an AI model";
 "refine.service" = "Service";
 "refine.thisMac" = "this Mac";
@@ -1435,3 +1435,14 @@
 "vocab.packs.hint" = "Packs are lists made by the community and shipped with the app. Switch on the fields you use. Anyone can add to them on GitHub (the cadenza/vocab folder). Terms in a pack fix spelling only; they never change ordinary words.";
 "vocab.cloud" = "Also give the terms to cloud recognition services";
 "vocab.cloud.hint" = "Tencent, Volcengine and Deepgram accept hot words, so they hear your terms and the packs' terms before the audio. This goes only to the service you already allowed to receive your recordings, and only while you use it. Switch it off to keep your own terms on this Mac.";
+"translate.target" = "Translate dictation into";
+"translate.off" = "Off";
+"translate.other" = "Another language…";
+"translate.custom" = "Language";
+"translate.custom.prompt" = "e.g. Latin, Welsh, Klingon";
+"translate.hint" = "What you say is recognized, then translated, and the translation is what gets inserted. It uses the AI service below, so any language that model knows works; the quick list is also in the menu bar. If the translation fails, the text is inserted untranslated and the result line says why.";
+"translate.kept" = "Translation skipped (%@), inserted as spoken";
+"translate.err.noService" = "no AI service is set up";
+"menu.translate" = "Translate into";
+"menu.translate.off" = "Off";
+"menu.translate.manage" = "More languages…";

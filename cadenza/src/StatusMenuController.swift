@@ -12,7 +12,9 @@ struct StatusMenuSnapshot {
     var phase:Phase = .idle
     var shortcut:String = ""
     var engine:String = "",mode:String = "hold",microphone:String = ""
-    var engines:[Entry] = [],microphones:[Entry] = []
+    var engines:[Entry] = [],microphones:[Entry] = [],translations:[Entry] = []
+    /// The language dictation is translated into; empty = translation is off.
+    var translateTarget = ""
     var toggleAvailable=false,hasResult=false,busy=false
     /// 截图快捷键的显示文字；空 = 未设置
     var screenshotShortcut="",ocrShortcut=""
@@ -84,6 +86,10 @@ enum StatusMenuController {
         engines.addItem(.separator());engines.addItem(item("manage",L10n.tr("menu.manageEngines"),"showEngineSettings"))
         _=submenu("mode",L10n.tr("menu.trigger"),[.init(title:L10n.tr("ui.e4947a64758a"),value:"hold",available:true),.init(title:L10n.tr("ui.c3c686d13dc5"),value:"toggle",available:s.toggleAvailable)],s.mode,"selectInputMode:")
         _=submenu("mic",L10n.tr("ui.714cac30e2ff"),s.microphones,s.microphone,"selectMicrophone:")
+        if !s.translations.isEmpty {
+            let translate=submenu("translate",L10n.tr("menu.translate"),s.translations,s.translateTarget,"selectTranslate:")
+            translate.addItem(.separator());translate.addItem(item("translate.manage",L10n.tr("menu.translate.manage"),"showTranslateSettings"))
+        }
         menu.addItem(.separator())
         menu.addItem(item("copy",L10n.tr("menu.copyLast"),"copyLastRecognition",enabled:s.hasResult && !s.busy))
         let shot=item("screenshot",L10n.tr("menu.screenshot"),"startScreenshot",enabled:!s.busy)

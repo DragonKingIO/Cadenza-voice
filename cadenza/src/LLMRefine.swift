@@ -205,10 +205,10 @@ enum RefinePrompt {
         }
         return Double(previous[b.count]) / Double(a.count)
     }
-    private static let refusals = ["抱歉", "对不起", "我无法", "我不能", "作为一个", "作为AI", "作为 AI", "i'm sorry", "i am sorry", "i cannot", "i can't", "as an ai", "sorry,"]
+    static let refusals = ["抱歉", "对不起", "我无法", "我不能", "作为一个", "作为AI", "作为 AI", "i'm sorry", "i am sorry", "i cannot", "i can't", "as an ai", "sorry,"]
 
-    /// Strips wrappers a model sometimes adds, then rejects an answer that is not the same text cleaned up.
-    static func check(_ answer: String, original: String, glossary: [String] = [], style: RefineStyle = .clean) -> Result<String, RefineFailure> {
+    /// Strips wrappers a model sometimes adds: tags, a code fence, quotation marks the speaker did not use.
+    static func unwrap(_ answer: String, original: String) -> String {
         var out = answer.trimmingCharacters(in: .whitespacesAndNewlines)
         out = out.replacingOccurrences(of: "</?transcript>", with: "", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines)
         if out.hasPrefix("```"), out.hasSuffix("```"), out.count > 6 {
@@ -219,6 +219,12 @@ enum RefinePrompt {
         for pair in [("\"", "\""), ("“", "”"), ("「", "」")] where out.hasPrefix(pair.0) && out.hasSuffix(pair.1) && out.count > 2 && !original.hasPrefix(pair.0) {
             out = String(out.dropFirst().dropLast()).trimmingCharacters(in: .whitespacesAndNewlines)
         }
+        return out
+    }
+
+    /// Strips wrappers a model sometimes adds, then rejects an answer that is not the same text cleaned up.
+    static func check(_ answer: String, original: String, glossary: [String] = [], style: RefineStyle = .clean) -> Result<String, RefineFailure> {
+        let out = unwrap(answer, original: original)
         guard !out.isEmpty else { return .failure(.rejected("empty")) }
         let lowerOut = out.lowercased(), lowerIn = original.lowercased()
         if refusals.contains(where: { lowerOut.hasPrefix($0.lowercased()) && !lowerIn.hasPrefix($0.lowercased()) }) { return .failure(.rejected("refusal")) }

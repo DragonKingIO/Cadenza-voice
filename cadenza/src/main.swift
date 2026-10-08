@@ -578,6 +578,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         s.pinCount=PinManager.shared.count;s.pinsHidden=PinManager.shared.hidden;s.pinsClickThrough=PinManager.shared.anyClickThrough
         (s.engines,s.engine)=Self.engineMenuEntries(config:c)
         let devices=Microphones.devices()
+        s.translateTarget=c.translate.target
+        s.translations=[.init(title:L10n.tr("menu.translate.off"),value:"",available:true)]+TranslationLanguages.quick.map{.init(title:$0.display,value:$0.id,available:true)}
+        if c.translate.active && TranslationLanguages.quick.first(where:{$0.id==c.translate.target}) == nil {s.translations.append(.init(title:TranslationLanguages.displayName(c.translate.target),value:c.translate.target,available:true))}
         s.microphones=[.init(title:L10n.tr("ui.04b77083689b"),value:"",available:true)]+devices.map{.init(title:$0.name,value:$0.uid,available:true)}
         if !c.microphoneUID.isEmpty && !devices.contains(where:{$0.uid==c.microphoneUID}) {s.microphones.append(.init(title:L10n.tr("menu.disconnected"),value:c.microphoneUID,available:false))}
         if let session=pipeline.session {
@@ -645,6 +648,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         }
     }
     @objc private func selectInputMode(_ sender: NSMenuItem) { if let value = sender.representedObject as? String,["hold","toggle"].contains(value),value != "toggle" || configStore.config.toggleTrigger != nil { changeConfig { $0.inputMode = value;$0.holdShortcutEnabled=value == "hold";$0.toggleShortcutEnabled=value == "toggle" } } }
+    @objc private func selectTranslate(_ sender: NSMenuItem) { if let value = sender.representedObject as? String,TranslationLanguages.valid(value) { changeConfig { $0.translate.target = value } } }
+    @objc private func showTranslateSettings() { showSwiftMain(.input) }
     @objc private func selectMicrophone(_ sender: NSMenuItem) { if let value = sender.representedObject as? String { changeConfig { $0.microphoneUID = value } } }
     @objc private func showShortcutSettings() { showSettings(); settingsWindow?.show(page: 2) }
     @objc private func showEngineSettings() { showSettings(); settingsWindow?.show(page: 1) }

@@ -78,6 +78,13 @@ enum BrandPreview {
             controller.settingsModel?.providerDraftFactory={engine in ProviderSettingsDraft(store:store,engine:engine,busy:{false},changed:{},writer:SettingsUIFixtures.Writer(),read:{_ in nil},has:{_ in true})}
             controller.settingsModel?.configuring=provider
         }
+        if CommandLine.arguments.contains("--preview-translate") {
+            // Synthetic setting only: no key, no network.
+            var refine=TextRefineSettings();refine.preset="deepseek"
+            if let p=LLMPresets.preset("deepseek"){refine.baseURL=p.baseURL;refine.model=p.model}
+            _=store.mutate{$0.refine=refine;$0.translate.target="Japanese"}
+            controller.settingsModel?.sync()
+        }
         if CommandLine.arguments.contains("--preview-refine") {
             // Synthetic setting only: no key, no network.
             var refine=TextRefineSettings();refine.enabled=true;refine.preset="deepseek"

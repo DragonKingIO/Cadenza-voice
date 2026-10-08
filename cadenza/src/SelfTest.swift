@@ -38,6 +38,7 @@ enum SelfTest {
         TCCFixtures.run(check)
         LLMRefineFixtures.run(check)
         VocabularyFixtures.run(check)
+        TranslateFixtures.run(check)
         testConfigValidation()
         testCustomShortcuts()
         testOnboardingReadiness()
@@ -557,6 +558,42 @@ enum SelfTest {
         settle { pipeline.session == nil }
         check("没开润色时不调用模型", inserted.last == "没开润色的文字")
         pipeline.textRefiner = LLMTextRefiner()
+        // Translation in the pipeline: the translation is inserted; any failure inserts the spoken text and says why
+        store.mutate { $0.refine = refineSettings; $0.refine.enabled = false; $0.translate.target = "English" }
+        pipeline.textTranslator = TranslateFixtures.FakeTranslator(result: "Translated text.", note: nil)
+        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        recorders.last?.onFinal?("呃要翻译的话")
+        pump()
+        check("翻译期间会话保持并标记等待", pipeline.refining && pipeline.session != nil)
+        settle { pipeline.session == nil }
+        check("翻译成功插入译文", inserted.last == "Translated text." && pipeline.lastTranscript == "Translated text." && !pipeline.refining)
+        pipeline.textTranslator = TranslateFixtures.FakeTranslator(result: nil, note: "服务响应太慢。")
+        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        recorders.last?.onFinal?("呃翻译失败的话")
+        settle { pipeline.session == nil }
+        check("翻译失败插入原话并说明原因", inserted.last == "翻译失败的话" && pipeline.lastResult.contains("服务响应太慢。") && pipeline.lastResult.contains(L10n.format("translate.kept", "服务响应太慢。")))
+        store.mutate { $0.refine = TextRefineSettings() }
+        pipeline.textTranslator = TranslateFixtures.FakeTranslator(result: "不应出现", note: nil)
+        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        recorders.last?.onFinal?("没设服务的话")
+        settle { pipeline.session == nil }
+        check("没有设置 AI 服务时插入原话并说明", inserted.last == "没设服务的话" && pipeline.lastResult.contains(L10n.tr("translate.err.noService")))
+        store.mutate { $0.refine = refineSettings; $0.refine.enabled = false }
+        let beforeCancel = inserted.count
+        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        recorders.last?.onFinal?("取消前的话")
+        pump()
+        pipeline.forceEnd(reason: "test")
+        settle { false }
+        check("翻译期间取消会话后不再插入", inserted.count == beforeCancel && pipeline.session == nil && !pipeline.refining)
+        store.mutate { $0.translate.target = "" }
+        pipeline.textTranslator = TranslateFixtures.FakeTranslator(result: "不应被调用", note: nil)
+        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        recorders.last?.onFinal?("没开翻译的话")
+        settle { pipeline.session == nil }
+        check("没开翻译时不调用翻译", inserted.last == "没开翻译的话")
+        store.mutate { $0.refine = TextRefineSettings() }
+        pipeline.textTranslator = LLMTextTranslator()
         // Vocabulary: a mis-recognized term is fixed before insertion (scratch files, not the person's own)
         let vocabularyStore = VocabularyStore.shared
         let savedVocabularyFile = vocabularyStore.userFile, savedVocabularyDirectories = vocabularyStore.packDirectories
