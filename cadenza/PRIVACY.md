@@ -39,6 +39,10 @@ Turning consent off in the provider settings and saving it blocks future session
 
 The hybrid buffer gate is connected in source behind a disabled-by-default development switch; it has not been enabled in the installed app. Before the standalone-modifier decision point, a chord or extremely short tap discards the local buffer without establishing a provider connection. After the decision point, streaming providers may already have received audio; whole-recording providers receive audio only at a valid end. Consent is checked again before constructing the service. Local test transports count requests/messages without using real credentials or network audio. This is not a live packet-capture result.
 
+## AI polish (optional)
+
+Off by default. When you turn it on and choose a service, the **recognized text** (never the audio) is sent to that service's address after recognition, to remove fillers and fix punctuation. Nothing else is sent: no audio, no settings, no earlier text. A service on this Mac (Ollama, LM Studio, any `localhost` address) does not send the text anywhere else. For a service that is not on this Mac you must also switch on "Allow sending the recognized text to this service"; plain `http://` is refused for such addresses, the API key is stored in the macOS Keychain (never in the settings file), and turning on "Only on this Mac" blocks the service. If the service fails, is slow, or its answer does not look like your text, the text is inserted without polishing. The log records only the service name, the number of characters and the time taken, never the text or the key.
+
 ## Text tidying
 
 The "Tidy the text" setting (Settings → Voice input) removes hesitation sounds and stuttered repeats from recognized text, and can split long text into paragraphs. It is a fixed set of rules that runs on this Mac: no model, no network, nothing is sent or stored.

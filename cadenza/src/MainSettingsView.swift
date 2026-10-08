@@ -92,6 +92,7 @@ final class SettingsModel {
     var onScreenshotRecording: ((Bool) -> Void)?
     var appearanceMode="system"
     var polish=TextPolishSettings()
+    var refine=TextRefineSettings()
     var engineAvailable = true
     var shortcutEnabled = true
     var toggleAvailable = false
@@ -117,6 +118,7 @@ final class SettingsModel {
         let cfg = store.config
         appearanceMode=cfg.appearanceMode
         polish=cfg.polish
+        refine=cfg.refine
         engine = ASREngine(rawValue: cfg.engine) ?? .apple
         localOnlyOn = LocalOnlyMode.enabled
         if engine != .apple && engine != .local { UserDefaults.standard.set(engine.rawValue, forKey: Self.lastCloudKey) }
@@ -452,6 +454,7 @@ struct VoiceInputPage: View {
                 SummaryRow(title:L10n.tr("ui.ee2638183d3e"),value:model.inputModeIndex == 1 ? model.toggleBinding:model.holdBinding){model.tab = .shortcuts}
             } header:{Text(L10n.tr("settings.current"))}
             TextPolishSection(model:model)
+            TextRefineSection(model:model)
         }
         .onExitCommand {if model.listening{model.cancelTry()}}
         .onReceive(timer){_ in model.tick();model.sync()}

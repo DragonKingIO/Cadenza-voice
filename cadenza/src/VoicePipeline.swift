@@ -65,6 +65,12 @@ final class VoicePipeline {
     var snapshotFocus: () -> FocusIdentity? = FocusProbe.snapshot
     /// True when the system says Accessibility is off or the grant no longer answers. Test and preview runs ask no questions
     /// (see `TCC`), so they are never "lost".
+    /// Polishes text with a language model when the person turned that on. Replaced in tests.
+    var textRefiner: TextRefining = LLMTextRefiner()
+    /// True while the polished text is awaited; the recognition time-out must not fire then.
+    private(set) var refining = false
+    /// Why the text was inserted without polishing, shown after the result.
+    private(set) var refineNote: String?
     var accessibilityLost: () -> Bool = { !TCC.isolated && !FocusProbe.accessibilityTrusted }
     var onStateChange: (() -> Void)?
     /// Fired on the main thread after any session has been torn down (used by the local developer API).
@@ -254,8 +260,21 @@ final class VoicePipeline {
                 }
                 let coordinated=self.coordinatedSession
                 let corrected=text.map{LocalASRCorrection.apply(TextPolish.apply(ASRPunctuationCleanup.apply($0),self.config.polish),maps:self.config.localASRMappings)}
-                self.holdFinalized(text:corrected)
-                if coordinated {self.coordinatedFinal?(self.lastTranscript)}
+                let finish:(String?)->Void={[weak self] final in self?.holdFinalized(text:final);if coordinated {self?.coordinatedFinal?(self?.lastTranscript)}}
+                // Optional AI polishing: only text goes out, only when the person turned it on, and any failure keeps the text as it is.
+                let refine=self.config.refine
+                if let text=corrected,refine.enabled,refine.configured,self.recorder?.capturedAudioHasSignal != false,!text.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty {
+                    self.refining=true;self.refineNote=nil;self.notifyUI()
+                    self.textRefiner.refine(text,settings:refine){[weak self] refined,note in
+                        DispatchQueue.main.async {
+                            guard let self=self,self.session?.id == sid else{return}
+                            self.refining=false;self.refineNote=note
+                            finish(refined ?? text)
+                        }
+                    }
+                    return
+                }
+                finish(corrected)
             }
         }
         let ok = recorder?.begin() ?? false
@@ -364,6 +383,7 @@ final class VoicePipeline {
                 Log.write("HOLD-INSERT retained reason=write-not-verified len=\(transcript.count)")
             }
             if let notice=recorder?.fallbackNotice {lastResult += "；" + notice}
+            if let note=refineNote {lastResult += "；" + L10n.format("refine.kept",note)}
         }
         finishSession()
     }
@@ -408,7 +428,7 @@ final class VoicePipeline {
             // 云端保留原等待上限；本地按录音时长给予固定且有界的最终解码时间。
             let localWork=recorder is LocalASRRecorder || recorder is FallbackRecordingSession
             let waitLimit=localWork ? min(180,max(30,(recognizingSince ?? s.startedAt).timeIntervalSince(s.startedAt)*0.4+15)):12
-            if !coordinatedSession, let since = recognizingSince, now().timeIntervalSince(since) > waitLimit {
+            if !coordinatedSession, !refining, let since = recognizingSince, now().timeIntervalSince(since) > waitLimit {
                 Log.write("HOLD recognize-timeout → finalize with partial")
                 s.retentionReason=L10n.tr("ui.29fa51a01a10")
                 holdFinalized(text: localWork || lastPartial.isEmpty ? nil : lastPartial)
@@ -417,6 +437,7 @@ final class VoicePipeline {
     }
 
     private func finishSession() {
+        refining = false;refineNote = nil
         session = nil // Invalidate callbacks before cancelling the underlying request.
         recorder?.onFinal = nil
         recorder?.onPartial = nil
