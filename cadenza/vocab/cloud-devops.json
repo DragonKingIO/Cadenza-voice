@@ -1,0 +1,157 @@
+{
+ "schema": 1,
+ "id": "cloud-devops",
+ "name": {
+  "en": "Cloud and DevOps",
+  "zh-Hans": "云与运维"
+ },
+ "description": {
+  "en": "Cloud providers, containers, CI/CD, operating systems and monitoring.",
+  "zh-Hans": "云厂商、容器、持续集成与部署、操作系统和监控。"
+ },
+ "license": "CC0-1.0",
+ "default": true,
+ "entries": [
+  {
+   "term": "Docker",
+   "aliases": [
+    "多克",
+    "道克"
+   ]
+  },
+  {
+   "term": "Kubernetes",
+   "aliases": [
+    "库伯内特斯",
+    "酷伯内特斯",
+    "库伯尼特斯"
+   ]
+  },
+  {
+   "term": "Terraform",
+   "aliases": [
+    "terra form"
+   ]
+  },
+  {
+   "term": "Ansible",
+   "aliases": [
+    "安西波"
+   ]
+  },
+  {
+   "term": "Jenkins",
+   "aliases": [
+    "詹金斯"
+   ]
+  },
+  {
+   "term": "Nginx",
+   "aliases": [
+    "engine x",
+    "恩金克斯",
+    "恩吉克斯"
+   ]
+  },
+  {
+   "term": "Prometheus",
+   "aliases": [
+    "普罗米修斯"
+   ]
+  },
+  {
+   "term": "Grafana",
+   "aliases": [
+    "格拉法纳"
+   ]
+  },
+  {
+   "term": "AWS"
+  },
+  {
+   "term": "Azure"
+  },
+  {
+   "term": "Cloudflare",
+   "aliases": [
+    "cloud flare"
+   ]
+  },
+  {
+   "term": "Vercel"
+  },
+  {
+   "term": "Netlify"
+  },
+  {
+   "term": "Supabase",
+   "aliases": [
+    "super base",
+    "苏帕贝斯"
+   ]
+  },
+  {
+   "term": "Firebase",
+   "aliases": [
+    "fire base"
+   ]
+  },
+  {
+   "term": "Linux",
+   "aliases": [
+    "利纳克斯"
+   ]
+  },
+  {
+   "term": "Ubuntu",
+   "aliases": [
+    "乌班图"
+   ]
+  },
+  {
+   "term": "CentOS",
+   "aliases": [
+    "cent os"
+   ]
+  },
+  {
+   "term": "Debian"
+  },
+  {
+   "term": "SSH"
+  },
+  {
+   "term": "TLS"
+  },
+  {
+   "term": "CI/CD",
+   "aliases": [
+    "ci cd"
+   ]
+  },
+  {
+   "term": "GitHub Actions"
+  },
+  {
+   "term": "Istio"
+  },
+  {
+   "term": "etcd"
+  },
+  {
+   "term": "S3"
+  },
+  {
+   "term": "EC2"
+  },
+  {
+   "term": "CDN"
+  },
+  {
+   "term": "DNS"
+  },
+  {
+   "term": "VPN"
+  }
+ ]
+}

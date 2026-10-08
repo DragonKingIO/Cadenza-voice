@@ -6,12 +6,12 @@ import Speech
 // MARK: - 模型
 
 enum MainTab: String, CaseIterable, Identifiable, Hashable {
-    case input, engines, ocr, shortcuts, general, privacy, developer, about
+    case input, engines, ocr, shortcuts, vocabulary, general, privacy, developer, about
     var id: String { rawValue }
     /// The Developer page is for people who ask for it (Settings → General → Advanced).
     static func visible(showDeveloper: Bool) -> [MainTab] { allCases.filter { $0 != .developer || showDeveloper } }
-    var title: String { switch self { case .input: L10n.tr("ui.2087c777c06f"); case .engines: L10n.tr("ui.8545bbfc5af9"); case .ocr: L10n.tr("ocr.title"); case .shortcuts: L10n.tr("ui.ee2638183d3e"); case .general: L10n.tr("general.title"); case .privacy: L10n.tr("ui.86651d17a401"); case .developer: L10n.tr("developer.title"); case .about: L10n.tr("ui.52d25a9e30ba") } }
-    var icon: String { switch self { case .input: "mic"; case .engines: "cpu"; case .ocr: "text.viewfinder"; case .shortcuts: "keyboard"; case .general: "gearshape"; case .privacy: "checkmark.shield"; case .developer: "curlybraces"; case .about: "info.circle" } }
+    var title: String { switch self { case .input: L10n.tr("ui.2087c777c06f"); case .engines: L10n.tr("ui.8545bbfc5af9"); case .ocr: L10n.tr("ocr.title"); case .shortcuts: L10n.tr("ui.ee2638183d3e"); case .vocabulary: L10n.tr("vocab.title"); case .general: L10n.tr("general.title"); case .privacy: L10n.tr("ui.86651d17a401"); case .developer: L10n.tr("developer.title"); case .about: L10n.tr("ui.52d25a9e30ba") } }
+    var icon: String { switch self { case .input: "mic"; case .engines: "cpu"; case .ocr: "text.viewfinder"; case .shortcuts: "keyboard"; case .vocabulary: "text.book.closed"; case .general: "gearshape"; case .privacy: "checkmark.shield"; case .developer: "curlybraces"; case .about: "info.circle" } }
 }
 
 enum EngineScope: String, CaseIterable, Identifiable {
@@ -93,6 +93,7 @@ final class SettingsModel {
     var appearanceMode="system"
     var polish=TextPolishSettings()
     var refine=TextRefineSettings()
+    var vocabulary=VocabularySettings()
     var engineAvailable = true
     var shortcutEnabled = true
     var toggleAvailable = false
@@ -119,6 +120,7 @@ final class SettingsModel {
         appearanceMode=cfg.appearanceMode
         polish=cfg.polish
         refine=cfg.refine
+        vocabulary=cfg.vocabulary
         engine = ASREngine(rawValue: cfg.engine) ?? .apple
         localOnlyOn = LocalOnlyMode.enabled
         if engine != .apple && engine != .local { UserDefaults.standard.set(engine.rawValue, forKey: Self.lastCloudKey) }
@@ -428,6 +430,7 @@ struct MainSettingsView: View {
         case .engines: EngineSettingsView(model: model)
         case .ocr: OCRSettingsView(model: model)
         case .shortcuts: ShortcutsView(model: model)
+        case .vocabulary: VocabularyView(model: model)
         case .general: GeneralView(model: model)
         case .privacy: PrivacyView(model: model)
         case .developer: DeveloperView(model: model)

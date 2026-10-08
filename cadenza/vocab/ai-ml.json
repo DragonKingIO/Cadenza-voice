@@ -1,0 +1,175 @@
+{
+ "schema": 1,
+ "id": "ai-ml",
+ "name": {
+  "en": "AI and machine learning",
+  "zh-Hans": "人工智能与机器学习"
+ },
+ "description": {
+  "en": "Models, products, libraries and techniques in AI and machine learning.",
+  "zh-Hans": "人工智能与机器学习里的模型、产品、库和技术名词。"
+ },
+ "license": "CC0-1.0",
+ "default": true,
+ "entries": [
+  {
+   "term": "OpenAI",
+   "aliases": [
+    "open ai"
+   ]
+  },
+  {
+   "term": "ChatGPT",
+   "aliases": [
+    "chat gpt",
+    "柴特GPT",
+    "查特GPT"
+   ]
+  },
+  {
+   "term": "GPT-4o",
+   "aliases": [
+    "gpt 4o",
+    "gpt four o"
+   ]
+  },
+  {
+   "term": "Claude",
+   "aliases": [
+    "克劳德"
+   ]
+  },
+  {
+   "term": "Anthropic"
+  },
+  {
+   "term": "Gemini"
+  },
+  {
+   "term": "DeepSeek",
+   "aliases": [
+    "deep seek",
+    "迪普西克"
+   ]
+  },
+  {
+   "term": "Qwen"
+  },
+  {
+   "term": "Llama",
+   "aliases": [
+    "拉玛",
+    "拉马"
+   ]
+  },
+  {
+   "term": "Ollama",
+   "aliases": [
+    "奥拉玛",
+    "o llama"
+   ]
+  },
+  {
+   "term": "Mistral"
+  },
+  {
+   "term": "Midjourney",
+   "aliases": [
+    "mid journey",
+    "米德杰尼"
+   ]
+  },
+  {
+   "term": "Stable Diffusion"
+  },
+  {
+   "term": "ComfyUI",
+   "aliases": [
+    "comfy ui"
+   ]
+  },
+  {
+   "term": "LangChain",
+   "aliases": [
+    "lang chain"
+   ]
+  },
+  {
+   "term": "LlamaIndex",
+   "aliases": [
+    "llama index"
+   ]
+  },
+  {
+   "term": "Hugging Face",
+   "aliases": [
+    "抱抱脸"
+   ]
+  },
+  {
+   "term": "PyTorch",
+   "aliases": [
+    "pie torch",
+    "派torch",
+    "派托奇"
+   ]
+  },
+  {
+   "term": "TensorFlow",
+   "aliases": [
+    "tensor flow"
+   ]
+  },
+  {
+   "term": "LoRA",
+   "aliases": [
+    "low ra"
+   ]
+  },
+  {
+   "term": "LLM",
+   "aliases": [
+    "l l m"
+   ]
+  },
+  {
+   "term": "GGUF"
+  },
+  {
+   "term": "vLLM",
+   "aliases": [
+    "v llm"
+   ]
+  },
+  {
+   "term": "CUDA",
+   "aliases": [
+    "酷达"
+   ]
+  },
+  {
+   "term": "SenseVoice",
+   "aliases": [
+    "sense voice"
+   ]
+  },
+  {
+   "term": "Paraformer"
+  },
+  {
+   "term": "ONNX",
+   "aliases": [
+    "onyx"
+   ]
+  },
+  {
+   "term": "MLX"
+  },
+  {
+   "term": "Core ML"
+  },
+  {
+   "term": "MCP"
+  }
+ ]
+}

@@ -1,0 +1,346 @@
+{
+ "schema": 1,
+ "id": "developer",
+ "name": {
+  "en": "Developer terms",
+  "zh-Hans": "开发者词汇"
+ },
+ "description": {
+  "en": "Languages, frameworks, databases, protocols and tools, with the spellings and mishearings that speech recognition gets wrong.",
+  "zh-Hans": "编程语言、框架、数据库、协议和工具，以及语音识别常写错或听错的写法。"
+ },
+ "license": "CC0-1.0",
+ "default": true,
+ "entries": [
+  {
+   "term": "GitHub",
+   "aliases": [
+    "git hub",
+    "吉特哈勃",
+    "吉特哈布",
+    "基特哈勃"
+   ]
+  },
+  {
+   "term": "GitLab",
+   "aliases": [
+    "git lab",
+    "吉特拉布"
+   ]
+  },
+  {
+   "term": "Python",
+   "aliases": [
+    "派森",
+    "派桑",
+    "拍森"
+   ]
+  },
+  {
+   "term": "JavaScript",
+   "aliases": [
+    "java script"
+   ]
+  },
+  {
+   "term": "TypeScript",
+   "aliases": [
+    "type script"
+   ]
+  },
+  {
+   "term": "Java"
+  },
+  {
+   "term": "Kotlin"
+  },
+  {
+   "term": "SwiftUI",
+   "aliases": [
+    "swift ui"
+   ]
+  },
+  {
+   "term": "Node.js",
+   "aliases": [
+    "node js",
+    "nodejs"
+   ]
+  },
+  {
+   "term": "Vue.js",
+   "aliases": [
+    "vue js",
+    "维优"
+   ]
+  },
+  {
+   "term": "Next.js",
+   "aliases": [
+    "next js"
+   ]
+  },
+  {
+   "term": "Nuxt.js",
+   "aliases": [
+    "nuxt js"
+   ]
+  },
+  {
+   "term": "React",
+   "aliases": [
+    "瑞艾克特",
+    "锐艾克特"
+   ]
+  },
+  {
+   "term": "Svelte"
+  },
+  {
+   "term": "Tailwind CSS"
+  },
+  {
+   "term": "Webpack",
+   "aliases": [
+    "web pack"
+   ]
+  },
+  {
+   "term": "Vite"
+  },
+  {
+   "term": "ESLint",
+   "aliases": [
+    "es lint"
+   ]
+  },
+  {
+   "term": "JSON",
+   "aliases": [
+    "杰森",
+    "杰逊",
+    "街森"
+   ]
+  },
+  {
+   "term": "YAML",
+   "aliases": [
+    "亚麦尔",
+    "亚米尔"
+   ]
+  },
+  {
+   "term": "XML"
+  },
+  {
+   "term": "HTML"
+  },
+  {
+   "term": "CSS"
+  },
+  {
+   "term": "SQL",
+   "aliases": [
+    "sequel"
+   ]
+  },
+  {
+   "term": "PostgreSQL",
+   "aliases": [
+    "postgres sql",
+    "post gres",
+    "波斯特格雷斯"
+   ]
+  },
+  {
+   "term": "MySQL",
+   "aliases": [
+    "my sql",
+    "买sql"
+   ]
+  },
+  {
+   "term": "SQLite",
+   "aliases": [
+    "sq lite",
+    "sequel lite"
+   ]
+  },
+  {
+   "term": "MongoDB",
+   "aliases": [
+    "mongo db",
+    "蒙哥db"
+   ]
+  },
+  {
+   "term": "Redis",
+   "aliases": [
+    "瑞迪斯",
+    "雷迪斯"
+   ]
+  },
+  {
+   "term": "Elasticsearch",
+   "aliases": [
+    "elastic search"
+   ]
+  },
+  {
+   "term": "RabbitMQ",
+   "aliases": [
+    "rabbit mq"
+   ]
+  },
+  {
+   "term": "GraphQL",
+   "aliases": [
+    "graph ql"
+   ]
+  },
+  {
+   "term": "gRPC",
+   "aliases": [
+    "g rpc"
+   ]
+  },
+  {
+   "term": "WebSocket",
+   "aliases": [
+    "web socket"
+   ]
+  },
+  {
+   "term": "OAuth",
+   "aliases": [
+    "o auth"
+   ]
+  },
+  {
+   "term": "JWT"
+  },
+  {
+   "term": "CORS"
+  },
+  {
+   "term": "API"
+  },
+  {
+   "term": "SDK"
+  },
+  {
+   "term": "CLI"
+  },
+  {
+   "term": "IDE"
+  },
+  {
+   "term": "VS Code",
+   "aliases": [
+    "v s code"
+   ]
+  },
+  {
+   "term": "Xcode",
+   "aliases": [
+    "x code"
+   ]
+  },
+  {
+   "term": "Neovim",
+   "aliases": [
+    "neo vim"
+   ]
+  },
+  {
+   "term": "tmux"
+  },
+  {
+   "term": "Homebrew",
+   "aliases": [
+    "home brew"
+   ]
+  },
+  {
+   "term": "npm"
+  },
+  {
+   "term": "pnpm"
+  },
+  {
+   "term": "Gradle"
+  },
+  {
+   "term": "CMake",
+   "aliases": [
+    "c make"
+   ]
+  },
+  {
+   "term": "WebAssembly",
+   "aliases": [
+    "web assembly"
+   ]
+  },
+  {
+   "term": "UTF-8",
+   "aliases": [
+    "utf eight"
+   ]
+  },
+  {
+   "term": "Unicode"
+  },
+  {
+   "term": "ASCII"
+  },
+  {
+   "term": "GPU"
+  },
+  {
+   "term": "CPU"
+  },
+  {
+   "term": "RESTful",
+   "aliases": [
+    "rest ful"
+   ]
+  },
+  {
+   "term": "NoSQL",
+   "aliases": [
+    "no sql"
+   ]
+  },
+  {
+   "term": "JSON Schema"
+  },
+  {
+   "term": "Markdown",
+   "aliases": [
+    "mark down"
+   ]
+  },
+  {
+   "term": "Vim"
+  },
+  {
+   "term": "Emacs"
+  },
+  {
+   "term": "Bash"
+  },
+  {
+   "term": "Zsh",
+   "aliases": [
+    "z sh"
+   ]
+  },
+  {
+   "term": "PowerShell",
+   "aliases": [
+    "power shell"
+   ]
+  }
+ ]
+}

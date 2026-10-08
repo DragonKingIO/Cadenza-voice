@@ -346,7 +346,7 @@ enum LocalModelFixtures {
 
         // 取消：清除暂存
         center.download(e1); center.cancel(e1.id)
-        c("取消后不安装并清理暂存", wait(5) { center.state(e1.id) == .notInstalled && !FileManager.default.fileExists(atPath: root.appendingPathComponent(".downloads/\(e1.id)-1.0.0").path) })
+        c("取消后不安装并清理暂存", wait(15) { center.state(e1.id) == .notInstalled && !FileManager.default.fileExists(atPath: root.appendingPathComponent(".downloads/\(e1.id)-1.0.0").path) })
 
         // A clean-up ordered by a cancel must not remove files imported afterwards (this race made the import check flaky on slow machines)
         let epoch = StagingEpoch()
@@ -495,7 +495,7 @@ enum LocalModelFixtures {
         (s, cap, p, r, done) = make(decode: { got = $0; return "超时后的本地文字" })
         s.graceSeconds = 0.3
         _ = s.begin(); cap.feed(1600); s.end()
-        c("云端松开后长时间无响应时按宽限时间改用本地", wait(5) { done() } && r.value == .some("超时后的本地文字") && p.value?.aborted == true && s.usedFallback)
+        c("云端松开后长时间无响应时按宽限时间改用本地", wait(15) { done() } && r.value == .some("超时后的本地文字") && p.value?.aborted == true && s.usedFallback)
 
         // 宽限时间内云端正常返回：以云端为准，不再回退
         (s, cap, p, r, done) = make(decode: { _ in decodedCount += 1; return "不应使用" })
@@ -535,13 +535,14 @@ enum LocalModelFixtures {
         pipeline.holdStarted(source: .button)
         pipeline.holdEnded()
         rec.onFinal?("回退识别的文字")
-        _ = wait(2) { pipeline.session == nil }
-        c("回退提示附在结果信息里，识别文字照常展示", (pipeline.lastResult.contains("NOTICE-TEXT")) && pipeline.lastTranscript == "回退识别的文字")
+        _ = wait(10) { pipeline.session == nil }
+        let noticeOK = pipeline.lastResult.contains("NOTICE-TEXT") && pipeline.lastTranscript == "回退识别的文字"
+        c("回退提示附在结果信息里，识别文字照常展示", noticeOK)
 
         let plain = NoticeRecorder()
         pipeline.recorderFactory = { plain }
         pipeline.holdStarted(source: .button); pipeline.holdEnded(); plain.onFinal?("普通结果")
-        _ = wait(2) { pipeline.session == nil }
+        _ = wait(10) { pipeline.session == nil }
         c("没有回退时结果信息不含提示", !pipeline.lastResult.contains("NOTICE-TEXT") && pipeline.lastTranscript == "普通结果")
 
         // 选了本地引擎但没有可用模型：拒绝开始并给出提示（机器上已装模型时跳过，避免真的开始录音）

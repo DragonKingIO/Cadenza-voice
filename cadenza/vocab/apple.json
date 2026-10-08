@@ -1,0 +1,145 @@
+{
+ "schema": 1,
+ "id": "apple",
+ "name": {
+  "en": "Apple platforms",
+  "zh-Hans": "苹果平台"
+ },
+ "description": {
+  "en": "Apple products, operating systems and developer frameworks.",
+  "zh-Hans": "苹果的产品、操作系统和开发框架。"
+ },
+ "license": "CC0-1.0",
+ "default": true,
+ "entries": [
+  {
+   "term": "iPhone",
+   "aliases": [
+    "i phone"
+   ]
+  },
+  {
+   "term": "iPad",
+   "aliases": [
+    "i pad"
+   ]
+  },
+  {
+   "term": "iOS",
+   "aliases": [
+    "i os"
+   ]
+  },
+  {
+   "term": "macOS",
+   "aliases": [
+    "mac os"
+   ]
+  },
+  {
+   "term": "iPadOS",
+   "aliases": [
+    "i pad os"
+   ]
+  },
+  {
+   "term": "watchOS",
+   "aliases": [
+    "watch os"
+   ]
+  },
+  {
+   "term": "tvOS",
+   "aliases": [
+    "tv os"
+   ]
+  },
+  {
+   "term": "visionOS",
+   "aliases": [
+    "vision os"
+   ]
+  },
+  {
+   "term": "UIKit",
+   "aliases": [
+    "ui kit"
+   ]
+  },
+  {
+   "term": "AppKit",
+   "aliases": [
+    "app kit"
+   ]
+  },
+  {
+   "term": "TestFlight",
+   "aliases": [
+    "test flight"
+   ]
+  },
+  {
+   "term": "CloudKit",
+   "aliases": [
+    "cloud kit"
+   ]
+  },
+  {
+   "term": "Core Data"
+  },
+  {
+   "term": "AirDrop",
+   "aliases": [
+    "air drop"
+   ]
+  },
+  {
+   "term": "AirPods",
+   "aliases": [
+    "air pods"
+   ]
+  },
+  {
+   "term": "MacBook",
+   "aliases": [
+    "mac book"
+   ]
+  },
+  {
+   "term": "Mac mini"
+  },
+  {
+   "term": "Mac Studio"
+  },
+  {
+   "term": "FaceTime",
+   "aliases": [
+    "face time"
+   ]
+  },
+  {
+   "term": "iCloud",
+   "aliases": [
+    "i cloud"
+   ]
+  },
+  {
+   "term": "App Store"
+  },
+  {
+   "term": "WWDC"
+  },
+  {
+   "term": "Apple Silicon"
+  },
+  {
+   "term": "Spotlight"
+  },
+  {
+   "term": "Safari"
+  },
+  {
+   "term": "Siri"
+  }
+ ]
+}
