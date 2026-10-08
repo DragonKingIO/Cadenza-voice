@@ -57,6 +57,7 @@ BIN="$T"/*.app/Contents/MacOS/Cadenza
 ```
 
 - Self-tests, previews, benchmarks and `--check-*` runs never ask macOS about permissions (`src/TCC.swift`): a build signed differently from the installed app (ad hoc) that does so makes macOS reset the installed app's Accessibility, Input Monitoring and Screen Recording grants. Ask for permissions only through `TCC`; `tools/check-tcc-calls.sh` enforces it. Do not launch a staged build without one of those flags.
+- `--selftest-models-ui` opens the real settings window on a scratch configuration and an in-memory Keychain, and drives the "My AI models" controls (add, type a name, switch consent, save and delete a key, delete with confirmation) through the accessibility tree, as VoiceOver would. It needs a logged-in graphical session, so it is not in CI; run it by hand after changing that page. `--selftest-sidebar-click` does the same for the sidebar.
 - Self-tests never open windows and use isolated configuration. They do write lines into the local log file.
 - `--selftest-local-model-real` runs a real installed model on speech synthesized by macOS `say`. It skips itself when no
   model is installed. Download models inside the app (Settings → Speech → Local models).

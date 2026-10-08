@@ -56,6 +56,12 @@ if CommandLine.arguments.contains("--selftest-settings-ui") {
     print("[settings-ui] checks=\(count) failures=\(failed)");exit(failed == 0 ? 0:1)
 }
 
+if CommandLine.arguments.contains("--selftest-models-ui") {
+    var count=0,failed=0
+    ModelsUIFixtures.run{name,ok in count+=1;if !ok{failed+=1};print("[models-ui] \(ok ? "PASS":"FAIL") \(name)")}
+    print("[models-ui] checks=\(count) failures=\(failed)");exit(failed == 0 ? 0:1)
+}
+
 if CommandLine.arguments.contains("--selftest-sidebar-click") {
     var count=0,failed=0
     SidebarClickFixtures.run{name,ok in count+=1;if !ok{failed+=1};print("[sidebar-click] \(ok ? "PASS":"FAIL") \(name)")}
