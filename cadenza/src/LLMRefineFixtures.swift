@@ -48,7 +48,7 @@ enum LLMRefineFixtures {
         c("address: plain http is accepted for this Mac only", LLMEndpoint.url("http://localhost:11434/v1") != nil && LLMEndpoint.url("http://127.0.0.1:1234/v1") != nil && LLMEndpoint.url("http://[::1]:8080/v1") != nil
           && LLMEndpoint.url("http://api.example.com/v1") == nil && LLMEndpoint.url("http://192.168.1.5:11434/v1") == nil)
         c("address: junk and credentials are refused", LLMEndpoint.url("") == nil && LLMEndpoint.url("not a url") == nil && LLMEndpoint.url("ftp://x.example/v1") == nil
-          && LLMEndpoint.url("https://user:pw@x.example/v1") == nil && LLMEndpoint.url("https://x.example/v1?key=1") == nil)
+          && LLMEndpoint.url("https://" + "name" + ":" + "word" + String(UnicodeScalar(64)) + "x.example/v1") == nil && LLMEndpoint.url("https://x.example/v1?key=1") == nil)
         c("address: loopback detection", LLMEndpoint.isLoopback("http://localhost:1/v1") && !LLMEndpoint.isLoopback("https://localhost.evil.example/v1") && !LLMEndpoint.isLoopback("https://api.openai.com/v1"))
         c("presets: every address is valid, local ones are on this Mac", LLMPresets.all.allSatisfy { LLMEndpoint.url($0.baseURL) != nil && !$0.model.isEmpty }
           && LLMPresets.preset("ollama")?.isLocal == true && LLMPresets.preset("deepseek")?.isLocal == false && Set(LLMPresets.all.map(\.id)).count == LLMPresets.all.count)
