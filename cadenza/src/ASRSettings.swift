@@ -8,7 +8,7 @@ enum ASROptionPolicy {
         guard o.hotwords.utf8.count<=4000,o.vocabularyID.count<=128,o.correctionTableID.count<=128,o.model.count<=128 else{return L10n.tr("ui.b000c25d8071")}
         switch e {
         case .deepgram:
-            guard o.model == "nova-3",DeepgramAPI.languages.contains(o.language),!o.smoothing,!o.secondPass,o.hotwords.isEmpty,o.vocabularyID.isEmpty,o.correctionTableID.isEmpty else{return L10n.tr("deepgram.invalidOptions")}
+            guard o.model == "nova-3",DeepgramAPI.languages.contains(o.language),!o.smoothing,!o.secondPass,DeepgramAPI.validKeyterms(o.hotwords),o.vocabularyID.isEmpty,o.correctionTableID.isEmpty else{return L10n.tr("deepgram.invalidOptions")}
         case .volcengine:
             guard ["volc.seedasr.sauc.duration","volc.seedasr.sauc.concurrent","volc.bigasr.sauc.duration","volc.bigasr.sauc.concurrent"].contains(o.model) else{return L10n.tr("ui.b2311a36c9a3")}
             guard o.hotwords.split(separator:"\n").count<=50 else{return L10n.tr("ui.569e55f7a013")}

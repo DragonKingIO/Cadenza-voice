@@ -15,6 +15,14 @@ enum DeepgramAPI {
     static func fallbackLanguages(_ options:CloudASROptions)->[String] {
         options.language == "multi" ? ["en","es","fr","de","hi","ru","pt","ja","it","nl"]:[String(options.language.split(separator:"-").first ?? "")]
     }
+    /// Key terms are one per line, up to 100, each up to 60 characters. Nova-3 takes them as repeated `keyterm` parameters.
+    static func validKeyterms(_ hotwords:String)->Bool {
+        let lines=hotwords.split(separator:"\n",omittingEmptySubsequences:false)
+        return hotwords.isEmpty || lines.count<=100 && lines.allSatisfy{!$0.isEmpty && $0.count<=60 && $0 == $0.trimmingCharacters(in:.whitespaces)}
+    }
+    /// Key terms are only sent for English and the multilingual model; elsewhere the service's support is not confirmed, and a
+    /// refused request would cost the whole dictation.
+    static func keytermsApply(_ language:String)->Bool { ["en","multi"].contains(language) }
     static func request(options:CloudASROptions,key:String)->URLRequest? {
         guard options.consent,ASROptionPolicy.validate(.deepgram,options)==nil,!key.isEmpty,key.count<=4096,
               key.rangeOfCharacter(from:.controlCharacters)==nil else{return nil}
@@ -23,6 +31,7 @@ enum DeepgramAPI {
             URLQueryItem(name:"encoding",value:"linear16"),URLQueryItem(name:"sample_rate",value:"16000"),
             URLQueryItem(name:"channels",value:"1"),URLQueryItem(name:"interim_results",value:"true"),
             URLQueryItem(name:"punctuate",value:String(options.punctuation)),URLQueryItem(name:"smart_format",value:String(options.itn))]
+        if keytermsApply(options.language) {url.queryItems! += options.hotwords.split(separator:"\n").map{URLQueryItem(name:"keyterm",value:String($0))}}
         var request=URLRequest(url:url.url!);request.setValue("Token "+key,forHTTPHeaderField:"Authorization")
         return request
     }

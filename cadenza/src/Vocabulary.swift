@@ -49,13 +49,17 @@ struct VocabPack: Codable, Equatable {
 
 struct VocabularySettings: Codable, Equatable {
     var enabled = true
+    /// Give the terms to a cloud recognizer that accepts hot words, together with the recording. Only the service that already
+    /// gets the recording (the one the person consented to) receives them.
+    var sendToCloud = true
     /// Packs the person switched on or off, against each pack's own default.
     var packOverrides: [String: Bool] = [:]
     init() {}
-    enum CodingKeys: String, CodingKey { case enabled, packOverrides }
+    enum CodingKeys: String, CodingKey { case enabled, sendToCloud, packOverrides }
     init(from decoder: Decoder) throws {
         let d = try decoder.container(keyedBy: CodingKeys.self)
         enabled = (try? d.decodeIfPresent(Bool.self, forKey: .enabled)) ?? true
+        sendToCloud = (try? d.decodeIfPresent(Bool.self, forKey: .sendToCloud)) ?? true
         packOverrides = (try? d.decodeIfPresent([String: Bool].self, forKey: .packOverrides)) ?? [:]
     }
     func isOn(_ pack: VocabPack) -> Bool { packOverrides[pack.id] ?? pack.enabledByDefault }
@@ -308,6 +312,17 @@ final class VocabularyStore {
                 }
             }
         }
+        return out
+    }
+
+    /// Terms to hand to a recognizer before it starts: the person's own first, then pack terms that have aliases (the ones
+    /// recognizers get wrong most), then the rest.
+    func hotwordCandidates(_ settings: VocabularySettings) -> [(term: String, user: Bool)] {
+        guard settings.enabled else { return [] }
+        var out: [(term: String, user: Bool)] = user.map { ($0.term, true) }
+        var seen = Set(out.map { $0.term.lowercased() })
+        let entries = packs.filter { settings.isOn($0) }.flatMap(\.entries)
+        for e in entries.filter({ !$0.aliases.isEmpty }) + entries.filter({ $0.aliases.isEmpty }) where seen.insert(e.term.lowercased()).inserted { out.append((e.term, false)) }
         return out
     }
 
