@@ -48,6 +48,8 @@ protocol OCREngine {
 
 enum OCRError: LocalizedError, Equatable {
     case failed(String), unknownEngine, tooSmall, localModel(String)
+    /// The AI model could not be used for pictures (a name, then what to do).
+    case ai(String, String)
     case noConsent(String), noCredentials(String), offline
     case auth(String, String), quota(String, String), service(String, String), network(String, String), invalidResponse(String)
     var errorDescription: String? {
@@ -56,6 +58,7 @@ enum OCRError: LocalizedError, Equatable {
         case .unknownEngine: return L10n.tr("screenshot.ocr.unknownEngine")
         case .tooSmall: return L10n.tr("screenshot.ocr.err.tooSmall")
         case .localModel(let m): return L10n.format("screenshot.ocr.err.localModel", m)
+        case .ai(let p, let m): return L10n.format("screenshot.ocr.err.ai", p, m)
         case .noConsent(let p): return L10n.format("screenshot.ocr.err.noConsent", p)
         case .noCredentials(let p): return L10n.format("screenshot.ocr.err.noCredentials", p)
         case .offline: return L10n.tr("screenshot.ocr.err.offline")
@@ -497,6 +500,23 @@ struct OCRRouter {
     /// Directory of the installed local model set with this id, nil when it is not installed.
     var localModelDirectory: (String) -> URL? = { id in LocalModelCenter.shared.isReady(id) ? LocalModelCenter.shared.modelDir(id) : nil }
     var localModelEngine: (URL) throws -> OCREngine = { try PaddleOCRCache.engine(directory: $0) }
+    /// The chosen "my AI model" (its service settings and key) for picture reading; nil when none is chosen or it was deleted.
+    var aiService: (String) -> (name: String, service: TextRefineSettings, key: String?)? = { _ in nil }
+    var aiTransport: LLMTransport = NativeLLMTransport()
+    var localOnly: () -> Bool = { LocalOnlyMode.enabled }
+
+    /// Why the AI model cannot read pictures right now; nil when it can.
+    func aiBlocker() -> OCRError? {
+        let title = L10n.tr("ocr.engine.ai")
+        guard let chosen = aiService(settings.ocrProfileID), chosen.service.configured else { return .ai(title, L10n.tr("screenshot.ocr.err.ai.none")) }
+        if chosen.service.isLocal { return nil }
+        if localOnly() { return .ai(chosen.name, L10n.tr("screenshot.ocr.err.ai.locked")) }
+        if settings.ocrConsent[AIVisionOCR.engineID] != true { return .noConsent(chosen.name) }
+        let needsKey = LLMPresets.preset(chosen.service.preset)?.needsKey ?? true
+        if needsKey && (chosen.key ?? "").isEmpty { return .noCredentials(chosen.name) }
+        if online() == false { return .offline }
+        return nil
+    }
 
     func cloudEngine(for provider: OCRProvider) -> OCREngine? {
         guard let c = credentials(provider) else { return nil }
@@ -527,6 +547,18 @@ struct OCRRouter {
                 let reason = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
                 result = try await local.recognize(image); result.fallbackReason = reason
             }
+        } else if settings.ocrEngine == AIVisionOCR.engineID {
+            if let blocker = aiBlocker() {
+                guard settings.ocrFallback else { throw blocker }
+                result = try await local.recognize(image); result.fallbackReason = blocker.localizedDescription
+            } else if let chosen = aiService(settings.ocrProfileID) {
+                do { result = try await AIVisionOCREngine(service: chosen.service, apiKey: chosen.key, name: chosen.name, transport: aiTransport).recognize(image) }
+                catch {
+                    guard settings.ocrFallback else { throw error }
+                    let reason = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                    result = try await local.recognize(image); result.fallbackReason = reason
+                }
+            } else { throw OCRError.unknownEngine }
         } else if let provider = OCRProvider(rawValue: settings.ocrEngine) {
             if let blocker = cloudBlocker(provider) {
                 guard settings.ocrFallback else { throw blocker }
