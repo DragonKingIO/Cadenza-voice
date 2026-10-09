@@ -7,6 +7,10 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-09
+
+Still an **early preview**.
+
 ### Changed
 - **Voice translation has its own shortcut and its own page.** Translation used to apply to all dictation once a language was chosen. Now ordinary dictation never translates; hold the *translate shortcut* (Settings → Translation) and what you say is recognized, translated into the chosen language and typed as the translation. The page holds the language, the AI model, the shortcut and a link to add models. Right Option works well next to Left Option for dictation; a translation shortcut that equals, or contains, another shortcut is refused. Without a chosen language the key says so instead of recording. The menu bar still picks the language. **If you had a language chosen, set a translate shortcut to keep translating.**
 - **Two shortcuts, no "trigger mode" to pick.** Settings → Shortcuts used to have a Hold / Tap switch on top of two shortcut rows, and choosing Tap before a tap shortcut was set silently went back to Hold, which looked like the click did nothing. Now there are two rows, *Hold to talk* and *Tap to start and stop*, each with its own switch and key; setting a key turns it on, Remove clears it, and both can work at the same time. The menu bar's "Trigger Method" submenu is gone for the same reason, and its header names every shortcut that is on. Existing settings carry over: a tap shortcut that was on and a hold shortcut that was off stays that way.
@@ -115,6 +119,7 @@ many setups yet.
   folder `Cadenza`). The first launch moves your settings, models and saved keys across; macOS may ask once to read the old
   keys, and the permissions must be granted again.
 
-[Unreleased]: https://github.com/DragonKingIO/Cadenza-voice/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/DragonKingIO/Cadenza-voice/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/DragonKingIO/Cadenza-voice/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/DragonKingIO/Cadenza-voice/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/DragonKingIO/Cadenza-voice/releases/tag/v1.0.0

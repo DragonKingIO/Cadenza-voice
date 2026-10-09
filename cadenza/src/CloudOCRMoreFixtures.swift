@@ -38,6 +38,11 @@ enum CloudOCRMoreFixtures {
 
 
         func decode(_ json: String) -> ScreenshotSettings? { try? JSONDecoder().decode(ScreenshotSettings.self, from: Data(json.utf8)) }
+        // Every cloud speech engine links to its setup guide; the guide has a section with the same anchor (cloud-credentials).
+        let cloudEngines = ASREngine.allCases.filter { $0 != .apple && $0 != .local }
+        c("凭据指南：每个云端语音服务都有指南链接并指向对应锚点", cloudEngines.allSatisfy { engine in
+            ProviderHelp.credentialGuideURL(engine: engine, language: "en")?.absoluteString.hasSuffix("cloud-credentials/#" + engine.rawValue) == true })
+        c("凭据指南：苹果与本机识别没有指南链接", ProviderHelp.credentialGuideURL(engine: .apple, language: "en") == nil && ProviderHelp.credentialGuideURL(engine: .local, language: "en") == nil)
         c("settings: the Azure place defaults to a region and survives", decode("{}")?.ocrAzurePlace == "eastus" && decode("{\"ocrAzurePlace\":\"westeurope\"}")?.ocrAzurePlace == "westeurope")
     }
 }
