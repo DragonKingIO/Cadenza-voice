@@ -22,7 +22,7 @@ Apple Speech 使用系统 Speech 框架。
 
 ## 录音条角色动画
 
-`resources/character/` 里的四个短动画（`write`、`think`、`alert`、`error`）在设置里选择“角色”样式时代替声波显示。它们由 Guillaume（[@guillaume_rygn](https://x.com/guillaume_rygn)）用 [Dots Lab](https://dots-lab.pages.dev/) 制作，经作者同意收录。Dots Lab 页面没有声明许可协议，所以这些图片**不**适用本项目的 MIT 许可证：未经作者许可，请勿在本项目之外使用。
+`resources/character/` 里的四个短动画（`write`、`think`、`alert`、`error`）在设置里选择“角色”样式时代替声波显示。它们由 Guillaume（[@guillaume_rygn](https://x.com/guillaume_rygn)）用 [Dots Lab](https://dots-lab.pages.dev/) 制作。作者已在 X 上回复同意可用于开源项目，因此这些动画随本仓库收录，并保留作者署名。动画作品仍归作者所有，本项目不对其重新授权。
 
 ## 截图工具栏图标
 

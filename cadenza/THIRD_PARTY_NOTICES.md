@@ -24,7 +24,7 @@ Like the speech models, the PP-OCR text recognition models are downloaded by the
 
 ## Recording bar character animations
 
-The four short animations in `resources/character/` (`write`, `think`, `alert`, `error`) are shown instead of the waveform when the user chooses the character style in Settings. They were made with [Dots Lab](https://dots-lab.pages.dev/) by Guillaume ([@guillaume_rygn](https://x.com/guillaume_rygn)) and are included with the author's permission. The Dots Lab page states no license, so these images are **not** covered by this project's MIT license: do not reuse them outside this project without asking the author.
+The four short animations in `resources/character/` (`write`, `think`, `alert`, `error`) are shown instead of the waveform when the user chooses the character style in Settings. They were made by Guillaume ([@guillaume_rygn](https://x.com/guillaume_rygn)) with [Dots Lab](https://dots-lab.pages.dev/). The author confirmed on X that they may be used in open-source projects, and they are included in this repository with that permission and with attribution. The artwork remains the author's work; this project does not relicense it.
 
 ## Screenshot toolbar icons
 

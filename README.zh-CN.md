@@ -64,6 +64,9 @@ git clone https://github.com/DragonKingIO/Cadenza-voice.git && cd Cadenza-voice
 
 欢迎代码、文档、翻译、用自己声音做的模型评测和问题反馈。从 [CONTRIBUTING.md](CONTRIBUTING.md) 开始；每个改动都会按其中的隐私约定评审。请遵守[行为准则](CODE_OF_CONDUCT.md)，安全问题请按 [SECURITY.md](SECURITY.md) 私下报告。
 
+社区：[LINUX DO](https://linux.do)，中文开发者社区。
+
+
 ## 许可证
 
 [MIT](cadenza/LICENSE)。[隐私说明](cadenza/PRIVACY.zh-CN.md) · [使用条款](cadenza/TERMS.zh-CN.md) · [第三方声明](cadenza/THIRD_PARTY_NOTICES.zh-CN.md)
