@@ -7,6 +7,10 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-09
+
+Still an **early preview**.
+
 ### Changed
 - **"My AI models" has its own page in the sidebar.** The list of AI models (add, key, permission, test) used to sit at the bottom of the Input page although AI polish, voice translation and the shared keys all use it. It now has an *AI Models* page, with a note on which local model to pick for the memory of this Mac (measured sentences in [LOCAL-MODELS.md](docs/LOCAL-MODELS.md)). The Input page keeps the polish switch; the Translation page links to the new page.
 - **Voice translation has its own shortcut and its own page.** Translation used to apply to all dictation once a language was chosen. Now ordinary dictation never translates; hold the *translate shortcut* (Settings → Translation) and what you say is recognized, translated into the chosen language and typed as the translation. The page holds the language, the AI model, the shortcut and a link to add models. Right Option works well next to Left Option for dictation; a translation shortcut that equals, or contains, another shortcut is refused. Without a chosen language the key says so instead of recording. The menu bar still picks the language. **If you had a language chosen, set a translate shortcut to keep translating.**
@@ -116,6 +120,7 @@ many setups yet.
   folder `Cadenza`). The first launch moves your settings, models and saved keys across; macOS may ask once to read the old
   keys, and the permissions must be granted again.
 
-[Unreleased]: https://github.com/DragonKingIO/Cadenza-voice/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/DragonKingIO/Cadenza-voice/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/DragonKingIO/Cadenza-voice/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/DragonKingIO/Cadenza-voice/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/DragonKingIO/Cadenza-voice/releases/tag/v1.0.0
