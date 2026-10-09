@@ -85,6 +85,8 @@ Code, documentation, translations, model evaluations on your own voice and bug r
 [CONTRIBUTING.md](CONTRIBUTING.md). Every change is reviewed against the privacy contract described there. Please follow the
 [Code of Conduct](CODE_OF_CONDUCT.md), and report security problems privately as described in [SECURITY.md](SECURITY.md).
 
+Community: [LINUX DO](https://linux.do), a Chinese-language developer community.
+
 ## License
 
 [MIT](cadenza/LICENSE). Privacy notice: [PRIVACY.md](cadenza/PRIVACY.md) · Terms: [TERMS.md](cadenza/TERMS.md) ·
