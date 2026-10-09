@@ -73,6 +73,7 @@ enum FallbackPolicy {
         case .iflytek:return iflytekLanguage == "auto" ? ["zh","en"]:languages(iflytekLanguage:iflytekLanguage,recognitionLocale:recognitionLocale)
         case .tencent:return options.model == "16k_en" ? ["en"]:options.model == "16k_zh_en" ? ["zh","en"]:["zh"]
         case .baidu:return options.model == "1737" ? ["en"]:options.model == "1637" ? ["yue"]:["zh"]
+        case .openai,.groq,.compat:return options.language == "multi" ? [recognitionLocale]:[options.language]
         default:return [recognitionLocale]
         }
     }

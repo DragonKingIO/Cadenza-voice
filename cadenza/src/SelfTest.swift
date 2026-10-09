@@ -27,6 +27,8 @@ enum SelfTest {
         ASREntryFixtures.run(check)
         LocalModelFixtures.run(check)
         ScreenshotFixtures.run(check)
+        SharedCredentialsFixtures.run(check)
+        BatchTranscriptionFixtures.run(check)
         LocalAPIFixtures.run(check)
         LocalAPIAudioFixtures.run(check)
         CharacterFixtures.run(check)

@@ -184,11 +184,11 @@ enum OCRProvider: String, CaseIterable, Identifiable {
 }
 
 enum OCRCredentialStore {
-    static func has(_ p: OCRProvider) -> Bool { p.credentialFields.allSatisfy { KeychainStore.get(OCRProvider.keychainKey(p, $0.0))?.isEmpty == false } }
+    static func has(_ p: OCRProvider) -> Bool { p.credentialFields.allSatisfy { SharedCredentials.has(OCRProvider.keychainKey(p, $0.0)) } }
     static func values(_ p: OCRProvider) -> [String: String]? {
         var out: [String: String] = [:]
         for (field, _) in p.credentialFields {
-            guard let v = KeychainStore.get(OCRProvider.keychainKey(p, field)), !v.isEmpty else { return nil }
+            guard let v = SharedCredentials.get(OCRProvider.keychainKey(p, field)) else { return nil }
             out[field] = v
         }
         return out

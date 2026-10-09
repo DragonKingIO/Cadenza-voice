@@ -107,7 +107,9 @@ enum LLMPresets {
 
 enum LLMEndpoint {
     /// The chat-completions URL for a base address: only http(s) with a host, no credentials in the address.
-    static func url(_ base: String) -> URL? {
+    static func url(_ base: String) -> URL? { resolve(base, "/chat/completions") }
+    /// `base` + `suffix` under the same address rules (https, or http for this Mac only; no credentials, query or fragment).
+    static func resolve(_ base: String, _ suffix: String) -> URL? {
         let trimmed = base.trimmingCharacters(in: .whitespacesAndNewlines)
         guard var parts = URLComponents(string: trimmed), let scheme = parts.scheme?.lowercased(), ["http", "https"].contains(scheme),
               let host = parts.host, !host.isEmpty, parts.user == nil, parts.password == nil, parts.query == nil, parts.fragment == nil else { return nil }
@@ -115,7 +117,7 @@ enum LLMEndpoint {
         if scheme == "http", !isLoopbackHost(host) { return nil }
         var path = parts.path
         while path.hasSuffix("/") { path.removeLast() }
-        if !path.hasSuffix("/chat/completions") { path += "/chat/completions" }
+        if !path.hasSuffix(suffix) { path += suffix }
         parts.path = path
         return parts.url
     }

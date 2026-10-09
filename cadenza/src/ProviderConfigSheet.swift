@@ -15,6 +15,8 @@ final class ProviderSettingsDraft {
     var options:CloudASROptions
     var credentials:[String:String]=[:]
     var saved:Set<String>=[]
+    /// Fields served by the secret saved for text recognition (see `SharedCredentials`), not by one of their own.
+    var shared:Set<String>=[]
     var editing:Set<String>=[]
     var mappings:[MappingDraft]
     var feedback=""
@@ -28,13 +30,14 @@ final class ProviderSettingsDraft {
     private var probe:ProviderConnectionProbe?
     private var testID:UUID?
     private var credentialDeadline:DispatchWorkItem?
-    init(store:ConfigStore,engine:ASREngine,busy:@escaping()->Bool,changed:@escaping()->Void,writer:ASRCredentialWriting=KeychainASRCredentialWriter(),read:@escaping(String)->String?={KeychainStore.get($0)},has:@escaping(String)->Bool={KeychainStore.has($0)}){
+    init(store:ConfigStore,engine:ASREngine,busy:@escaping()->Bool,changed:@escaping()->Void,writer:ASRCredentialWriting=KeychainASRCredentialWriter(),read:@escaping(String)->String?={SharedCredentials.get($0)},has:@escaping(String)->Bool={SharedCredentials.has($0)},own:@escaping(String)->String?={KeychainStore.get($0)}){
         self.store=store;self.engine=engine;recognitionLanguage=store.config.iflytekLanguage;options=store.config.options(engine);mappings=store.config.localASRMappings.map{MappingDraft(source:$0.source,replacement:$0.replacement)};self.busy=busy;self.changed=changed;self.writer=writer;self.read=read;self.has=has
         saved=Set(engine.credentialFields.compactMap{has(engine.rawValue+"."+$0.0) ? $0.0:nil})
+        shared=Set(saved.filter{(own(engine.rawValue+"."+$0) ?? "").isEmpty})
     }
     var complete:Bool{engine.credentialFields.allSatisfy{saved.contains($0.0) || !(credentials[$0.0] ?? "").isEmpty}}
     var canSave:Bool{complete || (store.config.options(engine).consent && !options.consent)}
-    var supportsOptions:Bool{engine != .baidu && (engine != .tencent || CloudASROptions.tencentTextModels.contains(options.model)) && (engine != .iflytek || recognitionLanguage != "en_us")}
+    var supportsOptions:Bool{engine.hasTextSwitches && (engine != .tencent || CloudASROptions.tencentTextModels.contains(options.model)) && (engine != .iflytek || recognitionLanguage != "en_us")}
     func fail(_ key:String){feedback=L10n.tr(key);isError=true}
     @discardableResult func save()->Bool {
         guard !previewReadOnly else{return false}
@@ -49,7 +52,7 @@ final class ProviderSettingsDraft {
         var failures=false
         for (key,_) in engine.credentialFields {
             guard let value=credentials[key],!value.isEmpty else{continue}
-            if writer.set(value,for:engine.rawValue+"."+key){credentials[key]="";saved.insert(key);editing.remove(key)}else{failures=true}
+            if writer.set(value,for:engine.rawValue+"."+key){credentials[key]="";saved.insert(key);shared.remove(key);editing.remove(key)}else{failures=true}
         }
         changed()
         if failures{fail("provider.partial");return false}
@@ -120,7 +123,7 @@ struct ProviderConfigSheet:View {
             Form {
                 Section {
                     VStack(alignment:.leading,spacing:10){
-                        ForEach(0..<3,id:\.self){index in HStack(alignment:.top){Text("\(index+1).").monospacedDigit().foregroundStyle(.secondary);Text(L10n.tr((engine == .deepgram ? "deepgram.step.":"provider.step.")+String(index+1)))}}
+                        ForEach(0..<3,id:\.self){index in HStack(alignment:.top){Text("\(index+1).").monospacedDigit().foregroundStyle(.secondary);Text(L10n.tr((engine == .deepgram ? "deepgram.step.":BatchTranscription.service(engine) != nil ? "batch.step.":"provider.step.")+String(index+1)))}}
                         if let url=ProviderConnectionProbe.consoleURL(engine){Link(destination:url){Label(L10n.tr("provider.console."+engine.rawValue),systemImage:"arrow.up.right.square")}.buttonStyle(.borderedProminent)}
                         if let url=ProviderHelp.credentialGuideURL(engine:engine,language:L10n.language){
                             Link(destination:url){Label(L10n.tr("provider.credentialGuide"),systemImage:"book")}.buttonStyle(.bordered)
@@ -131,7 +134,7 @@ struct ProviderConfigSheet:View {
                     ForEach(engine.credentialFields,id:\.0){key,name in
                         LabeledContent(name){
                             if draft.saved.contains(key) && !draft.editing.contains(key){
-                                HStack{Text(L10n.tr("provider.savedSecret")).foregroundStyle(.secondary);Button(L10n.tr("provider.replace")){draft.editing.insert(key)}.buttonStyle(.bordered)}
+                                HStack{Text(L10n.tr(draft.shared.contains(key) ? "provider.sharedSecret":"provider.savedSecret")).foregroundStyle(.secondary);Button(L10n.tr("provider.replace")){draft.editing.insert(key)}.buttonStyle(.bordered)}
                             } else {
                                 SecureField(L10n.tr(draft.saved.contains(key) ? "provider.replaceHint":"provider.required"),text:Binding(get:{draft.credentials[key] ?? ""},set:{draft.credentials[key]=$0})).textFieldStyle(.roundedBorder).frame(width:270).accessibilityLabel(name)
                             }
@@ -147,7 +150,7 @@ struct ProviderConfigSheet:View {
                     }
                 } header:{Text(L10n.tr("provider.credentials"))} footer:{VStack(alignment:.leading,spacing:6){Label(L10n.tr("provider.localKeychain"),systemImage:"lock");Text(L10n.tr("provider.testExplanation"));if !draft.options.consent {Text(L10n.tr("provider.testConsent"))}}.font(.callout).foregroundStyle(.primary)}
                 Section {
-                    Toggle(L10n.format("provider.consent",engine.title),isOn:$draft.options.consent)
+                    Toggle(L10n.format("provider.consent",engine == .compat ? BatchTranscription.destination(engine,draft.options):engine.title),isOn:$draft.options.consent)
                     VStack(alignment:.leading,spacing:8){
                         Text(L10n.tr("provider.privacy.streaming"))
                         Text(L10n.tr("provider.privacy.irrevocable")).fontWeight(.semibold)
@@ -178,6 +181,23 @@ struct ProviderConfigSheet:View {
                 }
             }
             Text(L10n.tr("deepgram.languageHint")).font(.callout)
+        }
+        if engine == .compat {
+            Picker(L10n.tr("compat.preset"),selection:Binding(get:{BatchTranscription.preset(forBaseURL:draft.options.baseURL)?.id ?? ""},set:{id in if let p=BatchTranscription.compatPresets.first(where:{$0.id==id}){draft.options.baseURL=p.baseURL;draft.options.model=p.model}})){
+                Text(L10n.tr("compat.preset.other")).tag("")
+                ForEach(BatchTranscription.compatPresets){Text($0.title).tag($0.id)}
+            }
+            TextField(L10n.tr("compat.baseURL"),text:$draft.options.baseURL,prompt:Text("https://api.example.com/v1"))
+            TextField(L10n.tr("provider.model"),text:$draft.options.model)
+            Text(L10n.tr("compat.hint")).font(.callout)
+        }
+        if let service=BatchTranscription.service(engine) {
+            if engine != .compat {Picker(L10n.tr("provider.model"),selection:$draft.options.model){ForEach(service.models,id:\.self){Text($0).tag($0)}}}
+            Picker(L10n.tr("provider.language"),selection:$draft.options.language){
+                ForEach(BatchTranscription.languages,id:\.self){code in Text(code == "multi" ? L10n.tr("batch.language.auto"):Locale(identifier:L10n.language).localizedString(forIdentifier:code) ?? code).tag(code)}
+            }
+            Text(L10n.tr("batch.languageHint")).font(.callout)
+            TextField(L10n.tr("provider.hotwords"),text:$draft.options.hotwords).help(L10n.tr("batch.hotwords.placeholder"))
         }
         if engine == .iflytek {
             Picker(L10n.tr("provider.language"),selection:$draft.recognitionLanguage){Text(L10n.tr("language.chinese")).tag("zh_cn");Text(L10n.tr("language.english")).tag("en_us");Text(L10n.tr("language.auto")).tag("auto")}

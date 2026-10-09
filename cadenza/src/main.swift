@@ -128,6 +128,7 @@ if CommandLine.arguments.contains("--selftest-local-ocr-real") {_ = NSApplicatio
 if CommandLine.arguments.contains("--selftest-local-ocr-download") {_ = NSApplication.shared;exit(OCRLocalFixtures.realDownload())}
 if CommandLine.arguments.contains("--local-accuracy-probe") {exit(LocalModelFixtures.accuracyProbe())}
 if CommandLine.arguments.contains("--accuracy-benchmark") {exit(AccuracyBenchmark.run())}
+if CommandLine.arguments.contains("--selftest-batch-real") {exit(BatchTranscriptionFixtures.real())}
 if CommandLine.arguments.contains("--bench-fillers") {exit(FillerProbe.run())}
 if CommandLine.arguments.contains("--bench-translate") {exit(TranslateProbe.run())}
 if CommandLine.arguments.contains("--bench-quiet") {exit(QuietProbe.run())}

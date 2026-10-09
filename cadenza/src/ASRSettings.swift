@@ -23,6 +23,8 @@ enum ASROptionPolicy {
             guard ["cn-shanghai","cn-beijing","cn-shenzhen"].contains(o.region) else{return L10n.tr("ui.7f2f898f4f79")}
         case .baidu:
             guard ["1537","1737","1637","1837"].contains(o.model),o.vocabularyID.isEmpty || o.model=="1537" && Int(o.vocabularyID).map({$0>0})==true else{return L10n.tr("ui.3a69fc7da08b")}
+        case .openai,.groq,.compat:
+            if let problem=BatchTranscription.validate(e,o){return problem}
         default:break
         }
         if (e == .iflytek || e == .baidu) && (o.smoothing || o.secondPass){return L10n.tr("ui.25889af6645e")}
@@ -39,6 +41,7 @@ enum ASROptionPolicy {
     case .apple:return L10n.tr("ui.a556c4a215de")
     case .local:return L10n.tr("local.capability")
     case .deepgram:return L10n.tr("deepgram.capability")
+    case .openai,.groq,.compat:return L10n.tr("batch.capability")
     }}
 }
 protocol ASRCredentialWriting:AnyObject {
@@ -81,15 +84,15 @@ final class ASRSettingsController:NSWindowController,NSWindowDelegate {
         if engine == .volcengine{stack.addArrangedSubview(label(L10n.tr("ui.eb45875691d1")))}
         stack.addArrangedSubview(label(L10n.tr("ui.3144e711ad64")))
         for (key,name) in engine.credentialFields {let field=NSSecureTextField();field.identifier=NSUserInterfaceItemIdentifier("asr.credential."+key);field.placeholderString=L10n.tr("ui.5f196397724d");secure[key]=field;row(name,field)}
-        let models:[String];switch engine {case .volcengine:models=["volc.seedasr.sauc.duration","volc.seedasr.sauc.concurrent","volc.bigasr.sauc.duration","volc.bigasr.sauc.concurrent"];case .tencent:models=["16k_zh","16k_en","16k_zh_en"];case .baidu:models=["1537","1737","1637","1837"];default:models=[]}
+        let models:[String];switch engine {case .volcengine:models=["volc.seedasr.sauc.duration","volc.seedasr.sauc.concurrent","volc.bigasr.sauc.duration","volc.bigasr.sauc.concurrent"];case .tencent:models=["16k_zh","16k_en","16k_zh_en"];case .baidu:models=["1537","1737","1637","1837"];case .openai,.groq:models=BatchTranscription.service(engine)?.models ?? [];default:models=[]}
         if !models.isEmpty{model.addItems(withTitles:models);model.selectItem(withTitle:o.model);model.target=self;model.action=#selector(modelChanged);row(L10n.tr("ui.d76465693690"),model)}
         if engine == .aliyun{region.addItems(withTitles:["cn-shanghai","cn-beijing","cn-shenzhen"]);region.selectItem(withTitle:o.region);row(L10n.tr("ui.9c26cb4d716d"),region)}
-        if engine == .volcengine || engine == .tencent {hotwords.stringValue=o.hotwords;hotwords.placeholderString=engine == .tencent ? L10n.tr("ui.b41cffa7de36"):L10n.tr("ui.3feb3b033561");row(L10n.tr("ui.9d39fb2c12be"),hotwords)}
+        if engine == .volcengine || engine == .tencent || BatchTranscription.service(engine) != nil {hotwords.stringValue=o.hotwords;hotwords.placeholderString=engine == .tencent ? L10n.tr("ui.b41cffa7de36"):BatchTranscription.service(engine) != nil ? L10n.tr("batch.hotwords.placeholder"):L10n.tr("ui.3feb3b033561");row(L10n.tr("ui.9d39fb2c12be"),hotwords)}
         if engine == .volcengine || engine == .aliyun || engine == .baidu {vocabulary.stringValue=o.vocabularyID;vocabulary.placeholderString=engine == .baidu ? L10n.tr("ui.c2c2358a1fad"):L10n.tr("ui.f402ac0f4c03");row(L10n.tr("ui.7a32a9ca8f38"),vocabulary)}
         if engine == .aliyun {let custom=NSTextField(string:o.model);custom.identifier=NSUserInterfaceItemIdentifier("nls-custom-model");custom.placeholderString=L10n.tr("ui.ca612dbeae8b");row(L10n.tr("ui.39f1a4088dbb"),custom);customModel=custom}
         if engine == .volcengine{correction.stringValue=o.correctionTableID;row(L10n.tr("ui.0c7bfaf16124"),correction)}
         punc=checkbox(L10n.tr("ui.ba8f4e13f8de"),o.punctuation);itn=checkbox(L10n.tr("ui.0f9dc3678abe"),o.itn);smooth=checkbox(L10n.tr("ui.cc8c352f8dbb"),o.smoothing);second=checkbox(L10n.tr("ui.d3cc890d2739"),o.secondPass)
-        punc.isEnabled=engine != .baidu;itn.isEnabled=engine != .baidu;smooth.isEnabled=[.volcengine,.tencent,.aliyun].contains(engine);second.isEnabled=engine == .volcengine
+        punc.isEnabled=engine.hasTextSwitches;itn.isEnabled=engine.hasTextSwitches;smooth.isEnabled=[.volcengine,.tencent,.aliyun].contains(engine);second.isEnabled=engine == .volcengine
         modelChanged()
         for b in [punc,itn,smooth,second]{stack.addArrangedSubview(b)}
         mappings.stringValue=store.config.localASRMappings.map{$0.source+" => "+$0.replacement}.joined(separator:"\n");mappings.placeholderString=L10n.tr("ui.54174c25a0b8");row(L10n.tr("ui.d7eb72cda81e"),mappings)
@@ -110,7 +113,9 @@ final class ASRSettingsController:NSWindowController,NSWindowDelegate {
         case .tencent:url="https://console.cloud.tencent.com/asr"
         case .aliyun:url="https://nls-portal.console.aliyun.com"
         case .baidu:url="https://console.bce.baidu.com/ai/#/ai/speech/overview/index"
-        case .apple,.local:return
+        case .openai:url="https://platform.openai.com/api-keys"
+        case .groq:url="https://console.groq.com/keys"
+        case .apple,.local,.compat:return
         }
         guard let u=URL(string:url),u.scheme=="https",let host=u.host,!host.isEmpty,host.contains(".") else{return}
         NSWorkspace.shared.open(u)
