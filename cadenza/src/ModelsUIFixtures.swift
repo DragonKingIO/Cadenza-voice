@@ -46,7 +46,7 @@ enum ModelsUIFixtures {
         defer { main.window?.close() }
         pump(0.8)
         guard let window = main.window, let model = main.settingsModel else { check("models ui: the settings window and its model exist", false); return }
-        model.tab = .input
+        model.tab = .aiModels
         for _ in 0..<20 where !(window.isKeyWindow && NSApp.isActive) { NSApp.activate(ignoringOtherApps: true); window.makeKeyAndOrderFront(nil); pump(0.2) }
         pump(0.5)
         let addLabel = L10n.tr("llm.add")

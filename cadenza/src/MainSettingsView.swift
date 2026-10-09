@@ -6,12 +6,12 @@ import Speech
 // MARK: - 模型
 
 enum MainTab: String, CaseIterable, Identifiable, Hashable {
-    case input, engines, ocr, translate, shortcuts, vocabulary, general, privacy, developer, about
+    case input, engines, ocr, aiModels, translate, shortcuts, vocabulary, general, privacy, developer, about
     var id: String { rawValue }
     /// The Developer page is for people who ask for it (Settings → General → Advanced).
     static func visible(showDeveloper: Bool) -> [MainTab] { allCases.filter { $0 != .developer || showDeveloper } }
-    var title: String { switch self { case .input: L10n.tr("ui.2087c777c06f"); case .engines: L10n.tr("ui.8545bbfc5af9"); case .ocr: L10n.tr("ocr.title"); case .translate: L10n.tr("translate.title"); case .shortcuts: L10n.tr("ui.ee2638183d3e"); case .vocabulary: L10n.tr("vocab.title"); case .general: L10n.tr("general.title"); case .privacy: L10n.tr("ui.86651d17a401"); case .developer: L10n.tr("developer.title"); case .about: L10n.tr("ui.52d25a9e30ba") } }
-    var icon: String { switch self { case .input: "mic"; case .engines: "cpu"; case .ocr: "text.viewfinder"; case .translate: "character.bubble"; case .shortcuts: "keyboard"; case .vocabulary: "text.book.closed"; case .general: "gearshape"; case .privacy: "checkmark.shield"; case .developer: "curlybraces"; case .about: "info.circle" } }
+    var title: String { switch self { case .input: L10n.tr("ui.2087c777c06f"); case .engines: L10n.tr("ui.8545bbfc5af9"); case .ocr: L10n.tr("ocr.title"); case .aiModels: L10n.tr("ai.title"); case .translate: L10n.tr("translate.title"); case .shortcuts: L10n.tr("ui.ee2638183d3e"); case .vocabulary: L10n.tr("vocab.title"); case .general: L10n.tr("general.title"); case .privacy: L10n.tr("ui.86651d17a401"); case .developer: L10n.tr("developer.title"); case .about: L10n.tr("ui.52d25a9e30ba") } }
+    var icon: String { switch self { case .input: "mic"; case .engines: "cpu"; case .ocr: "text.viewfinder"; case .aiModels: "sparkles"; case .translate: "character.bubble"; case .shortcuts: "keyboard"; case .vocabulary: "text.book.closed"; case .general: "gearshape"; case .privacy: "checkmark.shield"; case .developer: "curlybraces"; case .about: "info.circle" } }
 }
 
 enum EngineScope: String, CaseIterable, Identifiable {
@@ -459,6 +459,7 @@ struct MainSettingsView: View {
         case .input: VoiceInputPage(model: model)
         case .engines: EngineSettingsView(model: model)
         case .ocr: OCRSettingsView(model: model)
+        case .aiModels: AIModelsPage(model: model)
         case .translate: TranslatePage(model: model)
         case .shortcuts: ShortcutsView(model: model)
         case .vocabulary: VocabularyView(model: model)
@@ -488,7 +489,6 @@ struct VoiceInputPage: View {
             } header:{Text(L10n.tr("settings.current"))}
             TextPolishSection(model:model)
             TextRefineSection(model:model)
-            LLMModelsSection(model:model)
         }
         .onExitCommand {if model.listening{model.cancelTry()}}
         .onReceive(timer){_ in model.tick();model.sync()}
@@ -784,6 +784,21 @@ struct EngineSettingsView: View {
     }
 }
 
+/// The AI models every text feature shares (polish, translation): add, test, key and permission, plus a word on which local model to pick.
+struct AIModelsPage:View {
+    @Bindable var model:SettingsModel
+    private var memoryGB:Int { Int((Double(ProcessInfo.processInfo.physicalMemory)/1_073_741_824).rounded()) }
+    var body:some View {
+        SettingsPage {
+            LLMModelsSection(model:model)
+            Section {
+                Label(L10n.format("ai.local.memory",String(memoryGB)),systemImage:"memorychip").font(.callout)
+                Text(L10n.tr(memoryGB >= 16 ? "ai.local.big":"ai.local.small")).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
+            } header:{Text(L10n.tr("ai.local.header"))} footer:{Text(L10n.tr("ai.local.footer")).font(.callout).foregroundStyle(.primary)}
+        }
+    }
+}
+
 /// Voice translation: the language, the model, and its own shortcut. Ordinary dictation is never translated.
 struct TranslatePage:View {
     @Bindable var model:SettingsModel
@@ -802,7 +817,7 @@ struct TranslatePage:View {
                 if !model.translate.active {Label(L10n.tr("translate.shortcut.needTarget"),systemImage:"exclamationmark.circle").font(.callout).foregroundStyle(.orange)}
             } header:{Text(L10n.tr("translate.shortcut.header"))} footer:{Text(L10n.tr("translate.shortcut.hint")).font(.callout).foregroundStyle(.primary)}
             Section {
-                Button(L10n.tr("translate.models")){model.tab = .input}.buttonStyle(.link)
+                Button(L10n.tr("translate.models")){model.tab = .aiModels}.buttonStyle(.link)
             } footer:{Text(L10n.tr("translate.models.hint")).font(.callout).foregroundStyle(.secondary)}
         }
     }
