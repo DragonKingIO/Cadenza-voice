@@ -39,7 +39,7 @@ final class OCRProviderDraft {
         self.provider = provider; self.has = has; self.own = own; self.read = read; self.write = write; self.delete = delete; self.persist = persist; self.transport = transport
         consent = settings.ocrConsent[provider.rawValue] == true
         accurate = settings.ocrAccurate[provider.rawValue] == true
-        region = settings.ocrTencentRegion
+        region = provider == .azure ? settings.ocrAzurePlace : settings.ocrTencentRegion
         refreshSaved()
     }
 
@@ -65,7 +65,7 @@ final class OCRProviderDraft {
         }
         if failed { fail("ocr.sheet.keychainFailed"); return false }
         let cleanRegion = region.trimmingCharacters(in: .whitespaces)
-        guard persist(provider, consent, accurate, cleanRegion.isEmpty ? "ap-guangzhou" : cleanRegion) else { fail("ui.bcd8e5694934"); return false }
+        guard persist(provider, consent, accurate, cleanRegion.isEmpty ? (provider == .azure ? "eastus" : "ap-guangzhou") : cleanRegion) else { fail("ui.bcd8e5694934"); return false }
         feedback = L10n.tr("ocr.sheet.saved"); isError = false
         return true
     }
@@ -93,7 +93,7 @@ final class OCRProviderDraft {
         guard let image = OCRTestImage.make() else { fail("ocr.sheet.testFailed"); return }
         testing = true; feedback = L10n.tr("ocr.sheet.testing"); isError = false
         defer { testing = false }
-        var s = ScreenshotSettings(); s.ocrAccurate[provider.rawValue] = accurate; s.ocrTencentRegion = region
+        var s = ScreenshotSettings(); s.ocrAccurate[provider.rawValue] = accurate; s.ocrTencentRegion = region; s.ocrAzurePlace = region
         let router = OCRRouter(settings: s, credentials: { _ in creds }, online: { true }, transport: transport)
         do {
             guard let engine = router.cloudEngine(for: provider) else { fail("ocr.sheet.testFailed"); return }
@@ -278,6 +278,11 @@ struct OCRProviderSheet: View {
                     if draft.provider == .tencent {
                         LabeledContent(L10n.tr("ocr.field.region")) { TextField("", text: $draft.region, prompt: Text("ap-guangzhou")).textFieldStyle(.roundedBorder).frame(maxWidth: 260) }
                     }
+                    if draft.provider == .azure {
+                        LabeledContent(L10n.tr("ocr.field.place")) { TextField("", text: $draft.region, prompt: Text("eastus")).textFieldStyle(.roundedBorder).frame(maxWidth: 260) }
+                        Text(L10n.tr("ocr.azure.hint")).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                    if draft.provider == .mistral { Text(L10n.tr("ocr.mistral.hint")).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
                     if !draft.shared.isEmpty { Text(L10n.tr("ocr.sheet.shared")).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
                     if draft.provider.supportsAccurate { Toggle(L10n.tr("ocr.sheet.accurate"), isOn: $draft.accurate) }
                 }

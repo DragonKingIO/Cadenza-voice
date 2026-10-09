@@ -225,7 +225,7 @@ final class SettingsModel {
     func setScope(_ s: EngineScope) { scope = s }
     /// The chosen AI model for picture reading, as the router sees it.
     func aiOCRService() -> (name: String, service: TextRefineSettings, key: String?)? {
-        store?.config.llmService(profile: screenshotSettings.ocrProfileID).map { ($0.name, $0.service, KeychainStore.get($0.service.keyName)) }
+        store?.config.llmService(profile: screenshotSettings.ocrProfileID).map { ($0.name, $0.service, SharedCredentials.aiModelKey(keyName: $0.service.keyName, preset: $0.service.preset)) }
     }
     /// Picture reading by an AI model can be switched on once a model is chosen and, unless it runs on this Mac, picture upload is allowed.
     var aiOCRReady: Bool {
@@ -248,7 +248,7 @@ final class SettingsModel {
         return OCRProviderDraft(provider: provider, settings: screenshotSettings, persist: { [weak self] p, consent, accurate, region in
             guard let self, let store = self.store, !self.previewReadOnly else { return false }
             let original = store.config
-            guard store.mutate({ $0.screenshot.ocrConsent[p.rawValue] = consent; $0.screenshot.ocrAccurate[p.rawValue] = accurate; if p == .tencent { $0.screenshot.ocrTencentRegion = region } }), store.save() else { _ = store.mutate { $0 = original }; return false }
+            guard store.mutate({ $0.screenshot.ocrConsent[p.rawValue] = consent; $0.screenshot.ocrAccurate[p.rawValue] = accurate; if p == .tencent { $0.screenshot.ocrTencentRegion = region }; if p == .azure { $0.screenshot.ocrAzurePlace = region } }), store.save() else { _ = store.mutate { $0 = original }; return false }
             self.onSettingsChanged?(); self.sync(); return true
         })
     }

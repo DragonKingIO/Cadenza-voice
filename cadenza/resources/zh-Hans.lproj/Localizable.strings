@@ -1263,6 +1263,12 @@
 "ocr.provider.baidu" = "百度智能云 OCR";
 "ocr.provider.google" = "Google Cloud Vision";
 "ocr.provider.tencent" = "腾讯云 OCR";
+"ocr.provider.azure" = "微软 Azure AI Vision（Read）";
+"ocr.provider.mistral" = "Mistral OCR";
+"ocr.field.place" = "区域或地址";
+"ocr.azure.hint" = "填 Azure AI Vision 或多服务资源的密钥和它的区域（例如 eastus），或者资源的地址（https://名称.cognitiveservices.azure.com）。只为语音创建的资源，它的密钥不能读图片。";
+"ocr.azure.place.invalid" = "区域或地址无效";
+"ocr.mistral.hint" = "Mistral 用 Markdown 回答，它为插图加的占位符会被去掉。密钥和“我的 AI 模型”里的 Mistral 是同一把。";
 "screenshot.arrow.double" = "双向箭头";
 "screenshot.arrow.line" = "直线";
 "screenshot.arrow.single" = "单向箭头";
@@ -1429,6 +1435,7 @@
 "refine.model" = "模型名称";
 "refine.key" = "API 密钥";
 "refine.key.saved" = "已保存，输入新密钥可替换";
+"refine.key.shared" = "这里没有单独保存密钥，正在使用你在别处（语音识别或文字识别）为这家公司保存的密钥。要换成不同的密钥，请在下面保存一把。";
 "refine.key.save" = "保存密钥";
 "refine.key.delete" = "删除密钥";
 "refine.style" = "风格";

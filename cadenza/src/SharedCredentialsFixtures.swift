@@ -8,9 +8,9 @@ enum SharedCredentialsFixtures {
 
         // The lookup
         c("table: every entry points back at the key it came from", SharedCredentials.alternates.allSatisfy { key, others in others.allSatisfy { SharedCredentials.alternates[$0]?.contains(key) == true } })
-        c("table: Tencent, Baidu and Google keys are shared, nothing else is",
+        c("table: Tencent, Baidu, Google and Azure keys are shared, nothing else is",
           SharedCredentials.alternates["tencent.secretid"] == ["ocr.tencent.secretid"] && SharedCredentials.alternates["ocr.baidu.apikey"] == ["baidu.apikey"]
-          && SharedCredentials.alternates["tencent.appid"] == nil && SharedCredentials.alternates["ocr.google.apikey"] == ["google.apikey"] && SharedCredentials.alternates["deepgram.apikey"] == nil && SharedCredentials.alternates["azure.apikey"] == nil)
+          && SharedCredentials.alternates["tencent.appid"] == nil && SharedCredentials.alternates["ocr.google.apikey"] == ["google.apikey"] && SharedCredentials.alternates["deepgram.apikey"] == nil && SharedCredentials.alternates["azure.apikey"] == ["ocr.azure.apikey"])
         c("get: nothing saved gives nothing", SharedCredentials.get("ocr.tencent.secretid", read: read) == nil && !SharedCredentials.has("ocr.tencent.secretid", read: read))
         items["tencent.secretid"] = "ID-1"
         c("get: a key saved for speech recognition serves text recognition", SharedCredentials.get("ocr.tencent.secretid", read: read) == "ID-1" && SharedCredentials.isShared("ocr.tencent.secretid", read: read))
@@ -21,6 +21,22 @@ enum SharedCredentialsFixtures {
         items = ["ocr.baidu.apikey": "B-1"]
         c("get: the other direction works too", SharedCredentials.get("baidu.apikey", read: read) == "B-1")
         c("get: a key with no counterpart is only itself", { items = ["tencent.appid": "A"]; return SharedCredentials.get("ocr.tencent.appid", read: read) == nil && SharedCredentials.get("tencent.appid", read: read) == "A" }())
+
+        // AI models of the same company
+        let savedModels = SharedCredentials.aiModels
+        defer { SharedCredentials.aiModels = savedModels }
+        SharedCredentials.aiModels = { [("openai", "llm.profile.aaa"), ("deepseek", "llm.profile.bbb")] }
+        items = ["llm.profile.aaa": "sk-chat", "llm.profile.bbb": "ds-key"]
+        c("ai models: the key of an OpenAI entry serves OpenAI speech recognition", SharedCredentials.get("openai.apikey", read: read) == "sk-chat" && SharedCredentials.isShared("openai.apikey", read: read))
+        c("ai models: a company with no entry, or an entry of another company, gives nothing", SharedCredentials.get("groq.apikey", read: read) == nil && SharedCredentials.get("ocr.mistral.apikey", read: read) == nil && SharedCredentials.get("deepgram.apikey", read: read) == nil)
+        items["openai.apikey"] = "sk-speech"
+        c("ai models: a key saved for speech wins over the entry's", SharedCredentials.get("openai.apikey", read: read) == "sk-speech" && !SharedCredentials.isShared("openai.apikey", read: read))
+        items = ["groq.apikey": "gsk-speech", "ocr.mistral.apikey": "mi-ocr"]
+        c("ai models: an AI model of that company borrows the speech or text recognition key, other companies do not",
+          SharedCredentials.forAIModel(preset: "groq", read: read) == "gsk-speech" && SharedCredentials.forAIModel(preset: "mistral", read: read) == "mi-ocr" && SharedCredentials.forAIModel(preset: "openai", read: read) == nil && SharedCredentials.forAIModel(preset: "ollama", read: read) == nil)
+        items["llm.profile.own"] = "own-key"
+        c("ai models: the model's own key wins, and a missing one falls back to the borrowed key", SharedCredentials.aiModelKey(keyName: "llm.profile.own", preset: "groq", read: read) == "own-key" && SharedCredentials.aiModelKey(keyName: "llm.profile.none", preset: "groq", read: read) == "gsk-speech" && SharedCredentials.aiModelKey(keyName: "llm.profile.none", preset: "deepseek", read: read) == nil)
+        SharedCredentials.aiModels = savedModels
 
         // Through the real stores (in memory while testing)
         let names = ["tencent.secretid", "tencent.secretkey", "tencent.appid", "ocr.tencent.secretid", "ocr.tencent.secretkey"]

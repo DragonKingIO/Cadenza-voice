@@ -402,7 +402,7 @@ struct LLMTextRefiner: TextRefining {
 
     func refine(_ text: String, settings: TextRefineSettings, glossary terms: [String], done: @escaping (String?, String?) -> Void) {
         let started = ProcessInfo.processInfo.systemUptime
-        let apiKey = key(settings.keyName)
+        let apiKey = key(settings.keyName) ?? SharedCredentials.forAIModel(preset: settings.preset)
         Task {
             let result = await LLMClient.refine(text, settings: settings, apiKey: apiKey, glossary: terms, transport: transport)
             let seconds = ProcessInfo.processInfo.systemUptime - started

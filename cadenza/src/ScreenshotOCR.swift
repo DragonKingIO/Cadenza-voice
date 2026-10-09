@@ -164,7 +164,7 @@ enum BarcodeScanner {
 // MARK: 云端：公共部分
 
 enum OCRProvider: String, CaseIterable, Identifiable {
-    case baidu, tencent, google
+    case baidu, tencent, google, azure, mistral
     var id: String { rawValue }
     var title: String { L10n.tr("ocr.provider." + rawValue) }
     /// (钥匙串字段名, 显示名的本地化键)
@@ -172,15 +172,17 @@ enum OCRProvider: String, CaseIterable, Identifiable {
         switch self {
         case .baidu: return [("apikey", "ocr.field.apiKey"), ("secretkey", "ocr.field.secretKey")]
         case .tencent: return [("secretid", "ocr.field.secretId"), ("secretkey", "ocr.field.secretKey")]
-        case .google: return [("apikey", "ocr.field.apiKey")]
+        case .google, .azure, .mistral: return [("apikey", "ocr.field.apiKey")]
         }
     }
-    var supportsAccurate: Bool { self != .google }
+    var supportsAccurate: Bool { [.baidu, .tencent].contains(self) }
     var consoleURL: String {
         switch self {
         case .baidu: return "https://console.bce.baidu.com/ai/#/ai/ocr/overview/index"
         case .tencent: return "https://console.cloud.tencent.com/ocr/overview"
         case .google: return "https://console.cloud.google.com/apis/library/vision.googleapis.com"
+        case .azure: return "https://portal.azure.com/#create/Microsoft.CognitiveServicesComputerVision"
+        case .mistral: return "https://console.mistral.ai/api-keys"
         }
     }
     static func keychainKey(_ provider: OCRProvider, _ field: String) -> String { "ocr." + provider.rawValue + "." + field }
@@ -525,6 +527,8 @@ struct OCRRouter {
         case .baidu: return BaiduOCREngine(apiKey: c["apikey"] ?? "", secretKey: c["secretkey"] ?? "", accurate: accurate, transport: transport)
         case .tencent: return TencentOCREngine(secretId: c["secretid"] ?? "", secretKey: c["secretkey"] ?? "", region: settings.ocrTencentRegion, accurate: accurate, transport: transport)
         case .google: return GoogleOCREngine(apiKey: c["apikey"] ?? "", transport: transport)
+        case .azure: return AzureReadOCREngine(key: c["apikey"] ?? "", place: settings.ocrAzurePlace, transport: transport)
+        case .mistral: return MistralOCREngine(key: c["apikey"] ?? "", transport: transport)
         }
     }
 

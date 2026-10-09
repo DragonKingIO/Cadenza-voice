@@ -441,10 +441,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
 
     private func startScreenshotSupport() {
+        SharedCredentials.aiModels = { [weak self] in self?.configStore.config.llmProfiles.map { ($0.preset, $0.keyName) } ?? [] }
         screenshot.settings = { [weak self] in self?.configStore.config.screenshot ?? ScreenshotSettings() }
         screenshot.makeRouter = { [weak self] settings in
             var router = OCRRouter(settings: settings)
-            router.aiService = { id in self?.configStore.config.llmService(profile: id).map { ($0.name, $0.service, KeychainStore.get($0.service.keyName)) } }
+            router.aiService = { id in self?.configStore.config.llmService(profile: id).map { ($0.name, $0.service, SharedCredentials.aiModelKey(keyName: $0.service.keyName, preset: $0.service.preset)) } }
             return router
         }
         screenshot.canStart = { [weak self] in self?.pipeline.hasActiveSession != true }

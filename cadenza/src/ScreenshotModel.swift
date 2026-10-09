@@ -18,6 +18,8 @@ struct ScreenshotSettings: Codable, Equatable {
     var ocrAccurate: [String: Bool] = [:]
     /// 腾讯云地域
     var ocrTencentRegion = "ap-guangzhou"
+    /// Azure: the region of the resource ("eastus") or the address of the resource.
+    var ocrAzurePlace = "eastus"
     /// 本机文字识别模型（ocrEngine == "ppocr" 时使用）：在“文字识别”页下载的模型条目 id
     var ocrLocalModel = ""
     /// "My AI models" entry that reads the picture (ocrEngine == "ai").
@@ -25,7 +27,7 @@ struct ScreenshotSettings: Codable, Equatable {
     /// 选区外按下 C 复制取色值的格式：0 = RGB，1 = HEX
     var colorFormat = 1
 
-    enum CodingKeys: String, CodingKey { case trigger, ocrTrigger, ocrEngine, ocrFallback, ocrConsent, ocrAccurate, ocrTencentRegion, ocrLocalModel, ocrProfileID, colorFormat }
+    enum CodingKeys: String, CodingKey { case trigger, ocrTrigger, ocrEngine, ocrFallback, ocrConsent, ocrAccurate, ocrTencentRegion, ocrAzurePlace, ocrLocalModel, ocrProfileID, colorFormat }
     init() {}
     init(from decoder: Decoder) throws {
         let d = try decoder.container(keyedBy: CodingKeys.self)
@@ -36,6 +38,7 @@ struct ScreenshotSettings: Codable, Equatable {
         ocrConsent = try d.decodeIfPresent([String: Bool].self, forKey: .ocrConsent) ?? [:]
         ocrAccurate = try d.decodeIfPresent([String: Bool].self, forKey: .ocrAccurate) ?? [:]
         ocrTencentRegion = try d.decodeIfPresent(String.self, forKey: .ocrTencentRegion) ?? "ap-guangzhou"
+        ocrAzurePlace = try d.decodeIfPresent(String.self, forKey: .ocrAzurePlace) ?? "eastus"
         ocrLocalModel = try d.decodeIfPresent(String.self, forKey: .ocrLocalModel) ?? ""
         let pid = try d.decodeIfPresent(String.self, forKey: .ocrProfileID) ?? ""
         ocrProfileID = pid.range(of: "^[a-z0-9]{0,16}$", options: .regularExpression) != nil ? pid : ""

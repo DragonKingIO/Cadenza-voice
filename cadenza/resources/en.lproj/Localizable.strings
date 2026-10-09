@@ -1263,6 +1263,12 @@
 "ocr.provider.baidu" = "Baidu AI Cloud OCR";
 "ocr.provider.google" = "Google Cloud Vision";
 "ocr.provider.tencent" = "Tencent Cloud OCR";
+"ocr.provider.azure" = "Microsoft Azure AI Vision (Read)";
+"ocr.provider.mistral" = "Mistral OCR";
+"ocr.field.place" = "Region or address";
+"ocr.azure.hint" = "Use the key of an Azure AI Vision or multi-service resource and its region (for example eastus), or the address of the resource (https://NAME.cognitiveservices.azure.com). The key of a resource made only for speech does not read pictures.";
+"ocr.azure.place.invalid" = "the region or address is not valid";
+"ocr.mistral.hint" = "Mistral answers in Markdown; the picture placeholders it adds are removed. The key is the same as for a Mistral entry in My AI models.";
 "screenshot.arrow.double" = "Double Arrow";
 "screenshot.arrow.line" = "Line";
 "screenshot.arrow.single" = "Arrow";
@@ -1429,6 +1435,7 @@
 "refine.model" = "Model name";
 "refine.key" = "API key";
 "refine.key.saved" = "Saved. Type a new key to replace it";
+"refine.key.shared" = "No key is saved here; the key you saved for this company elsewhere (speech or text recognition) is used. Save one below to use a different key.";
 "refine.key.save" = "Save key";
 "refine.key.delete" = "Delete key";
 "refine.style" = "Style";
