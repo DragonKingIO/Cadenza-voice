@@ -566,26 +566,26 @@ enum SelfTest {
         // Translation in the pipeline: the translation is inserted; any failure inserts the spoken text and says why
         store.mutate { $0.refine = refineSettings; $0.refine.enabled = false; $0.translate.target = "English" }
         pipeline.textTranslator = TranslateFixtures.FakeTranslator(result: "Translated text.", note: nil)
-        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        pipeline.holdStarted(source: .menu, target: focus, translate: true); pipeline.holdEnded()
         recorders.last?.onFinal?("呃要翻译的话")
         pump()
         check("翻译期间会话保持并标记等待", pipeline.refining && pipeline.session != nil)
         settle { pipeline.session == nil }
         check("翻译成功插入译文", inserted.last == "Translated text." && pipeline.lastTranscript == "Translated text." && !pipeline.refining)
         pipeline.textTranslator = TranslateFixtures.FakeTranslator(result: nil, note: "服务响应太慢。")
-        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        pipeline.holdStarted(source: .menu, target: focus, translate: true); pipeline.holdEnded()
         recorders.last?.onFinal?("呃翻译失败的话")
         settle { pipeline.session == nil }
         check("翻译失败插入原话并说明原因", inserted.last == "翻译失败的话" && pipeline.lastResult.contains("服务响应太慢。") && pipeline.lastResult.contains(L10n.format("translate.kept", "服务响应太慢。")))
         store.mutate { $0.refine = TextRefineSettings() }
         pipeline.textTranslator = TranslateFixtures.FakeTranslator(result: "不应出现", note: nil)
-        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        pipeline.holdStarted(source: .menu, target: focus, translate: true); pipeline.holdEnded()
         recorders.last?.onFinal?("没设服务的话")
         settle { pipeline.session == nil }
         check("没有设置 AI 服务时插入原话并说明", inserted.last == "没设服务的话" && pipeline.lastResult.contains(L10n.tr("translate.err.noService")))
         store.mutate { $0.refine = refineSettings; $0.refine.enabled = false }
         let beforeCancel = inserted.count
-        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        pipeline.holdStarted(source: .menu, target: focus, translate: true); pipeline.holdEnded()
         recorders.last?.onFinal?("取消前的话")
         pump()
         pipeline.forceEnd(reason: "test")
@@ -597,6 +597,17 @@ enum SelfTest {
         recorders.last?.onFinal?("没开翻译的话")
         settle { pipeline.session == nil }
         check("没开翻译时不调用翻译", inserted.last == "没开翻译的话")
+        // Ordinary dictation never translates, even with a language chosen; only the translation shortcut does
+        store.mutate { $0.translate.target = "English" }
+        pipeline.textTranslator = TranslateFixtures.FakeTranslator(result: "不应翻译普通听写", note: nil)
+        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        recorders.last?.onFinal?("普通听写的话")
+        settle { pipeline.session == nil }
+        check("选了语言后普通听写仍不翻译", inserted.last == "普通听写的话" && !pipeline.refining)
+        store.mutate { $0.translate.target = "" }
+        let beforeRefused = inserted.count
+        pipeline.holdStarted(source: .menu, target: focus, translate: true)
+        check("没选语言时翻译快捷键不开始录音，并说明要先选语言", pipeline.session == nil && pipeline.lastIsError && pipeline.lastResult == L10n.tr("translate.shortcut.needTarget") && inserted.count == beforeRefused)
         store.mutate { $0.refine = TextRefineSettings() }
         // Polish and translation run on their own models
         final class Seen { var polish = "", translate = "" }
@@ -605,7 +616,7 @@ enum SelfTest {
         store.mutate { $0.llmProfiles = [profile("aaa", "polish-model"), profile("bbb", "translate-model")]; $0.refine = TextRefineSettings(); $0.refine.enabled = true; $0.refine.profileID = "aaa"; $0.translate.profileID = "bbb"; $0.translate.target = "English" }
         pipeline.textTranslator = TranslateFixtures.FakeTranslator(result: "Translated.", note: nil, seen: { seen.translate = $0.model })
         pipeline.textRefiner = LLMRefineFixtures.FakeRefiner(result: "不应用润色", note: nil, seen: { seen.polish = $0.model })
-        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        pipeline.holdStarted(source: .menu, target: focus, translate: true); pipeline.holdEnded()
         recorders.last?.onFinal?("用各自的模型")
         settle { pipeline.session == nil }
         check("翻译用自己的模型，且翻译时不再润色", seen.translate == "translate-model" && seen.polish == "" && inserted.last == "Translated.")

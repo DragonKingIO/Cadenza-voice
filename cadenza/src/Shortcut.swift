@@ -34,6 +34,18 @@ enum ShortcutPolicy {
         }
         return nil
     }
+    /// Two shortcuts that cannot both work: the same key, or a lone Option key that is also part of the other one's combination
+    /// (holding Option and then pressing the combination would start both).
+    static func overlaps(_ a: HotkeySpec, _ b: HotkeySpec) -> Bool {
+        if a.keyCode == b.keyCode && a.modifiers == b.modifiers { return true }
+        func lone(_ s: HotkeySpec) -> Bool { HotkeySpecDisplay.isLoneModifierSpec(s) }
+        func contains(_ combo: HotkeySpec, _ key: HotkeySpec) -> Bool {
+            guard !lone(combo), let flag = ListenTrigger.modifierKeyFlags[key.keyCode], combo.modifiers & flag != 0 else { return false }
+            guard let sides = combo.modifierKeyCodes, !sides.isEmpty else { return true }
+            return sides.contains(key.keyCode)
+        }
+        return (lone(a) && contains(b, a)) || (lone(b) && contains(a, b))
+    }
     static func systemAssignments() -> [HotkeySpec]? {
         var array: Unmanaged<CFArray>?
         guard CopySymbolicHotKeys(&array) == noErr, let entries=array?.takeRetainedValue() as? [[String:Any]] else { return nil }

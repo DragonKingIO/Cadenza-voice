@@ -113,6 +113,7 @@ struct BridgeConfig: Codable {
     /// just set is switched on: there is no separate mode to pick afterwards.
     func settingShortcut(mode: String, candidate: HotkeySpec?, enabled: Bool?) -> BridgeConfig {
         var c = self
+        if mode == "translate" { c.translate.trigger = candidate; return c }
         if mode == "toggle" {
             c.toggleTrigger = candidate
             if candidate == nil { c.toggleShortcutEnabled = enabled ?? false } else { c.toggleShortcutEnabled = enabled ?? true }
@@ -215,6 +216,12 @@ struct BridgeConfig: Codable {
         if let toggle=c.toggleTrigger {
             if toggle.keyCode == c.trigger.keyCode && toggle.modifiers == c.trigger.modifiers { errs.append(L10n.tr("ui.998b5cd9d078")) }
             if let reason=ShortcutPolicy.basicReason(toggle,standardFunctionKeys:true) { errs.append(reason) }
+        }
+        if let t=c.translate.trigger {
+            if let reason=ShortcutPolicy.basicReason(t,standardFunctionKeys:true) { errs.append(reason) }
+            var others:[HotkeySpec]=[c.trigger]; if let toggle=c.toggleTrigger {others.append(toggle)}
+            if let s=c.screenshot.trigger {others.append(s)}; if let o=c.screenshot.ocrTrigger {others.append(o)}
+            if others.contains(where:{ShortcutPolicy.overlaps(t,$0)}) { errs.append(L10n.tr("translate.shortcut.conflict")) }
         }
         if SessionMode(rawValue: c.mode) == nil { errs.append(L10n.tr("ui.9810e873ddf8")) }
         if c.iflytekSourceID.isEmpty { errs.append(L10n.tr("ui.5a0016b900bc")) }

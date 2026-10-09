@@ -24,6 +24,8 @@ final class VoiceSession {
     /// No editor could be identified, but the original process and window are known. Text is
     /// sent to that process only while its front window is unchanged.
     var windowBound=false
+    /// This session was started by the translation shortcut: what is said is translated into the chosen language.
+    var translate=false
     let localOnly: Bool
     var state: SessionState = .voiceStarted
     var baselineWindows: Set<String> = []
@@ -153,10 +155,15 @@ final class VoicePipeline {
     // MARK: - 独立语音路线（hold 模式）：全程不调用 TIS，苹果输入源保持不变
 
     /// 左 Option 单独按下（或窗口按钮按下）→ 立即开始录音
-    func holdStarted(source: HoldSource = .hotkey, target: FocusIdentity? = nil, localOnly: Bool = false) {
+    func holdStarted(source: HoldSource = .hotkey, target: FocusIdentity? = nil, localOnly: Bool = false, translate: Bool = false) {
         Log.write("hold-start-invoked source=\(String(describing:source)) sessionActive=\(session != nil) mode=\(config.mode) enabled=\(config.enabled)")
         guard !inputSuspendedForDiagnostic else{Log.write("hold-refused diagnostic-only=true no-recorder=true");return}
         guard config.enabled, config.mode == SessionMode.hold.rawValue else { return }
+        if translate, !config.translate.active, session == nil {
+            lastResult = L10n.tr("translate.shortcut.needTarget");lastIsError = true;resultAction = .retry
+            Log.write("HOLD-refused translate-without-target")
+            notifyUI();return
+        }
         if session?.state == .awaitingConfirm {
             forceEnd(reason: L10n.tr("ui.7900a992fafc"))
         }
@@ -246,6 +253,7 @@ final class VoicePipeline {
             s.windowBound=true;s.retentionReason=nil
             Log.write("HOLD-TARGET window-bound=true editor-identified=false")
         }
+        s.translate = translate && config.translate.active
         let sid = s.id
         lastPartial = ""
         lastTranscript = nil
@@ -282,7 +290,7 @@ final class VoicePipeline {
                 let finish:(String?)->Void={[weak self] final in self?.holdFinalized(text:final);if coordinated {self?.coordinatedFinal?(self?.lastTranscript)}}
                 // Voice translation: the translation is what gets inserted; any failure inserts the untranslated text and says why.
                 let translate=self.config.translate
-                if let text=corrected,translate.active,self.recorder?.capturedAudioHasSignal != false,!text.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty {
+                if let text=corrected,translate.active,self.session?.translate == true,self.recorder?.capturedAudioHasSignal != false,!text.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty {
                     let service=self.config.llmService(.translate)
                     guard service.configured else{self.refineNote=L10n.format("translate.kept",L10n.tr("translate.err.noService"));finish(text);return}
                     self.refining=true;self.refineNote=nil;self.notifyUI()

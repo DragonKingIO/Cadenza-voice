@@ -56,6 +56,20 @@ enum SettingsPolishFixtures {
         let holdBack = removed.settingShortcut(mode: "hold", candidate: BridgeConfig.default().trigger, enabled: nil)
         check("setting the hold shortcut again switches it back on", holdBack.holdShortcutEnabled && holdBack.anyShortcutOn && holdBack.inputMode == "hold")
         check("a stale tap switch without a key is not active", { var c = base; c.toggleShortcutEnabled = true; return !c.toggleActive && !c.anyShortcutOn == !c.holdShortcutEnabled }())
+        // The translation shortcut
+        let leftOption = HotkeySpec(keyCode: 58, modifiers: UInt32(optionKey)), rightOption = HotkeySpec(keyCode: 61, modifiers: UInt32(optionKey))
+        let optionT = HotkeySpec(keyCode: 17, modifiers: UInt32(optionKey) | UInt32(controlKey) | UInt32(cmdKey) , modifierKeyCodes: [58, 59, 55])
+        check("overlap: the same key, a lone Option inside a combination, and nothing else", ShortcutPolicy.overlaps(leftOption, leftOption) && ShortcutPolicy.overlaps(leftOption, optionT) && ShortcutPolicy.overlaps(optionT, leftOption) && !ShortcutPolicy.overlaps(leftOption, rightOption) && !ShortcutPolicy.overlaps(rightOption, optionT))
+        var withTranslate = BridgeConfig.default(); withTranslate.trigger = leftOption; withTranslate.translate.target = "English"
+        let translateSet = withTranslate.settingShortcut(mode: "translate", candidate: rightOption, enabled: nil)
+        check("translation shortcut: set leaves hold and tap alone and is valid next to Left Option", translateSet.translate.trigger == rightOption && translateSet.trigger == leftOption && translateSet.holdShortcutEnabled == withTranslate.holdShortcutEnabled && translateSet.toggleTrigger == withTranslate.toggleTrigger && BridgeConfig.validate(translateSet).isEmpty)
+        let translateSame = withTranslate.settingShortcut(mode: "translate", candidate: leftOption, enabled: nil)
+        check("translation shortcut: the same key as dictation is refused", !BridgeConfig.validate(translateSame).isEmpty)
+        let translateInside = withTranslate.settingShortcut(mode: "translate", candidate: optionT, enabled: nil)
+        check("translation shortcut: a combination that contains the dictation key is refused", !BridgeConfig.validate(translateInside).isEmpty)
+        check("translation shortcut: removing clears only it", translateSet.settingShortcut(mode: "translate", candidate: nil, enabled: nil).translate.trigger == nil && BridgeConfig.validate(translateSet.settingShortcut(mode: "translate", candidate: nil, enabled: nil)).isEmpty)
+        let saved = (try? JSONEncoder().encode(translateSet)).flatMap { try? JSONDecoder().decode(BridgeConfig.self, from: $0) }
+        check("translation shortcut: survives saving, and an older file without one loads", saved?.translate.trigger == rightOption && (try? JSONDecoder().decode(TranslateSettings.self, from: Data("{\"target\":\"English\"}".utf8)))?.trigger == nil)
         controller.window?.close()
     }
 }
