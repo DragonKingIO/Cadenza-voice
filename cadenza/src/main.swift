@@ -128,6 +128,7 @@ if CommandLine.arguments.contains("--selftest-local-ocr-real") {_ = NSApplicatio
 if CommandLine.arguments.contains("--selftest-local-ocr-download") {_ = NSApplication.shared;exit(OCRLocalFixtures.realDownload())}
 if CommandLine.arguments.contains("--local-accuracy-probe") {exit(LocalModelFixtures.accuracyProbe())}
 if CommandLine.arguments.contains("--accuracy-benchmark") {exit(AccuracyBenchmark.run())}
+if CommandLine.arguments.contains("--selftest-ai-ocr-real") {exit(AIVisionOCRFixtures.real())}
 if CommandLine.arguments.contains("--selftest-batch-real") {exit(BatchTranscriptionFixtures.real())}
 if CommandLine.arguments.contains("--bench-fillers") {exit(FillerProbe.run())}
 if CommandLine.arguments.contains("--bench-translate") {exit(TranslateProbe.run())}
@@ -440,7 +441,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
 
     private func startScreenshotSupport() {
+        SharedCredentials.aiModels = { [weak self] in self?.configStore.config.llmProfiles.map { ($0.preset, $0.keyName) } ?? [] }
         screenshot.settings = { [weak self] in self?.configStore.config.screenshot ?? ScreenshotSettings() }
+        screenshot.makeRouter = { [weak self] settings in
+            var router = OCRRouter(settings: settings)
+            router.aiService = { id in self?.configStore.config.llmService(profile: id).map { ($0.name, $0.service, SharedCredentials.aiModelKey(keyName: $0.service.keyName, preset: $0.service.preset)) } }
+            return router
+        }
         screenshot.canStart = { [weak self] in self?.pipeline.hasActiveSession != true }
         screenshot.onColorFormatChange = { [weak self] value in
             guard let self else { return }

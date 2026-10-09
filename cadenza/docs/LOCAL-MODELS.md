@@ -224,3 +224,38 @@ What the printed sentences showed, which is the real evidence:
 So: for translation on this Mac, 7B is the better choice when about 5 GB of memory can be spared, 3B is acceptable for short
 plain sentences, and neither is something to send unread. Cloud models were not measured here. Twelve sentences and one model
 family is a small sample: the table shows what the checks do, not how good a model is.
+
+## Reading pictures with a vision model on this Mac
+
+`Cadenza --selftest-ai-ocr-real` draws pictures of text and has a model read them through the same path the app uses (Settings →
+Text Recognition → an AI model), next to Apple Vision on the same picture. Qwen2.5-VL 3B (3.2 GB) through Ollama, one run each:
+
+| Picture | Qwen2.5-VL 3B | Apple Vision |
+|---|---|---|
+| Six clean pictures: English, Chinese with a date, two lines, Chinese with English words, an instruction written in the picture, a blank picture | all six exact; the instruction was copied as text, not followed; the blank picture gave nothing | five exact; "世界2026" lost its space |
+| Three lines (an invoice number, an amount, a Chinese total) at 11 pt | exact | the Chinese line was lost ("i 9,876.50") |
+| Light grey on white | exact | the spaces around the Chinese were lost |
+| Tilted 9 degrees | exact | two lines joined, the comma of 9,876.50 lost |
+| Noise over the text | exact | the spaces were lost |
+| White on dark blue | exact | the spaces were lost |
+| Thin, small, tilted and noisy together | exact | the comma of 9,876.50 lost |
+
+Eleven more languages, two drawn lines each (a sentence and an amount), clean fonts:
+
+| Language | Qwen2.5-VL 3B | Apple Vision |
+|---|---|---|
+| Japanese, Korean, Hindi, Vietnamese, French, German, Traditional Chinese | exact | exact |
+| Russian | exact | exact except the dash in "Бюджет —" read as a hyphen |
+| Arabic | the amount lost digits (٢٥٠٠٠٠ read as ٢٠٠٠) | exact |
+| Thai | a letter wrong (จอง → จด), the second line's first word replaced | exact |
+| Greek | exact | nothing read |
+
+Time: about 5 to 6 seconds per picture for the model (the first one loads it), against 0.2 s for Apple Vision. The model's
+answer has no positions, so the text can be copied but not selected on the screenshot.
+
+So: for clean text Apple Vision is as good and 20 times faster, and it reads far more languages than a list of three online services
+suggests; for small, tilted or noisy text, or where spaces and separators matter, the vision model read every picture exactly where
+Apple Vision made mistakes; for Arabic and Thai digits and letters this small model was the weaker one, and for Greek the only one
+that read anything. These are drawn pictures (clean fonts, a
+fixed set of three lines), not photographs, handwriting or scans, and one model: the table shows where the two differ, not how
+good either is in general.

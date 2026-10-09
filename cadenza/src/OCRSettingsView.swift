@@ -39,7 +39,7 @@ final class OCRProviderDraft {
         self.provider = provider; self.has = has; self.own = own; self.read = read; self.write = write; self.delete = delete; self.persist = persist; self.transport = transport
         consent = settings.ocrConsent[provider.rawValue] == true
         accurate = settings.ocrAccurate[provider.rawValue] == true
-        region = settings.ocrTencentRegion
+        region = provider == .azure ? settings.ocrAzurePlace : settings.ocrTencentRegion
         refreshSaved()
     }
 
@@ -65,7 +65,7 @@ final class OCRProviderDraft {
         }
         if failed { fail("ocr.sheet.keychainFailed"); return false }
         let cleanRegion = region.trimmingCharacters(in: .whitespaces)
-        guard persist(provider, consent, accurate, cleanRegion.isEmpty ? "ap-guangzhou" : cleanRegion) else { fail("ui.bcd8e5694934"); return false }
+        guard persist(provider, consent, accurate, cleanRegion.isEmpty ? (provider == .azure ? "eastus" : "ap-guangzhou") : cleanRegion) else { fail("ui.bcd8e5694934"); return false }
         feedback = L10n.tr("ocr.sheet.saved"); isError = false
         return true
     }
@@ -93,7 +93,7 @@ final class OCRProviderDraft {
         guard let image = OCRTestImage.make() else { fail("ocr.sheet.testFailed"); return }
         testing = true; feedback = L10n.tr("ocr.sheet.testing"); isError = false
         defer { testing = false }
-        var s = ScreenshotSettings(); s.ocrAccurate[provider.rawValue] = accurate; s.ocrTencentRegion = region
+        var s = ScreenshotSettings(); s.ocrAccurate[provider.rawValue] = accurate; s.ocrTencentRegion = region; s.ocrAzurePlace = region
         let router = OCRRouter(settings: s, credentials: { _ in creds }, online: { true }, transport: transport)
         do {
             guard let engine = router.cloudEngine(for: provider) else { fail("ocr.sheet.testFailed"); return }
@@ -120,11 +120,15 @@ struct OCRSettingsView: View {
             Section {
                 EngineRow(title: L10n.tr("ocr.engine.vision"), detail: L10n.tr("ocr.engine.vision.detail"), badge: L10n.tr("ocr.engine.builtin"), selected: settings.ocrEngine == "vision", configurable: false,
                           onSelect: { model.selectOCREngine("vision") }, onConfigure: {})
+                EngineRow(title: L10n.tr("ocr.engine.ai"), detail: aiDetail, badge: nil, selected: settings.ocrEngine == AIVisionOCR.engineID, configurable: false,
+                          onSelect: { model.selectOCREngine(AIVisionOCR.engineID) }, onConfigure: {})
                 ForEach(OCRProvider.allCases) { provider in
                     EngineRow(title: provider.title, detail: detail(for: provider), badge: nil, selected: settings.ocrEngine == provider.rawValue, configurable: true,
                               onSelect: { model.selectOCREngine(provider.rawValue) }, onConfigure: { model.configuringOCR = provider })
                 }
             } header: { Text(L10n.tr("ocr.engines.header")) } footer: { Text(L10n.tr("ocr.engines.footer")).font(.callout).foregroundStyle(.primary) }
+
+            OCRAIModelSection(model: model)
 
             if !localModels.isEmpty {
                 Section {
@@ -152,6 +156,12 @@ struct OCRSettingsView: View {
         .confirmationDialog(L10n.format("local.delete.title", deleting?.name() ?? ""), isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), titleVisibility: .visible) {
             Button(L10n.tr("local.delete"), role: .destructive) { if let e = deleting { center.delete(e.id) }; deleting = nil }
         } message: { Text(L10n.tr("local.delete.detail")) }
+    }
+
+    private var aiDetail: String {
+        guard let chosen = model.llmProfiles.first(where: { $0.id == settings.ocrProfileID }) else { return L10n.tr("ocr.ai.detail.none") }
+        if model.aiOCRReady { return L10n.format("ocr.ai.detail.ready", chosen.name) }
+        return L10n.tr("ocr.status.notAllowed")
     }
 
     private func detail(for p: OCRProvider) -> String {
@@ -268,6 +278,11 @@ struct OCRProviderSheet: View {
                     if draft.provider == .tencent {
                         LabeledContent(L10n.tr("ocr.field.region")) { TextField("", text: $draft.region, prompt: Text("ap-guangzhou")).textFieldStyle(.roundedBorder).frame(maxWidth: 260) }
                     }
+                    if draft.provider == .azure {
+                        LabeledContent(L10n.tr("ocr.field.place")) { TextField("", text: $draft.region, prompt: Text("eastus")).textFieldStyle(.roundedBorder).frame(maxWidth: 260) }
+                        Text(L10n.tr("ocr.azure.hint")).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                    if draft.provider == .mistral { Text(L10n.tr("ocr.mistral.hint")).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
                     if !draft.shared.isEmpty { Text(L10n.tr("ocr.sheet.shared")).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
                     if draft.provider.supportsAccurate { Toggle(L10n.tr("ocr.sheet.accurate"), isOn: $draft.accurate) }
                 }
@@ -293,5 +308,57 @@ struct OCRProviderSheet: View {
             }
         }
         .padding(20).frame(width: 520)
+    }
+}
+
+
+/// Picture reading by one of "my AI models": which model, permission to send pictures to it, and a test.
+struct OCRAIModelSection: View {
+    @Bindable var model: SettingsModel
+    @State private var testing = false
+    @State private var feedback = ""
+    @State private var failed = false
+
+    private var settings: ScreenshotSettings { model.screenshotSettings }
+    private var chosen: LLMProfile? { model.llmProfiles.first { $0.id == settings.ocrProfileID } }
+
+    var body: some View {
+        Section {
+            if model.llmProfiles.isEmpty {
+                Label(L10n.tr("llm.none"), systemImage: "arrow.down.circle").font(.callout).foregroundStyle(.secondary)
+            } else {
+                Picker(L10n.tr("ocr.ai.model"), selection: Binding(get: { settings.ocrProfileID }, set: { id in model.persist { $0.screenshot.ocrProfileID = id } })) {
+                    if chosen == nil { Text(L10n.tr("llm.choose")).tag(settings.ocrProfileID) }
+                    ForEach(model.llmProfiles) { p in Text(p.name + " · " + p.model).tag(p.id) }
+                }
+                if let chosen, !chosen.isLocal {
+                    Toggle(L10n.format("ocr.ai.consent", chosen.name), isOn: Binding(get: { settings.ocrConsent[AIVisionOCR.engineID] == true }, set: { on in model.persist { $0.screenshot.ocrConsent[AIVisionOCR.engineID] = on } }))
+                } else if chosen != nil {
+                    Label(L10n.tr("ocr.ai.local"), systemImage: "lock").font(.callout).foregroundStyle(.secondary)
+                }
+                HStack {
+                    Button(L10n.tr("ocr.ai.use")) { model.selectOCREngine(AIVisionOCR.engineID) }.disabled(!model.aiOCRReady || settings.ocrEngine == AIVisionOCR.engineID)
+                    Button(L10n.tr("ocr.ai.test")) { Task { await test() } }.disabled(!model.aiOCRReady || testing)
+                    if testing { ProgressView().controlSize(.small) }
+                    if settings.ocrEngine == AIVisionOCR.engineID { Text(L10n.tr("ocr.ai.inUse")).font(.callout).foregroundStyle(.secondary) }
+                }
+                if !feedback.isEmpty { Text(feedback).font(.callout).foregroundStyle(failed ? Color.orange : Color.secondary).textSelection(.enabled) }
+            }
+        } header: { Text(L10n.tr("ocr.ai.header")) } footer: { Text(L10n.tr("ocr.ai.footer")).font(.callout).foregroundStyle(.primary) }
+    }
+
+    /// Sends the small test picture ("OCR TEST 123") to the chosen model and shows what it read.
+    private func test() async {
+        guard !testing, let chosen = model.aiOCRService(), let image = OCRTestImage.make() else { return }
+        testing = true; failed = false; feedback = L10n.tr("ocr.sheet.testing")
+        defer { testing = false }
+        do {
+            let result = try await AIVisionOCREngine(service: chosen.service, apiKey: chosen.key, name: chosen.name).recognize(image)
+            feedback = result.isEmpty ? L10n.tr("ocr.ai.test.nothing") : L10n.format("ocr.ai.test.read", result.text)
+            failed = result.isEmpty
+        } catch {
+            failed = true
+            feedback = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        }
     }
 }

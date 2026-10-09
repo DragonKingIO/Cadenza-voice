@@ -12,17 +12,37 @@ enum SharedCredentials {
     static let alternates: [String: [String]] = {
         let pairs: [(String, String)] = [
             ("tencent.secretid", "ocr.tencent.secretid"), ("tencent.secretkey", "ocr.tencent.secretkey"),
-            ("baidu.apikey", "ocr.baidu.apikey"), ("baidu.secretkey", "ocr.baidu.secretkey"), ("google.apikey", "ocr.google.apikey"),
+            ("baidu.apikey", "ocr.baidu.apikey"), ("baidu.secretkey", "ocr.baidu.secretkey"), ("google.apikey", "ocr.google.apikey"), ("azure.apikey", "ocr.azure.apikey"),
         ]
         var map: [String: [String]] = [:]
         for (a, b) in pairs { map[a, default: []].append(b); map[b, default: []].append(a) }
         return map
     }()
 
-    /// The secret saved under `key`, or else under an account that holds the same secret.
+    /// Keys that an entry of "My AI models" for the same company also serves: the speech or text recognition account, then the
+    /// preset of the AI model. One OpenAI key does speech to text, chat and reading pictures.
+    static let aiModelServices: [String: String] = ["openai.apikey": "openai", "groq.apikey": "groq", "ocr.mistral.apikey": "mistral"]
+    /// The AI models the person added (preset and the Keychain account of each key); the app sets this when it starts.
+    static var aiModels: () -> [(preset: String, keyName: String)] = { [] }
+
+    /// The secret saved under `key`, or else under an account that holds the same secret, or else the key of an AI model of that company.
     static func get(_ key: String, read: (String) -> String? = { KeychainStore.get($0) }) -> String? {
         for candidate in [key] + (alternates[key] ?? []) { if let v = read(candidate), !v.isEmpty { return v } }
+        if let preset = aiModelServices[key] {
+            for model in aiModels() where model.preset == preset { if let v = read(model.keyName), !v.isEmpty { return v } }
+        }
         return nil
+    }
+
+    /// The key an AI model of this company can borrow from the speech or text recognition entry of the same company.
+    static func forAIModel(preset: String, read: (String) -> String? = { KeychainStore.get($0) }) -> String? {
+        guard let account = aiModelServices.first(where: { $0.value == preset })?.key, let v = read(account), !v.isEmpty else { return nil }
+        return v
+    }
+    /// The key of an AI model: its own, or else the one borrowed from speech or text recognition.
+    static func aiModelKey(keyName: String, preset: String, read: (String) -> String? = { KeychainStore.get($0) }) -> String? {
+        if let own = read(keyName), !own.isEmpty { return own }
+        return forAIModel(preset: preset, read: read)
     }
     static func has(_ key: String, read: (String) -> String? = { KeychainStore.get($0) }) -> Bool { get(key, read: read) != nil }
 

@@ -89,6 +89,14 @@ extension BridgeConfig {
         return s
     }
 
+    /// A chosen profile as service settings (for picture reading, which has its own switch and permission), or nil when it was deleted.
+    func llmService(profile id: String) -> (name: String, service: TextRefineSettings)? {
+        guard !id.isEmpty, let p = llmProfile(id) else { return nil }
+        var s = refine
+        s.preset = p.preset; s.baseURL = p.baseURL; s.model = p.model; s.consent = p.consent; s.keyAccount = p.keyName
+        return (p.name, s)
+    }
+
     /// Makes a profile from the single service of an older configuration, once.
     mutating func migrateLLMProfiles() {
         guard llmProfiles.isEmpty, !refine.baseURL.isEmpty, refine.profileID.isEmpty, translate.profileID.isEmpty else { return }

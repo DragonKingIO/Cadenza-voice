@@ -48,6 +48,8 @@ protocol OCREngine {
 
 enum OCRError: LocalizedError, Equatable {
     case failed(String), unknownEngine, tooSmall, localModel(String)
+    /// The AI model could not be used for pictures (a name, then what to do).
+    case ai(String, String)
     case noConsent(String), noCredentials(String), offline
     case auth(String, String), quota(String, String), service(String, String), network(String, String), invalidResponse(String)
     var errorDescription: String? {
@@ -56,6 +58,7 @@ enum OCRError: LocalizedError, Equatable {
         case .unknownEngine: return L10n.tr("screenshot.ocr.unknownEngine")
         case .tooSmall: return L10n.tr("screenshot.ocr.err.tooSmall")
         case .localModel(let m): return L10n.format("screenshot.ocr.err.localModel", m)
+        case .ai(let p, let m): return L10n.format("screenshot.ocr.err.ai", p, m)
         case .noConsent(let p): return L10n.format("screenshot.ocr.err.noConsent", p)
         case .noCredentials(let p): return L10n.format("screenshot.ocr.err.noCredentials", p)
         case .offline: return L10n.tr("screenshot.ocr.err.offline")
@@ -161,7 +164,7 @@ enum BarcodeScanner {
 // MARK: 云端：公共部分
 
 enum OCRProvider: String, CaseIterable, Identifiable {
-    case baidu, tencent, google
+    case baidu, tencent, google, azure, mistral
     var id: String { rawValue }
     var title: String { L10n.tr("ocr.provider." + rawValue) }
     /// (钥匙串字段名, 显示名的本地化键)
@@ -169,15 +172,17 @@ enum OCRProvider: String, CaseIterable, Identifiable {
         switch self {
         case .baidu: return [("apikey", "ocr.field.apiKey"), ("secretkey", "ocr.field.secretKey")]
         case .tencent: return [("secretid", "ocr.field.secretId"), ("secretkey", "ocr.field.secretKey")]
-        case .google: return [("apikey", "ocr.field.apiKey")]
+        case .google, .azure, .mistral: return [("apikey", "ocr.field.apiKey")]
         }
     }
-    var supportsAccurate: Bool { self != .google }
+    var supportsAccurate: Bool { [.baidu, .tencent].contains(self) }
     var consoleURL: String {
         switch self {
         case .baidu: return "https://console.bce.baidu.com/ai/#/ai/ocr/overview/index"
         case .tencent: return "https://console.cloud.tencent.com/ocr/overview"
         case .google: return "https://console.cloud.google.com/apis/library/vision.googleapis.com"
+        case .azure: return "https://portal.azure.com/#create/Microsoft.CognitiveServicesComputerVision"
+        case .mistral: return "https://console.mistral.ai/api-keys"
         }
     }
     static func keychainKey(_ provider: OCRProvider, _ field: String) -> String { "ocr." + provider.rawValue + "." + field }
@@ -497,6 +502,23 @@ struct OCRRouter {
     /// Directory of the installed local model set with this id, nil when it is not installed.
     var localModelDirectory: (String) -> URL? = { id in LocalModelCenter.shared.isReady(id) ? LocalModelCenter.shared.modelDir(id) : nil }
     var localModelEngine: (URL) throws -> OCREngine = { try PaddleOCRCache.engine(directory: $0) }
+    /// The chosen "my AI model" (its service settings and key) for picture reading; nil when none is chosen or it was deleted.
+    var aiService: (String) -> (name: String, service: TextRefineSettings, key: String?)? = { _ in nil }
+    var aiTransport: LLMTransport = NativeLLMTransport()
+    var localOnly: () -> Bool = { LocalOnlyMode.enabled }
+
+    /// Why the AI model cannot read pictures right now; nil when it can.
+    func aiBlocker() -> OCRError? {
+        let title = L10n.tr("ocr.engine.ai")
+        guard let chosen = aiService(settings.ocrProfileID), chosen.service.configured else { return .ai(title, L10n.tr("screenshot.ocr.err.ai.none")) }
+        if chosen.service.isLocal { return nil }
+        if localOnly() { return .ai(chosen.name, L10n.tr("screenshot.ocr.err.ai.locked")) }
+        if settings.ocrConsent[AIVisionOCR.engineID] != true { return .noConsent(chosen.name) }
+        let needsKey = LLMPresets.preset(chosen.service.preset)?.needsKey ?? true
+        if needsKey && (chosen.key ?? "").isEmpty { return .noCredentials(chosen.name) }
+        if online() == false { return .offline }
+        return nil
+    }
 
     func cloudEngine(for provider: OCRProvider) -> OCREngine? {
         guard let c = credentials(provider) else { return nil }
@@ -505,6 +527,8 @@ struct OCRRouter {
         case .baidu: return BaiduOCREngine(apiKey: c["apikey"] ?? "", secretKey: c["secretkey"] ?? "", accurate: accurate, transport: transport)
         case .tencent: return TencentOCREngine(secretId: c["secretid"] ?? "", secretKey: c["secretkey"] ?? "", region: settings.ocrTencentRegion, accurate: accurate, transport: transport)
         case .google: return GoogleOCREngine(apiKey: c["apikey"] ?? "", transport: transport)
+        case .azure: return AzureReadOCREngine(key: c["apikey"] ?? "", place: settings.ocrAzurePlace, transport: transport)
+        case .mistral: return MistralOCREngine(key: c["apikey"] ?? "", transport: transport)
         }
     }
 
@@ -527,6 +551,18 @@ struct OCRRouter {
                 let reason = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
                 result = try await local.recognize(image); result.fallbackReason = reason
             }
+        } else if settings.ocrEngine == AIVisionOCR.engineID {
+            if let blocker = aiBlocker() {
+                guard settings.ocrFallback else { throw blocker }
+                result = try await local.recognize(image); result.fallbackReason = blocker.localizedDescription
+            } else if let chosen = aiService(settings.ocrProfileID) {
+                do { result = try await AIVisionOCREngine(service: chosen.service, apiKey: chosen.key, name: chosen.name, transport: aiTransport).recognize(image) }
+                catch {
+                    guard settings.ocrFallback else { throw error }
+                    let reason = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                    result = try await local.recognize(image); result.fallbackReason = reason
+                }
+            } else { throw OCRError.unknownEngine }
         } else if let provider = OCRProvider(rawValue: settings.ocrEngine) {
             if let blocker = cloudBlocker(provider) {
                 guard settings.ocrFallback else { throw blocker }

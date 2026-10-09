@@ -223,8 +223,18 @@ final class SettingsModel {
         persist { $0.engine = ASREngine.local.rawValue; $0.localModel.primaryModelID = id }
     }
     func setScope(_ s: EngineScope) { scope = s }
+    /// The chosen AI model for picture reading, as the router sees it.
+    func aiOCRService() -> (name: String, service: TextRefineSettings, key: String?)? {
+        store?.config.llmService(profile: screenshotSettings.ocrProfileID).map { ($0.name, $0.service, SharedCredentials.aiModelKey(keyName: $0.service.keyName, preset: $0.service.preset)) }
+    }
+    /// Picture reading by an AI model can be switched on once a model is chosen and, unless it runs on this Mac, picture upload is allowed.
+    var aiOCRReady: Bool {
+        guard let chosen = aiOCRService(), chosen.service.configured else { return false }
+        return chosen.service.isLocal || screenshotSettings.ocrConsent[AIVisionOCR.engineID] == true
+    }
     /// 选择文字识别引擎；云端引擎必须先配置密钥并允许上传，否则打开配置窗口
     func selectOCREngine(_ id: String, hasCredentials: (OCRProvider) -> Bool = OCRCredentialStore.has) {
+        if id == AIVisionOCR.engineID { if aiOCRReady { persist { $0.screenshot.ocrEngine = id } }; return }
         if let provider = OCRProvider(rawValue: id), !(hasCredentials(provider) && screenshotSettings.ocrConsent[id] == true) { configuringOCR = provider; return }
         persist { $0.screenshot.ocrEngine = id }
     }
@@ -238,7 +248,7 @@ final class SettingsModel {
         return OCRProviderDraft(provider: provider, settings: screenshotSettings, persist: { [weak self] p, consent, accurate, region in
             guard let self, let store = self.store, !self.previewReadOnly else { return false }
             let original = store.config
-            guard store.mutate({ $0.screenshot.ocrConsent[p.rawValue] = consent; $0.screenshot.ocrAccurate[p.rawValue] = accurate; if p == .tencent { $0.screenshot.ocrTencentRegion = region } }), store.save() else { _ = store.mutate { $0 = original }; return false }
+            guard store.mutate({ $0.screenshot.ocrConsent[p.rawValue] = consent; $0.screenshot.ocrAccurate[p.rawValue] = accurate; if p == .tencent { $0.screenshot.ocrTencentRegion = region }; if p == .azure { $0.screenshot.ocrAzurePlace = region } }), store.save() else { _ = store.mutate { $0 = original }; return false }
             self.onSettingsChanged?(); self.sync(); return true
         })
     }

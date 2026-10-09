@@ -204,6 +204,9 @@ struct LLMModelsSection: View {
             if let note = modelNote {
                 Label(note, systemImage: models.isEmpty ? "exclamationmark.triangle" : "checkmark.circle").font(.callout).foregroundStyle(models.isEmpty ? Color.orange : Color.secondary)
             }
+            if needsKey, !keySaved, SharedCredentials.forAIModel(preset: p.preset) != nil {
+                Label(L10n.tr("refine.key.shared"), systemImage: "link").font(.callout).foregroundStyle(.secondary)
+            }
             if needsKey {
                 HStack {
                     SecureField(L10n.tr("refine.key"), text: $keyDraft, prompt: Text(L10n.tr(keySaved ? "refine.key.saved" : "refine.key.prompt"))).textFieldStyle(.roundedBorder)
@@ -235,7 +238,7 @@ struct LLMModelsSection: View {
     }
 
     private func fetchModels(_ p: LLMProfile) {
-        let current = service(p), key = KeychainStore.get(p.keyName)
+        let current = service(p), key = SharedCredentials.aiModelKey(keyName: p.keyName, preset: p.preset)
         fetchingModels = true; modelNote = nil
         Task {
             let result = await LLMClient.listModels(settings: current, apiKey: key)
@@ -250,7 +253,7 @@ struct LLMModelsSection: View {
     }
 
     private func runTest(_ p: LLMProfile) {
-        let sample = L10n.tr("refine.testSample"), current = service(p), key = KeychainStore.get(p.keyName)
+        let sample = L10n.tr("refine.testSample"), current = service(p), key = SharedCredentials.aiModelKey(keyName: p.keyName, preset: p.preset)
         testing = true; testResult = nil
         Task {
             let result = await LLMClient.refine(sample, settings: current, apiKey: key)

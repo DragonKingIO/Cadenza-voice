@@ -247,7 +247,7 @@ struct LLMTextTranslator: TextTranslating {
 
     func translate(_ text: String, target: String, settings: TextRefineSettings, glossary: [String], done: @escaping (String?, String?) -> Void) {
         let started = ProcessInfo.processInfo.systemUptime
-        let apiKey = key(settings.keyName)
+        let apiKey = key(settings.keyName) ?? SharedCredentials.forAIModel(preset: settings.preset)
         Task {
             let result = await LLMClient.translate(text, target: target, settings: settings, apiKey: apiKey, glossary: glossary, transport: transport)
             let seconds = ProcessInfo.processInfo.systemUptime - started
