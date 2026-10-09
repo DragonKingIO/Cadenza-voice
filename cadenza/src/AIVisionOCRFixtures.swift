@@ -143,8 +143,16 @@ enum AIVisionOCRFixtures {
             ("noisy", text, Look(noise: 0.55)), ("white on dark blue", text, Look(ink: .white, paper: NSColor(red: 0.1, green: 0.15, blue: 0.4, alpha: 1))),
             ("thin strokes, small, tilted, noisy", text, Look(size: 14, tilt: -5, noise: 0.35, font: .ultraLight)),
         ]
+        let languages: [(String, [String])] = [
+            ("Japanese", ["明日の午後三時に会議室を予約してください。", "予算は二十五万円です。"]), ("Korean", ["내일 오후 세 시에 회의실을 예약해 주세요.", "예산은 이십오만 원입니다."]),
+            ("Russian", ["Забронируйте переговорную на завтра в 15:00.", "Бюджет — 250 000 рублей."]), ("Arabic", ["احجز غرفة الاجتماعات غداً الساعة الثالثة.", "الميزانية ٢٥٠٠٠٠ ريال."]),
+            ("Thai", ["กรุณาจองห้องประชุมพรุ่งนี้เวลาบ่ายสามโมง", "งบประมาณ 250,000 บาท"]), ("Hindi", ["कल दोपहर तीन बजे बैठक कक्ष बुक करें।", "बजट ₹2,50,000 है।"]),
+            ("Vietnamese", ["Vui lòng đặt phòng họp lúc 3 giờ chiều mai.", "Ngân sách là 250.000 đồng."]), ("French", ["Réservez la salle de réunion demain à 15 h.", "Le budget est de 250 000 €."]),
+            ("German", ["Bitte buchen Sie morgen um 15 Uhr den Besprechungsraum.", "Das Budget beträgt 250.000 €."]), ("Greek", ["Κλείστε την αίθουσα συσκέψεων αύριο στις 3 μ.μ."]),
+            ("Traditional Chinese", ["請明天下午三點預約會議室。", "預算為二十五萬元。"]),
+        ]
         var broken = 0
-        let everything: [(String, [String], Look?)] = cases.map { ($0.0, $0.1, nil) } + hard.map { ($0.0, $0.1, $0.2) }
+        let everything: [(String, [String], Look?)] = cases.map { ($0.0, $0.1, nil) } + hard.map { ($0.0, $0.1, $0.2) } + languages.map { ($0.0, $0.1, nil) }
         for (name, lines, look) in everything {
             guard let image = picture(lines, look: look) else { continue }
             let started = Date()
