@@ -170,6 +170,19 @@ enum TranslatePrompt {
         return runs.allSatisfy(have)
     }
 
+    /// Characters that only simplified Chinese writes this way; Japanese uses other forms (開, 説, 買…).
+    private static let simplifiedOnly = Set("们这说为过还没帮预约对给时间开东买卖读让请")
+    private static func latinWords(_ s: String) -> Set<String> {
+        Set(s.lowercased().split(whereSeparator: { !($0.isLetter && $0.isASCII) }).map(String.init).filter { $0.count >= 4 })
+    }
+    /// Latin words of four letters or more that are in neither the transcript nor the glossary, or (for Japanese) simplified-only characters.
+    static func hasLeftovers(_ out: String, original: String, glossary: [String], script: TranslationLanguage.Script) -> Bool {
+        let allowed = latinWords(original).union(glossary.flatMap { latinWords($0) })
+        if !latinWords(out).isSubset(of: allowed) { return true }
+        if script == .hanKana, out.contains(where: { simplifiedOnly.contains($0) }) { return true }
+        return false
+    }
+
     /// Unwraps the answer and refuses one that does not look like a translation of this transcript.
     static func check(_ answer: String, original: String, target: String, glossary: [String] = []) -> Result<String, RefineFailure> {
         let out = RefinePrompt.unwrap(answer, original: original)
@@ -181,6 +194,9 @@ enum TranslatePrompt {
         if let script = language?.script, share(out, script) < 0.6 { return .failure(.rejected("language")) }
         // Japanese is written with kana as well; Han characters alone are Chinese (the model answered in the wrong language).
         if language?.script == .hanKana, out.unicodeScalars.filter({ (0x3040...0x30FF).contains($0.value) }).count * 10 < out.filter({ $0.isLetter }).count { return .failure(.rejected("language")) }
+        // A model that gives up halfway leaves words of another language in the middle: English words the speaker never said in a
+        // Japanese answer, or Chinese-only characters in it.
+        if let script = language?.script, script != .latin, hasLeftovers(out, original: original, glossary: glossary, script: script) { return .failure(.rejected("language")) }
         let inCore = original.filter { $0.isLetter || $0.isNumber }.count, outCore = out.filter { $0.isLetter || $0.isNumber }.count
         if inCore >= 4 { let ratio = Double(outCore) / Double(inCore); if ratio < 0.1 || ratio > 12 { return .failure(.rejected("length")) } }
         if !isSubsequence(digitsOnly(original), of: digitsOnly(out)) && !numbersWrittenAsWords(out, original: original, language: language) { return .failure(.rejected("numbers")) }
