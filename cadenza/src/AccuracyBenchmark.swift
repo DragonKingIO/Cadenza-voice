@@ -378,3 +378,90 @@ enum FillerProbe {
         return 0
     }
 }
+
+/// `--bench-quiet`: how soft can speech be, and how loud can the room be, before a local model stops being reliable?
+/// Speech is synthesized once, scaled so its RMS sits at a chosen level in dBFS (normal speech at arm's length is around -28
+/// dBFS, a whisper around -45 to -55), room noise of a chosen absolute level is added, the result is rounded to 16 bits like a
+/// microphone's converter would, and each installed Chinese-capable local model reads it. Prints the character error rate.
+enum QuietProbe {
+    static let levels: [Float] = [-28, -40, -50, -58, -66]       // speech RMS, dBFS
+    /// Steady room noise: "white" is the harshest case (it covers every frequency); "fan" is the low rumble of a fan or air conditioning.
+    static let rooms: [(name: String, level: Float?, fan: Bool)] = [("silent", nil, false), ("fan -45", -45, true), ("white -65", -65, false), ("white -55", -55, false), ("white -45", -45, false)]
+
+    static func rms(_ s: [Float]) -> Float { s.isEmpty ? 0 : (s.reduce(0) { $0 + $1 * $1 } / Float(s.count)).squareRoot() }
+    static func db(_ x: Float) -> Float { 20 * log10(max(x, 1e-9)) }
+
+    /// RMS of the louder frames only: pauses and tails do not count as speech level.
+    static func speechRMS(_ s: [Float]) -> Float {
+        let frame = 320
+        var powers: [Float] = []
+        var i = 0
+        while i + frame <= s.count { let r = rms(Array(s[i..<(i + frame)])); powers.append(r * r); i += frame }
+        guard !powers.isEmpty else { return 0 }
+        let threshold = (powers.max() ?? 0) * 0.01
+        let loud = powers.filter { $0 > threshold }
+        return (loud.reduce(0, +) / Float(max(1, loud.count))).squareRoot()
+    }
+
+    static func condition(_ speech: [Float], level: Float, room: Float?, fan: Bool = false, seed: UInt64) -> [Float] {
+        let base = speechRMS(speech)
+        guard base > 0 else { return speech }
+        let gain = pow(10, level / 20) / base
+        var out = speech.map { $0 * gain }
+        if let room {
+            var state = seed | 1
+            func next() -> Float { state ^= state << 13; state ^= state >> 7; state ^= state << 17; return Float(Double(state % 2_000_001) / 1_000_000 - 1) }
+            let sigma = pow(10, room / 20)
+            var noise = out.map { _ in (next() + next() + next() + next()) * 0.866 }
+            if fan {   // one-pole low-pass at about 300 Hz, then rescaled so the level is the stated RMS
+                var y: Float = 0
+                noise = noise.map { y += 0.115 * ($0 - y); return y }
+                let r = rms(noise); if r > 0 { noise = noise.map { $0 / r } }
+            }
+            out = zip(out, noise).map { $0 + $1 * sigma }
+        }
+        return out.map { Float((max(-1, min(1, $0)) * 32767).rounded()) / 32767 }   // 16-bit converter
+    }
+
+    static func run() -> Int32 {
+        if CommandLine.arguments.contains("--bench-quiet-enhance=off") { SpeechEnhancer.enabled = false }
+        if let v = AccuracyBenchmark.value("--bench-quiet-clean-db").flatMap(Float.init) { SpeechEnhancer.cleanAboveDB = v }
+        if let v = AccuracyBenchmark.value("--bench-quiet-over").flatMap(Float.init) { SpeechEnhancer.oversubtraction = v }
+        if let v = AccuracyBenchmark.value("--bench-quiet-floor").flatMap(Float.init) { SpeechEnhancer.floorGain = v }
+        var engines = AccuracyBenchmark.localEngines().filter { $0.name.contains("sensevoice-multilingual-int8/zh") || $0.name.contains("fire-red") || $0.name.contains("paraformer") || $0.name.contains("qwen3") }
+        if let only = AccuracyBenchmark.value("--bench-engines") { engines = engines.filter { $0.name.contains(only) } }
+        let chosenLevels = AccuracyBenchmark.value("--bench-quiet-levels")?.split(separator: ",").compactMap { Float($0) } ?? levels
+        let chosenRooms = AccuracyBenchmark.value("--bench-quiet-rooms")?.split(separator: ",").compactMap { Int($0) } ?? Array(rooms.indices)
+        let show = CommandLine.arguments.contains("--bench-quiet-show")
+        guard !engines.isEmpty else { print("quiet: no Chinese-capable local model installed"); return 0 }
+        let items = Array(AccuracyBenchmark.corpus.enumerated().filter { $0.offset % 2 == 0 }.map(\.element).prefix(12))
+        var clips: [[Float]] = []
+        for item in items { if let s = AccuracyBenchmark.speech(item.text, voice: "Tingting", rate: nil) { clips.append(s) } }
+        guard clips.count == items.count else { print("quiet: could not synthesize all sentences"); return 1 }
+        print("quiet: \(items.count) sentences, speech level = RMS of the louder frames; normal speech is about -28 dBFS, a whisper -45 to -55")
+        print("model | speech dBFS | " + chosenRooms.map { rooms[$0].name }.joined(separator: " | "))
+        for engine in engines {
+            let transcribe = engine.make()
+            for level in chosenLevels {
+                var cells: [String] = []
+                for (r, room) in rooms.enumerated() where chosenRooms.contains(r) {
+                    var errors = 0.0
+                    for (i, clip) in clips.enumerated() {
+                        let conditioned = condition(clip, level: level, room: room.level, fan: room.fan, seed: UInt64(1000 + i * 31 + r))
+                        if show && i == 0 {
+                            let enhanced = SpeechEnhancer.enhance(conditioned), levelled = LocalDecoder.levelled(enhanced)
+                            func peak(_ a: [Float]) -> Float { a.map(abs).max() ?? 0 }
+                            print(String(format: "    [debug] input rms %.1f dBFS peak %.4f | enhanced rms %.1f dBFS peak %.4f | levelled rms %.1f dBFS peak %.4f | est. SNR %.1f dB", db(rms(conditioned)), peak(conditioned), db(rms(enhanced)), peak(enhanced), db(rms(levelled)), peak(levelled), SpeechEnhancer.estimatedSNR(SpeechEnhancer.highPass(conditioned))))
+                        }
+                        let heard = transcribe(conditioned)
+                        errors += min(1, AccuracyBenchmark.cer(reference: items[i].text, hypothesis: heard))
+                        if show && i < 2 { print("    [\(Int(level)) dBFS, \(room.name)] \(items[i].text) -> \(heard.isEmpty ? "(nothing)" : heard)") }
+                    }
+                    cells.append(String(format: "%4.1f%%", errors / Double(items.count) * 100))
+                }
+                print("\(engine.name) | \(Int(level)) | " + cells.joined(separator: " | "))
+            }
+        }
+        return 0
+    }
+}

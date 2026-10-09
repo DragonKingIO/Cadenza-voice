@@ -34,6 +34,8 @@ final class VoiceSession {
     /// 会话内观测到的峰值电平（rms×10）：静音防幻觉依据，仅内存
     var peakLevel: Float = 0
     var levelSamples = 0
+    /// Every level reading of the session (rms×10 per chunk), kept in memory only: it tells soft speech from room noise.
+    var levels: [Float] = []
     let startedAt: Date
     var startedUptime=ProcessInfo.processInfo.systemUptime
 
@@ -256,6 +258,7 @@ final class VoicePipeline {
                 guard let self = self, self.session?.id == sid, self.session?.state == .voiceStarted else { return }
                 self.session?.peakLevel = max(self.session?.peakLevel ?? 0, v)
                 self.session?.levelSamples += 1
+                if (self.session?.levels.count ?? 0) < 20000 { self.session?.levels.append(v) }
                 self.onLevel?(v)
             }
         }
@@ -371,7 +374,7 @@ final class VoicePipeline {
         lastTranscript = transcript.isEmpty ? nil : transcript
         lastIsError=false;lastInputAccepted=false
         // 静音防幻觉：整段录音能量极低（仅环境噪声）→ 丢弃，防止云端把噪声误识成句子
-        if !(recorder is LocalASRRecorder || (recorder as? FallbackRecordingSession)?.usedFallback == true), !transcript.isEmpty, s.levelSamples > 0, s.peakLevel < 0.22,
+        if !(recorder is LocalASRRecorder || (recorder as? FallbackRecordingSession)?.usedFallback == true), !transcript.isEmpty, s.levelSamples > 0, !SpeechPresence.looksLikeSpeech(peak: s.peakLevel, levels: s.levels),
            now().timeIntervalSince(s.startedAt) >= 0.35 {
             lastTranscript = nil
             lastResult = L10n.tr("ui.e0f1304f638a");lastIsError=true

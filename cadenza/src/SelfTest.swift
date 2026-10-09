@@ -40,6 +40,7 @@ enum SelfTest {
         VocabularyFixtures.run(check)
         TranslateFixtures.run(check)
         LLMProfilesFixtures.run(check)
+        SpeechEnhancerFixtures.run(check)
         testConfigValidation()
         testCustomShortcuts()
         testOnboardingReadiness()
@@ -788,6 +789,18 @@ enum SelfTest {
         pipeline.holdStarted(source:.hotkey);engines.last?.onLevel?(0.25);pump();lateLevel?(1);pump()
         check("取消后迟到电平不污染新会话",level==0.25 && pipeline.hasActiveSession)
         pipeline.forceEnd(reason:"constructed cancel");check("取消新会话电平归零",pipeline.resourcesIdle && level==0)
+        // A whisper is kept, the room alone is dropped
+        func dictate(_ levels:[Float],_ text:String)->Bool {
+            var c=Date();pipeline.now={c};pipeline.snapshotFocus={focus};pipeline.holdStarted(source:.hotkey)
+            for v in levels{engines.last?.onLevel?(v)};pump()
+            c=c.addingTimeInterval(2);pipeline.holdEnded();engines.last?.onFinal?(text);pump()
+            return pipeline.lastTranscript == text
+        }
+        let roomOnly=(0..<80).map{Float(0.005)*(1+0.15*sin(Float($0)*1.7))}
+        var whisper=roomOnly;for i in 0..<30{whisper[10+i]=0.04*(1+0.3*sin(Float(i)*0.9))}
+        check("小声说话（远低于旧阈值但明显高于底噪）不被当作静音丢弃",dictate(whisper,"小声说的话"))
+        check("只有底噪的录音仍被丢弃并说明",!dictate(roomOnly,"从噪声里幻觉出来的话") && pipeline.lastResult == L10n.tr("ui.e0f1304f638a"))
+        pipeline.now={Date()};writes=0;pipeline.snapshotFocus={focus}
         failBegin=true;pipeline.holdStarted(source:.hotkey)
         check("录音启动失败立即归零并可重试",pipeline.resourcesIdle && level==0 && writes==0)
         failBegin=false;var clock=Date();pipeline.now={clock};pipeline.holdStarted(source:.hotkey)

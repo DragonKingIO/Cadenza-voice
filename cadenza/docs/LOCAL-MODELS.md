@@ -147,3 +147,50 @@ connectors=… changed=… chars=a->b`, never the text); read your own log to se
 filters too (Settings → Speech → Cloud → "Filter filler words": Tencent `filter_modal`, Aliyun `disfluency`, Volcengine `enable_ddc`).
 The measurement found two gaps, now closed: a 嗯 between two words with no mark around it ("方案的话嗯成本"), and three repeats in
 a row in English ("I I I think").
+
+## Soft speech and noisy rooms
+
+`Cadenza --bench-quiet` (add `--bench-quiet-enhance=off` for the "before" figures) speaks 12 sentences with the system voice,
+scales the speech to a chosen level, adds steady room noise of a chosen level, rounds the result to 16 bits like a microphone's
+converter, and has each installed Chinese-capable local model read it. A value of 100 means the model wrote nothing usable.
+Levels are the digital level of the signal (dBFS, RMS of the louder frames): normal speech at arm's length is about −28, a
+whisper about −45 to −55. They are **not** sound pressure in dB SPL, which depends on the microphone and its gain, so no claim
+about decibels in the room can be made from this table.
+
+What changed (all on this Mac, on the audio already in memory):
+
+- A gentle 80 Hz high-pass and, when the recording has a steady room noise close to the speech level, spectral subtraction
+  (`SpeechEnhancer`: the noise spectrum is learned from the quietest 20% of frames; strength 2.5, floor 0.05, picked by
+  measurement). A recording that is already clean (24 dB or more between its loud and quiet frames) is only high-passed.
+- The existing levelling step (up to ×30) now runs on the cleaned audio, so a hum no longer sets its gain.
+- Cloud services and Apple's recognizer: recordings whose loudest moment was under a fixed level were dropped as "silence", which
+  also dropped every whisper. `SpeechPresence` now compares the recording with its own room: a stretch that stands 2.5 times above
+  the quiet part for about a tenth of the recording is speech however soft; a room alone, a cough or digital silence is still
+  dropped. The audio sent to those services is not changed (no keys here to measure it).
+
+**SenseVoice** — character error rate, %, before → after:
+
+| Speech level (dBFS RMS) | silent room | fan, −45 dBFS | white noise −65 | white noise −55 | white noise −45 |
+|---|---|---|---|---|---|
+| −28 (normal) | 2.3 | 2.2 | 3.4 → **2.8** | 2.2 | 2.8 → **2.2** |
+| −40 | 2.2 | 11.3 → **3.7** | 2.2 | 2.8 → **2.2** | 4.6 → **4** |
+| −50 (whisper) | 2.2 | 100 → **32.5** | 2.8 | 4.6 → **4** | 100 → **11.4** |
+| −58 (soft whisper) | 2.2 | 100 | 4.1 → **3.4** | 100 → **5.7** | 100 |
+| −66 | 2.2 | 100 | 100 → **5.7** | 100 | 100 |
+
+**FireRed ASR2** — character error rate, %, before → after:
+
+| Speech level (dBFS RMS) | silent room | fan, −45 dBFS | white noise −65 | white noise −55 | white noise −45 |
+|---|---|---|---|---|---|
+| −28 (normal) | 2.8 | 2.8 → **3.3** | 2.8 | 3.3 → **2.8** | 3.3 → **2.8** |
+| −40 | 2.8 | 12.6 → **3** | 2.8 | 3.3 → **2.8** | 5.5 |
+| −50 (whisper) | 4 → **3.4** | 100 → **35.5** | 3.4 → **2.8** | 3.5 → **4.7** | 100 → **16.3** |
+| −58 (soft whisper) | 3.4 | 100 | 4.7 | 100 → **11.1** | 100 |
+| −66 | 3.4 | 100 | 100 → **11.4** | 100 | 100 |
+
+Reading the table: soft speech in a quiet room was already fine (levelling does that); the gains are where a steady noise sits
+close to or above the speech. White noise is the harshest case (it covers every frequency); a fan's low rumble is closer to a
+real room. Differences of about one point (for example 2.8 and 3.3) are within the variation of 12 sentences. When the noise is
+more than about 10 dB louder than the speech (a whisper at −58 under white noise at −45, or speech at −66 under noise at −55)
+nothing recovers the words, and the tool does not pretend otherwise. Synthetic speech and noise are cleaner than a real
+microphone in a real room; this has not been measured on real recordings.

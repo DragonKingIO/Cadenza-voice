@@ -96,7 +96,7 @@ enum LocalDecoder {
     }
 
     static func transcribe(_ raw: [Float], with t: LocalTranscriber) -> String {
-        let samples = levelled(raw)
+        let samples = levelled(SpeechEnhancer.enhance(raw))
         guard samples.count >= sampleRate / 2, samples.allSatisfy({$0.isFinite}), samples.contains(where:{abs($0)>0.00001}) else { return "" }
         var segments: [Range<Int>]
         if t.vadAvailable {

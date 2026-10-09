@@ -129,6 +129,7 @@ if CommandLine.arguments.contains("--selftest-local-ocr-download") {_ = NSApplic
 if CommandLine.arguments.contains("--local-accuracy-probe") {exit(LocalModelFixtures.accuracyProbe())}
 if CommandLine.arguments.contains("--accuracy-benchmark") {exit(AccuracyBenchmark.run())}
 if CommandLine.arguments.contains("--bench-fillers") {exit(FillerProbe.run())}
+if CommandLine.arguments.contains("--bench-quiet") {exit(QuietProbe.run())}
 if CommandLine.arguments.contains("--bench-speed") {_ = NSApplication.shared;exit(ModelSpeedBenchmark.run())}
 if CommandLine.arguments.contains("--selftest-local-model") {
     var checks=0,failures=0
