@@ -14,8 +14,10 @@ Maintainers publish releases on GitHub. A release is a signed-ad-hoc, not notari
 
 1. Tag the commit: `git tag -a vX.Y.Z -m "Cadenza X.Y.Z"` and push the tag.
 2. From a clean checkout of that tag run `cadenza/tools/make-release.sh`. It builds the package and writes
-   `cadenza/build/release/Cadenza-X.Y.Z-macos-<arch>.zip` and `SHA256SUMS.txt`. The script warns when the tree is not clean.
-3. Smoke test the zip on a Mac that did not build it: unzip, open (see "First launch" below), grant the permissions,
+   `cadenza/build/release/Cadenza-X.Y.Z-macos-universal.dmg` (the disk image people open), the same app as
+   `Cadenza-X.Y.Z-macos-universal.zip`, and `SHA256SUMS.txt` covering both. The script warns when the tree is not clean.
+3. Smoke test the .dmg on a Mac that did not build it: open it, drag the app to Applications, open it (see "First launch"
+   below), grant the permissions,
    record a sentence with a downloaded local model, and check that the text arrives.
 4. Create the GitHub Release for the tag, attach both files, and paste notes from the template below.
 5. **Do not mark it as a pre-release or draft** if you want the in-app update check to offer it: the check reads GitHub's
@@ -48,8 +50,9 @@ after an update.
 - …
 
 ## Install
-1. Download `Cadenza-X.Y.Z-macos-universal.zip` and unzip it.
-2. Open the app. macOS blocks the first launch because the app is not notarized: open System Settings → Privacy & Security,
+1. Download `Cadenza-X.Y.Z-macos-universal.dmg`, open it and drag Cadenza to Applications. (The zip holds the same app, for
+   people who prefer it.)
+2. Open the app from Applications. macOS blocks the first launch because the app is not notarized: open System Settings → Privacy & Security,
    scroll to the message about the app and choose **Open Anyway**.
 3. Allow Microphone, Accessibility and Input Monitoring when asked.
 
