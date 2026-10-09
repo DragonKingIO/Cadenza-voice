@@ -175,7 +175,7 @@ enum SettingsUIFixtures {
         var allowed=CloudASROptions.defaults(.baidu);allowed.consent=true;_=store.mutate{$0.setOptions(.baidu,allowed)};_=store.save()
         let revoke=ProviderSettingsDraft(store:store,engine:.baidu,busy:{false},changed:{},writer:writer,has:{_ in false});revoke.options.consent=false
         check("consent can be withdrawn after credentials are missing",revoke.canSave && revoke.save() && !store.config.options(.baidu).consent)
-        for engine in ASREngine.legacyListed where engine != .apple {
+        for engine in ASREngine.legacyListed where engine != .apple && engine != .google {   // Google's key check is tested with its own answers in BatchTranscriptionFixtures
             var options=CloudASROptions.defaults(engine);options.consent=true
             let credentials=Dictionary(uniqueKeysWithValues:engine.credentialFields.map{($0.0,"fixture-"+$0.0)})
             let socket=Socket(),http=HTTP();http.data=Data((engine == .aliyun ? "{\"Token\":{\"Id\":\"fixture-token\",\"ExpireTime\":4102444800}}":"{\"access_token\":\"fixture-token\",\"expires_in\":3600}").utf8)

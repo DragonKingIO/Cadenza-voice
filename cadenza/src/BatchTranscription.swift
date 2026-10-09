@@ -1,7 +1,8 @@
 import Foundation
 
 // Speech recognition by services that take a whole recording and answer with its text: the OpenAI transcription API and the
-// services that copy it (Groq). The recording is sent once, when the key is released.
+// services that copy it (Groq and others), Google Cloud Speech-to-Text and Microsoft Azure Speech. The recording is sent once,
+// when the key is released.
 
 enum BatchTranscription {
     struct Service {
@@ -21,6 +22,11 @@ enum BatchTranscription {
         case .compat:
             // The address and the model are the person's own (see `compatPresets`).
             return Service(endpoint: "", modelsEndpoint: "", models: [], defaultModel: "")
+        case .google:
+            return Service(endpoint: "https://speech.googleapis.com/v1/speech:recognize", modelsEndpoint: "", models: ["default", "latest_short", "latest_long"], defaultModel: "default")
+        case .azure:
+            // The address comes from the region (or the resource address) the person gave; see `azureEndpoints`.
+            return Service(endpoint: "", modelsEndpoint: "", models: [], defaultModel: "")
         default:
             return nil
         }
@@ -37,8 +43,37 @@ enum BatchTranscription {
 
     /// Where the recording goes: a fixed address for OpenAI and Groq, the person's own address (plus the transcription path) otherwise.
     static func endpointURL(_ engine: ASREngine, _ o: CloudASROptions) -> URL? {
-        engine == .compat ? LLMEndpoint.resolve(o.baseURL, "/audio/transcriptions") : service(engine).flatMap { URL(string: $0.endpoint) }
+        if engine == .azure { return azureEndpoints(o.region)?.recognize }
+        return engine == .compat ? LLMEndpoint.resolve(o.baseURL, "/audio/transcriptions") : service(engine).flatMap { URL(string: $0.endpoint) }
     }
+
+    /// Azure takes either the region of the Speech resource ("eastus") or the address of the resource from the Azure portal.
+    /// An address must be https on a Microsoft cloud host, so a typo cannot send the key somewhere else.
+    static func azureEndpoints(_ place: String) -> (recognize: URL, token: URL)? {
+        let p = place.trimmingCharacters(in: .whitespacesAndNewlines)
+        if p.range(of: "^[a-z0-9]{3,30}$", options: .regularExpression) != nil {
+            guard let r = URL(string: "https://\(p).stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1"),
+                  let t = URL(string: "https://\(p).api.cognitive.microsoft.com/sts/v1.0/issueToken") else { return nil }
+            return (r, t)
+        }
+        guard let parts = URLComponents(string: p), parts.scheme?.lowercased() == "https", let host = parts.host?.lowercased(), parts.user == nil, parts.password == nil,
+              parts.query == nil, parts.fragment == nil, parts.path.isEmpty || parts.path == "/",
+              ["azure.com", "azure.cn", "azure.us", "microsoft.com"].contains(where: { host == $0 || host.hasSuffix("." + $0) }) else { return nil }
+        guard let r = URL(string: "https://\(host)/stt/speech/recognition/conversation/cognitiveservices/v1"), let t = URL(string: "https://\(host)/sts/v1.0/issueToken") else { return nil }
+        return (r, t)
+    }
+
+    /// Google and Azure need the language named; OpenAI-style services can detect it. "yue" is Cantonese.
+    static let explicitLanguages = languages.filter { $0 != "multi" } + ["yue"]
+    static func languageChoices(_ engine: ASREngine) -> [String] { engine == .google || engine == .azure ? explicitLanguages : languages }
+    private static let regionalCodes: [String: (google: String, azure: String)] = [
+        "zh": ("cmn-Hans-CN", "zh-CN"), "yue": ("yue-Hant-HK", "zh-HK"), "en": ("en-US", "en-US"), "ja": ("ja-JP", "ja-JP"), "ko": ("ko-KR", "ko-KR"),
+        "es": ("es-ES", "es-ES"), "fr": ("fr-FR", "fr-FR"), "de": ("de-DE", "de-DE"), "ru": ("ru-RU", "ru-RU"), "pt": ("pt-BR", "pt-BR"), "it": ("it-IT", "it-IT"),
+        "ar": ("ar-SA", "ar-SA"), "hi": ("hi-IN", "hi-IN"), "th": ("th-TH", "th-TH"), "vi": ("vi-VN", "vi-VN"), "id": ("id-ID", "id-ID"), "tr": ("tr-TR", "tr-TR"),
+        "nl": ("nl-NL", "nl-NL"), "pl": ("pl-PL", "pl-PL"), "uk": ("uk-UA", "uk-UA"),
+    ]
+    static func regionalCode(_ engine: ASREngine, _ language: String) -> String? { regionalCodes[language].map { engine == .google ? $0.google : $0.azure } }
+
     static func modelsURL(_ engine: ASREngine, _ o: CloudASROptions) -> URL? {
         guard engine == .compat else { return service(engine).flatMap { URL(string: $0.modelsEndpoint) } }
         guard let url = endpointURL(engine, o), var parts = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
@@ -47,7 +82,7 @@ enum BatchTranscription {
     }
     /// The name the person sees for where the audio goes.
     static func destination(_ engine: ASREngine, _ o: CloudASROptions) -> String {
-        engine == .compat ? (endpointURL(engine, o)?.host ?? engine.title) : engine.title
+        engine == .compat || engine == .azure ? (endpointURL(engine, o)?.host ?? engine.title) : engine.title
     }
 
     /// "multi" lets the service tell the language; otherwise an ISO 639-1 code from this list.
@@ -55,8 +90,13 @@ enum BatchTranscription {
     static let promptLimit = 600
 
     static func validate(_ engine: ASREngine, _ o: CloudASROptions) -> String? {
-        guard let service = service(engine), engine == .compat ? validCompat(o) : service.models.contains(o.model), languages.contains(o.language), o.hotwords.count <= promptLimit,
+        guard let service = service(engine), languageChoices(engine).contains(o.language), o.hotwords.count <= promptLimit,
               !o.smoothing, !o.secondPass, o.vocabularyID.isEmpty, o.correctionTableID.isEmpty else { return L10n.tr("batch.invalidOptions") }
+        switch engine {
+        case .compat: guard validCompat(o) else { return L10n.tr("batch.invalidOptions") }
+        case .azure: guard azureEndpoints(o.region) != nil, o.hotwords.isEmpty else { return L10n.tr("batch.invalidOptions") }
+        default: guard service.models.contains(o.model) else { return L10n.tr("batch.invalidOptions") }
+        }
         return nil
     }
 
@@ -85,6 +125,8 @@ enum BatchTranscription {
     static func request(_ engine: ASREngine, options: CloudASROptions, key: String, pcm: Data, boundary: String = "cadenza-" + UUID().uuidString) -> URLRequest? {
         guard validate(engine, options) == nil, !key.isEmpty, key.count <= 4096, !pcm.isEmpty, pcm.count % 2 == 0,
               let url = endpointURL(engine, options) else { return nil }
+        if engine == .google { return googleRequest(url: url, options: options, key: key, pcm: pcm) }
+        if engine == .azure { return azureRequest(url: url, options: options, key: key, pcm: pcm) }
         var fields: [(String, String)] = [("model", options.model), ("response_format", "json"), ("temperature", "0")]
         if options.language != "multi" { fields.append(("language", options.language)) }
         let hint = prompt(options.hotwords)
@@ -101,24 +143,98 @@ enum BatchTranscription {
         return r
     }
 
-    /// A key check that sends no audio: the service's model list, which needs the same key.
-    static func keyCheckRequest(_ engine: ASREngine, key: String, options: CloudASROptions = CloudASROptions()) -> URLRequest? {
-        guard !key.isEmpty, let url = modelsURL(engine, options) else { return nil }
+    private static func googleRequest(url: URL, options: CloudASROptions, key: String, pcm: Data) -> URLRequest? {
+        guard let code = regionalCode(.google, options.language) else { return nil }
+        var config: [String: Any] = ["encoding": "LINEAR16", "sampleRateHertz": 16000, "audioChannelCount": 1, "languageCode": code, "enableAutomaticPunctuation": true, "model": options.model]
+        let phrases = options.hotwords.split(whereSeparator: { $0 == "\n" || $0 == "," }).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty && $0.count <= 100 }.prefix(100)
+        if !phrases.isEmpty { config["speechContexts"] = [["phrases": Array(phrases)]] }
+        guard let body = try? JSONSerialization.data(withJSONObject: ["config": config, "audio": ["content": pcm.base64EncodedString()]]) else { return nil }
         var r = URLRequest(url: url)
-        r.setValue("Bearer " + key, forHTTPHeaderField: "Authorization"); r.timeoutInterval = 10
+        r.httpMethod = "POST"; r.httpBody = body; r.timeoutInterval = 60
+        r.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        r.setValue(key, forHTTPHeaderField: "X-Goog-Api-Key")
         return r
     }
 
+    private static func azureRequest(url: URL, options: CloudASROptions, key: String, pcm: Data) -> URLRequest? {
+        guard let code = regionalCode(.azure, options.language), var parts = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
+        // "raw": dictation is typed as it was said, not with words starred out.
+        parts.queryItems = [URLQueryItem(name: "language", value: code), URLQueryItem(name: "format", value: "simple"), URLQueryItem(name: "profanity", value: "raw")]
+        guard let full = parts.url else { return nil }
+        var r = URLRequest(url: full)
+        r.httpMethod = "POST"; r.httpBody = wav(pcm: pcm); r.timeoutInterval = 60
+        r.setValue("audio/wav; codecs=audio/pcm; samplerate=16000", forHTTPHeaderField: "Content-Type")
+        r.setValue("application/json", forHTTPHeaderField: "Accept")
+        r.setValue(key, forHTTPHeaderField: "Ocp-Apim-Subscription-Key")
+        return r
+    }
+
+    /// A key check that sends no audio. OpenAI-style services: the model list, which needs the same key. Azure: a token request.
+    /// Google: a recognize request with an empty body, which a valid key answers with "invalid argument" and a wrong key does not.
+    static func keyCheckRequest(_ engine: ASREngine, key: String, options: CloudASROptions = CloudASROptions()) -> URLRequest? {
+        guard !key.isEmpty else { return nil }
+        switch engine {
+        case .google:
+            guard let url = endpointURL(engine, options) else { return nil }
+            var r = URLRequest(url: url)
+            r.httpMethod = "POST"; r.httpBody = Data("{}".utf8); r.timeoutInterval = 10
+            r.setValue("application/json", forHTTPHeaderField: "Content-Type"); r.setValue(key, forHTTPHeaderField: "X-Goog-Api-Key")
+            return r
+        case .azure:
+            guard let url = azureEndpoints(options.region)?.token else { return nil }
+            var r = URLRequest(url: url)
+            r.httpMethod = "POST"; r.httpBody = Data(); r.timeoutInterval = 10
+            r.setValue(key, forHTTPHeaderField: "Ocp-Apim-Subscription-Key"); r.setValue("0", forHTTPHeaderField: "Content-Length")
+            return r
+        default:
+            guard let url = modelsURL(engine, options) else { return nil }
+            var r = URLRequest(url: url)
+            r.setValue("Bearer " + key, forHTTPHeaderField: "Authorization"); r.timeoutInterval = 10
+            return r
+        }
+    }
+
+    /// Whether a service's answer to `keyCheckRequest` means the key is good.
+    static func keyCheckPassed(_ engine: ASREngine, status: Int, data: Data) -> Bool {
+        if engine == .google {
+            let text = String(decoding: data.prefix(4096), as: UTF8.self)
+            return status == 400 && text.contains("INVALID_ARGUMENT") && !text.contains("API_KEY_INVALID") && !text.lowercased().contains("api key not valid")
+        }
+        return (200...299).contains(status)
+    }
+
     /// The recognized text, or the reason the service gave in words a person can act on.
-    static func parse(status: Int, data: Data, engine: ASREngine, name: String? = nil) throws -> String {
+    static func parse(status: Int, data: Data, engine: ASREngine, name: String? = nil, options: CloudASROptions = CloudASROptions()) throws -> String {
         guard data.count <= 1_048_576 else { throw ASRFailure.protocolInvalid }
         let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
         guard (200...299).contains(status) else {
             let detail = ((object?["error"] as? [String: Any])?["message"] as? String).map { String($0.prefix(160)) } ?? ""
+            let who = name ?? engine.title
+            // Google answers a wrong key with 400, and a project without the API turned on with 403.
+            if engine == .google, status == 400, detail.lowercased().contains("api key not valid") { throw ASRServiceError(hint: L10n.format("batch.err.auth", who), code: status) }
+            if engine == .google, status == 403 { throw ASRServiceError(hint: L10n.format("batch.err.googleDenied", who), code: status) }
             throw ASRServiceError(hint: describe(status: status, detail: detail, engine: engine, name: name), code: status)
         }
-        guard let text = object?["text"] as? String else { throw ASRFailure.protocolInvalid }
-        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+        switch engine {
+        case .google:
+            let results = (object?["results"] as? [[String: Any]]) ?? []
+            let pieces = results.compactMap { ($0["alternatives"] as? [[String: Any]])?.first?["transcript"] as? String }
+            // Chinese, Japanese, Cantonese and Thai are written without spaces between sentences.
+            let joiner = ["zh", "yue", "ja", "th"].contains(options.language) ? "" : " "
+            guard object != nil else { throw ASRFailure.protocolInvalid }
+            return pieces.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }.joined(separator: joiner)
+        case .azure:
+            guard let state = object?["RecognitionStatus"] as? String else { throw ASRFailure.protocolInvalid }
+            switch state {
+            case "Success": return ((object?["DisplayText"] as? String) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            // Nothing was recognized: not a failure, and nothing is typed.
+            case "NoMatch", "InitialSilenceTimeout", "BabbleTimeout": return ""
+            default: throw ASRServiceError(hint: L10n.format("batch.err.server", name ?? engine.title), code: status)
+            }
+        default:
+            guard let text = object?["text"] as? String else { throw ASRFailure.protocolInvalid }
+            return text.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
     }
 
     static func describe(status: Int, detail: String, engine: ASREngine, name: String? = nil) -> String {

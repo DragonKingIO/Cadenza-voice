@@ -12,7 +12,7 @@ enum SharedCredentials {
     static let alternates: [String: [String]] = {
         let pairs: [(String, String)] = [
             ("tencent.secretid", "ocr.tencent.secretid"), ("tencent.secretkey", "ocr.tencent.secretkey"),
-            ("baidu.apikey", "ocr.baidu.apikey"), ("baidu.secretkey", "ocr.baidu.secretkey"),
+            ("baidu.apikey", "ocr.baidu.apikey"), ("baidu.secretkey", "ocr.baidu.secretkey"), ("google.apikey", "ocr.google.apikey"),
         ]
         var map: [String: [String]] = [:]
         for (a, b) in pairs { map[a, default: []].append(b); map[b, default: []].append(a) }

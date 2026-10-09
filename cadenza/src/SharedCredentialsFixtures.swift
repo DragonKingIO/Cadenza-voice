@@ -8,9 +8,9 @@ enum SharedCredentialsFixtures {
 
         // The lookup
         c("table: every entry points back at the key it came from", SharedCredentials.alternates.allSatisfy { key, others in others.allSatisfy { SharedCredentials.alternates[$0]?.contains(key) == true } })
-        c("table: Tencent and Baidu keys are shared, nothing else is",
+        c("table: Tencent, Baidu and Google keys are shared, nothing else is",
           SharedCredentials.alternates["tencent.secretid"] == ["ocr.tencent.secretid"] && SharedCredentials.alternates["ocr.baidu.apikey"] == ["baidu.apikey"]
-          && SharedCredentials.alternates["tencent.appid"] == nil && SharedCredentials.alternates["ocr.google.apikey"] == nil && SharedCredentials.alternates["deepgram.apikey"] == nil)
+          && SharedCredentials.alternates["tencent.appid"] == nil && SharedCredentials.alternates["ocr.google.apikey"] == ["google.apikey"] && SharedCredentials.alternates["deepgram.apikey"] == nil && SharedCredentials.alternates["azure.apikey"] == nil)
         c("get: nothing saved gives nothing", SharedCredentials.get("ocr.tencent.secretid", read: read) == nil && !SharedCredentials.has("ocr.tencent.secretid", read: read))
         items["tencent.secretid"] = "ID-1"
         c("get: a key saved for speech recognition serves text recognition", SharedCredentials.get("ocr.tencent.secretid", read: read) == "ID-1" && SharedCredentials.isShared("ocr.tencent.secretid", read: read))

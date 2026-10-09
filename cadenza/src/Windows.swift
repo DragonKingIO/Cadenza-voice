@@ -722,14 +722,14 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         language?.isHidden = !genericLanguage;providerLanguage?.isHidden=genericLanguage
         switch engine {
         case .deepgram:providerLanguage?.stringValue=config.options(.deepgram).language == "multi" ? L10n.tr("deepgram.multilingual") : (Locale(identifier:L10n.language).localizedString(forIdentifier:config.options(.deepgram).language) ?? config.options(.deepgram).language)
-        case .openai,.groq,.compat:providerLanguage?.stringValue=config.options(engine).language == "multi" ? L10n.tr("batch.language.auto") : (Locale(identifier:L10n.language).localizedString(forIdentifier:config.options(engine).language) ?? config.options(engine).language)
+        case .openai,.groq,.compat,.google,.azure:providerLanguage?.stringValue=config.options(engine).language == "multi" ? L10n.tr("batch.language.auto") : (Locale(identifier:L10n.language).localizedString(forIdentifier:config.options(engine).language) ?? config.options(engine).language)
         case .baidu:providerLanguage?.stringValue=L10n.tr("ui.7076f095aa51")
         case .tencent:providerLanguage?.stringValue=L10n.tr("ui.dbc948a3638d")
         case .aliyun:providerLanguage?.stringValue=L10n.tr("ui.38b2c8f51026")
         case .volcengine:providerLanguage?.stringValue=L10n.tr("ui.53fe95756463")
         default:providerLanguage?.stringValue=""
         }
-        let names:[ASREngine:String]=[.iflytek:L10n.tr("ui.daf29ef7cb93"),.volcengine:L10n.tr("ui.746f101ac011"),.tencent:L10n.tr("ui.42ad801d45fd"),.aliyun:L10n.tr("ui.7c0e5b76f059"),.baidu:L10n.tr("ui.a33d5a21ef34"),.deepgram:ASREngine.deepgram.title,.openai:ASREngine.openai.title,.groq:ASREngine.groq.title,.compat:ASREngine.compat.title]
+        let names:[ASREngine:String]=[.iflytek:L10n.tr("ui.daf29ef7cb93"),.volcengine:L10n.tr("ui.746f101ac011"),.tencent:L10n.tr("ui.42ad801d45fd"),.aliyun:L10n.tr("ui.7c0e5b76f059"),.baidu:L10n.tr("ui.a33d5a21ef34"),.deepgram:ASREngine.deepgram.title,.openai:ASREngine.openai.title,.groq:ASREngine.groq.title,.compat:ASREngine.compat.title,.google:ASREngine.google.title,.azure:ASREngine.azure.title]
         asrConfigureButton?.title=L10n.tr("ui.148d195e21b0")+(names[engine] ?? L10n.tr("ui.45596e805ebd"))
         asrConfigureButton?.isHidden=engine == .apple;asrConfigureButton?.isEnabled = !busy && engine != .apple
         asrEntryFeedback?.isHidden=engine == .apple

@@ -191,7 +191,7 @@ class CloudASRRecorder:HoldRecordingSession {
         guard let request=BatchTranscription.request(provider,options:options,key:credentials["apikey"] ?? "",pcm:whole) else{fail(L10n.tr("batch.invalidOptions"));return}
         let current=id
         http.exchange(request){[weak self] result in self?.queue.async{guard let self=self,self.id==current,!self.gate.terminal else{return}
-            do{let reply=try result.get();let text=try BatchTranscription.parse(status:reply.status,data:reply.data,engine:self.provider,name:BatchTranscription.destination(self.provider,self.options));self.gate.streamConfirmed();self.finish(text)}
+            do{let reply=try result.get();let text=try BatchTranscription.parse(status:reply.status,data:reply.data,engine:self.provider,name:BatchTranscription.destination(self.provider,self.options),options:self.options);self.gate.streamConfirmed();self.finish(text)}
             catch let error as ASRServiceError{self.fail(error.hint)}
             catch{self.fail(L10n.format("batch.err.network",self.destinationName))}
         }}
