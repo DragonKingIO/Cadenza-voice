@@ -4,7 +4,7 @@ import CryptoKit
 
 // Provider configuration contains no credentials. Missing keys in older app configs retain defaults.
 enum ASREngine: String, CaseIterable, Codable {
-    case apple, iflytek, volcengine, tencent, aliyun, baidu, deepgram, openai, groq, compat, google, azure
+    case apple, iflytek, volcengine, tencent, aliyun, baidu, deepgram, openai, groq, compat, google, azure, assemblyai, elevenlabs
     /// 本地模型（sherpa-onnx）：无需凭据，需要至少安装一个本地模型。
     case local
     /// 旧版 AppKit 设置窗口按固定分段列出的引擎（不含本地：本地模型在 SwiftUI 设置页管理）
@@ -17,14 +17,14 @@ enum ASREngine: String, CaseIterable, Codable {
     case .tencent:return [("appid",L10n.tr("credential.accountID")),("secretid","Secret ID"),("secretkey","Secret Key")]
     case .aliyun:return [("appkey","NLS AppKey"),("accesskeyid","AccessKey ID"),("accesskeysecret","AccessKey Secret")]
     case .baidu:return [("apikey","API Key"),("secretkey","Secret Key")]
-    case .deepgram,.openai,.groq,.compat,.google,.azure:return [("apikey","API Key")]
+    case .deepgram,.openai,.groq,.compat,.google,.azure,.assemblyai,.elevenlabs:return [("apikey","API Key")]
     } }
     /// Engines that take the whole recording once the key is released, instead of streaming it while the person speaks.
     var uploadsWholeRecording:Bool{self == .baidu || BatchTranscription.service(self) != nil}
     /// How long a recording these engines accept can be.
-    var wholeRecordingSeconds:Int{[.baidu,.google,.azure].contains(self) ? 60:300}
+    var wholeRecordingSeconds:Int{[.baidu,.google,.azure].contains(self) ? 60:self == .assemblyai ? 120:300}
     /// Punctuation, number conversion and filler filtering are switches of the Chinese cloud services; the others always do their own.
-    var hasTextSwitches:Bool{![.baidu,.openai,.groq,.compat,.google,.azure].contains(self)}
+    var hasTextSwitches:Bool{![.baidu,.openai,.groq,.compat,.google,.azure,.assemblyai,.elevenlabs].contains(self)}
     var configured:Bool {self == .local ? LocalModelCenter.shared.installedEntries.contains{LocalModelCatalog.usable($0)} : credentialFields.allSatisfy{SharedCredentials.has(rawValue+"."+$0.0)}}
     func credentials()->[String:String]? {
         var out:[String:String]=[:]
@@ -49,7 +49,7 @@ struct CloudASROptions:Codable,Equatable {
     /// Tencent models that accept punctuation, number conversion and filler filtering (the Mandarin engine and the
     /// Chinese-English large model; the English-only engine does not).
     static let tencentTextModels=["16k_zh","16k_zh_en"]
-    static func defaults(_ engine:ASREngine)->Self {var o=Self();o.punctuation=engine.hasTextSwitches;o.itn=engine.hasTextSwitches;switch engine {case .volcengine:o.model="volc.seedasr.sauc.duration";case .tencent:o.model="16k_zh";case .baidu:o.model="1537";case .deepgram:o.model="nova-3";case .openai,.groq:o.model=BatchTranscription.service(engine)?.defaultModel ?? "";case .compat:o.model=BatchTranscription.compatPresets[0].model;o.baseURL=BatchTranscription.compatPresets[0].baseURL;case .google:o.model=BatchTranscription.service(engine)?.defaultModel ?? "";o.language="zh";case .azure:o.region="eastus";o.language="zh";default:break};return o}
+    static func defaults(_ engine:ASREngine)->Self {var o=Self();o.punctuation=engine.hasTextSwitches;o.itn=engine.hasTextSwitches;switch engine {case .volcengine:o.model="volc.seedasr.sauc.duration";case .tencent:o.model="16k_zh";case .baidu:o.model="1537";case .deepgram:o.model="nova-3";case .openai,.groq:o.model=BatchTranscription.service(engine)?.defaultModel ?? "";case .compat:o.model=BatchTranscription.compatPresets[0].model;o.baseURL=BatchTranscription.compatPresets[0].baseURL;case .google,.assemblyai:o.model=BatchTranscription.service(engine)?.defaultModel ?? "";o.language="zh";case .elevenlabs:o.model=BatchTranscription.service(engine)?.defaultModel ?? "";case .azure:o.region="eastus";o.language="zh";default:break};return o}
     // Decode fields individually so future option additions do not invalidate saved settings.
     enum CodingKeys:String,CodingKey {case consent,model,region,language,punctuation,itn,smoothing,secondPass,hotwords,vocabularyID,correctionTableID,baseURL}
     init() {}

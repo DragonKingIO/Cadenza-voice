@@ -23,7 +23,7 @@ enum ASROptionPolicy {
             guard ["cn-shanghai","cn-beijing","cn-shenzhen"].contains(o.region) else{return L10n.tr("ui.7f2f898f4f79")}
         case .baidu:
             guard ["1537","1737","1637","1837"].contains(o.model),o.vocabularyID.isEmpty || o.model=="1537" && Int(o.vocabularyID).map({$0>0})==true else{return L10n.tr("ui.3a69fc7da08b")}
-        case .openai,.groq,.compat,.google,.azure:
+        case .openai,.groq,.compat,.google,.azure,.assemblyai,.elevenlabs:
             if let problem=BatchTranscription.validate(e,o){return problem}
         default:break
         }
@@ -41,7 +41,7 @@ enum ASROptionPolicy {
     case .apple:return L10n.tr("ui.a556c4a215de")
     case .local:return L10n.tr("local.capability")
     case .deepgram:return L10n.tr("deepgram.capability")
-    case .openai,.groq,.compat,.google,.azure:return L10n.tr("batch.capability")
+    case .openai,.groq,.compat,.google,.azure,.assemblyai,.elevenlabs:return L10n.tr("batch.capability")
     }}
 }
 protocol ASRCredentialWriting:AnyObject {
@@ -113,6 +113,8 @@ final class ASRSettingsController:NSWindowController,NSWindowDelegate {
         case .tencent:url="https://console.cloud.tencent.com/asr"
         case .aliyun:url="https://nls-portal.console.aliyun.com"
         case .baidu:url="https://console.bce.baidu.com/ai/#/ai/speech/overview/index"
+        case .assemblyai:url="https://www.assemblyai.com/dashboard/api-keys"
+        case .elevenlabs:url="https://elevenlabs.io/app/settings/api-keys"
         case .google:url="https://console.cloud.google.com/apis/credentials"
         case .azure:url="https://portal.azure.com/#view/Microsoft_Azure_ProjectOxford/CognitiveServicesHub/~/SpeechServices"
         case .openai:url="https://platform.openai.com/api-keys"

@@ -181,7 +181,7 @@ enum SettingsUIFixtures {
             let socket=Socket(),http=HTTP();http.data=Data((engine == .aliyun ? "{\"Token\":{\"Id\":\"fixture-token\",\"ExpireTime\":4102444800}}":"{\"access_token\":\"fixture-token\",\"expires_in\":3600}").utf8)
             let probe=ProviderConnectionProbe(engine:engine,options:options,credentials:credentials,socketFactory:{socket},http:http);var outcomes:[Bool]=[];probe.start{outcomes.append($0)}
             for _ in 0..<6{probe.synchronizeForTests()}
-            check("\(engine.rawValue) explicit check completes using fake transports",outcomes==[true] && socket.connections==(engine == .baidu || BatchTranscription.service(engine) != nil ? 0:1) && http.calls==([.aliyun,.baidu,.openai,.groq].contains(engine) ? 1:0))
+            check("\(engine.rawValue) explicit check completes using fake transports",outcomes==[true] && socket.connections==(engine == .baidu || BatchTranscription.service(engine) != nil ? 0:1) && http.calls==([.aliyun,.baidu,.openai,.groq,.assemblyai,.elevenlabs].contains(engine) ? 1:0))
             check("\(engine.rawValue) test sends no audio or protocol frame",socket.sends==0)
             socket.failed?();probe.synchronizeForTests();probe.expireForTests()
             check("\(engine.rawValue) late failure cannot change completed result",outcomes==[true])

@@ -197,7 +197,7 @@ struct ProviderConfigSheet:View {
             Picker(L10n.tr("provider.language"),selection:$draft.options.language){
                 ForEach(BatchTranscription.languageChoices(engine),id:\.self){code in Text(code == "multi" ? L10n.tr("batch.language.auto"):Locale(identifier:L10n.language).localizedString(forIdentifier:code) ?? code).tag(code)}
             }
-            Text(L10n.tr(engine == .google ? "google.hint":engine == .azure ? "azure.hint":"batch.languageHint")).font(.callout)
+            Text(L10n.tr(engine == .google ? "google.hint":engine == .azure ? "azure.hint":engine == .assemblyai ? "assemblyai.hint":engine == .elevenlabs ? "elevenlabs.hint":"batch.languageHint")).font(.callout)
             if engine != .azure {TextField(L10n.tr("provider.hotwords"),text:$draft.options.hotwords).help(L10n.tr("batch.hotwords.placeholder"))}
         }
         if engine == .iflytek {
