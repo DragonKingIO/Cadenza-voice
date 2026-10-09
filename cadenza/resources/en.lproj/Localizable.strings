@@ -123,6 +123,9 @@
 "provider.required" = "Required";
 "provider.saved" = "Saved";
 "provider.savedSecret" = "Saved ••••••";
+"provider.sharedSecret" = "In use from text recognition ••••••";
+"ocr.sheet.shared" = "The key is the one you saved for speech recognition with the same company, so there is nothing to enter again. Type a key below only to use a different one here. For Baidu, text recognition must also be switched on for the same application in its console.";
+"ocr.sheet.shared.placeholder" = "In use from speech recognition";
 "provider.secondPass" = "Refine recognition results";
 "provider.smoothing" = "Filter filler words";
 "provider.step.1" = "Open the provider console and sign in or register.";

@@ -662,7 +662,7 @@ enum ScreenshotFixtures {
 
     static func ocrPage(_ c: (String, Bool) -> Void) {
         func makeDraft(_ provider: OCRProvider, _ kc: FakeKeychain, settings: ScreenshotSettings = ScreenshotSettings(), transport: OCRTransport = FakeTransport(), persisted: @escaping (OCRProvider, Bool, Bool, String) -> Void = { _, _, _, _ in }) -> OCRProviderDraft {
-            OCRProviderDraft(provider: provider, settings: settings, has: { kc.items[$0]?.isEmpty == false }, read: { kc.items[$0] },
+            OCRProviderDraft(provider: provider, settings: settings, has: { kc.items[$0]?.isEmpty == false }, read: { kc.items[$0] }, own: { kc.items[$0] },
                              write: { v, k in if kc.failWrites { return false }; kc.items[k] = v; return true }, delete: { kc.items[$0] = nil; return true },
                              persist: { p, consent, accurate, region in persisted(p, consent, accurate, region); return true }, transport: transport)
         }

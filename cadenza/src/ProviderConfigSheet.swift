@@ -15,6 +15,8 @@ final class ProviderSettingsDraft {
     var options:CloudASROptions
     var credentials:[String:String]=[:]
     var saved:Set<String>=[]
+    /// Fields served by the secret saved for text recognition (see `SharedCredentials`), not by one of their own.
+    var shared:Set<String>=[]
     var editing:Set<String>=[]
     var mappings:[MappingDraft]
     var feedback=""
@@ -28,9 +30,10 @@ final class ProviderSettingsDraft {
     private var probe:ProviderConnectionProbe?
     private var testID:UUID?
     private var credentialDeadline:DispatchWorkItem?
-    init(store:ConfigStore,engine:ASREngine,busy:@escaping()->Bool,changed:@escaping()->Void,writer:ASRCredentialWriting=KeychainASRCredentialWriter(),read:@escaping(String)->String?={KeychainStore.get($0)},has:@escaping(String)->Bool={KeychainStore.has($0)}){
+    init(store:ConfigStore,engine:ASREngine,busy:@escaping()->Bool,changed:@escaping()->Void,writer:ASRCredentialWriting=KeychainASRCredentialWriter(),read:@escaping(String)->String?={SharedCredentials.get($0)},has:@escaping(String)->Bool={SharedCredentials.has($0)},own:@escaping(String)->String?={KeychainStore.get($0)}){
         self.store=store;self.engine=engine;recognitionLanguage=store.config.iflytekLanguage;options=store.config.options(engine);mappings=store.config.localASRMappings.map{MappingDraft(source:$0.source,replacement:$0.replacement)};self.busy=busy;self.changed=changed;self.writer=writer;self.read=read;self.has=has
         saved=Set(engine.credentialFields.compactMap{has(engine.rawValue+"."+$0.0) ? $0.0:nil})
+        shared=Set(saved.filter{(own(engine.rawValue+"."+$0) ?? "").isEmpty})
     }
     var complete:Bool{engine.credentialFields.allSatisfy{saved.contains($0.0) || !(credentials[$0.0] ?? "").isEmpty}}
     var canSave:Bool{complete || (store.config.options(engine).consent && !options.consent)}
@@ -49,7 +52,7 @@ final class ProviderSettingsDraft {
         var failures=false
         for (key,_) in engine.credentialFields {
             guard let value=credentials[key],!value.isEmpty else{continue}
-            if writer.set(value,for:engine.rawValue+"."+key){credentials[key]="";saved.insert(key);editing.remove(key)}else{failures=true}
+            if writer.set(value,for:engine.rawValue+"."+key){credentials[key]="";saved.insert(key);shared.remove(key);editing.remove(key)}else{failures=true}
         }
         changed()
         if failures{fail("provider.partial");return false}
@@ -131,7 +134,7 @@ struct ProviderConfigSheet:View {
                     ForEach(engine.credentialFields,id:\.0){key,name in
                         LabeledContent(name){
                             if draft.saved.contains(key) && !draft.editing.contains(key){
-                                HStack{Text(L10n.tr("provider.savedSecret")).foregroundStyle(.secondary);Button(L10n.tr("provider.replace")){draft.editing.insert(key)}.buttonStyle(.bordered)}
+                                HStack{Text(L10n.tr(draft.shared.contains(key) ? "provider.sharedSecret":"provider.savedSecret")).foregroundStyle(.secondary);Button(L10n.tr("provider.replace")){draft.editing.insert(key)}.buttonStyle(.bordered)}
                             } else {
                                 SecureField(L10n.tr(draft.saved.contains(key) ? "provider.replaceHint":"provider.required"),text:Binding(get:{draft.credentials[key] ?? ""},set:{draft.credentials[key]=$0})).textFieldStyle(.roundedBorder).frame(width:270).accessibilityLabel(name)
                             }

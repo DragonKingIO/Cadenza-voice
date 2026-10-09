@@ -123,6 +123,9 @@
 "provider.required" = "必填";
 "provider.saved" = "已保存";
 "provider.savedSecret" = "已保存 ••••••";
+"provider.sharedSecret" = "正在使用文字识别里的密钥 ••••••";
+"ocr.sheet.shared" = "这里用的就是你在语音识别里为同一家公司保存的密钥，不用再填一次。只有想在这里换一个不同的密钥时才需要在下面输入。百度需要在控制台里为同一个应用也开通文字识别。";
+"ocr.sheet.shared.placeholder" = "正在使用语音识别里的密钥";
 "provider.secondPass" = "优化识别结果";
 "provider.smoothing" = "过滤语气词";
 "provider.step.1" = "打开服务商控制台，注册或登录";

@@ -19,10 +19,10 @@ enum ASREngine: String, CaseIterable, Codable {
     case .baidu:return [("apikey","API Key"),("secretkey","Secret Key")]
     case .deepgram:return [("apikey","API Key")]
     } }
-    var configured:Bool {self == .local ? LocalModelCenter.shared.installedEntries.contains{LocalModelCatalog.usable($0)} : credentialFields.allSatisfy{KeychainStore.has(rawValue+"."+$0.0)}}
+    var configured:Bool {self == .local ? LocalModelCenter.shared.installedEntries.contains{LocalModelCatalog.usable($0)} : credentialFields.allSatisfy{SharedCredentials.has(rawValue+"."+$0.0)}}
     func credentials()->[String:String]? {
         var out:[String:String]=[:]
-        for (key,_) in credentialFields { guard let value=KeychainStore.get(rawValue+"."+key),!value.isEmpty else{return nil};out[key]=value }
+        for (key,_) in credentialFields { guard let value=SharedCredentials.get(rawValue+"."+key) else{return nil};out[key]=value }
         return out
     }
 }

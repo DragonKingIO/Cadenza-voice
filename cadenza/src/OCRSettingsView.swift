@@ -11,6 +11,8 @@ final class OCRProviderDraft {
     let provider: OCRProvider
     var values: [String: String] = [:]          // 本次输入的新密钥
     private(set) var saved: Set<String> = []     // 钥匙串里已有的字段
+    /// Fields served by the key saved for speech recognition (see `SharedCredentials`), not by one of their own.
+    private(set) var shared: Set<String> = []
     var consent: Bool
     var accurate: Bool
     var region: String
@@ -18,6 +20,8 @@ final class OCRProviderDraft {
     var isError = false
     var testing = false
 
+    private let has: (String) -> Bool
+    private let own: (String) -> String?
     private let write: (String, String) -> Bool
     private let delete: (String) -> Bool
     private let read: (String) -> String?
@@ -25,17 +29,24 @@ final class OCRProviderDraft {
     private let transport: OCRTransport
 
     init(provider: OCRProvider, settings: ScreenshotSettings,
-         has: (String) -> Bool = { KeychainStore.get($0)?.isEmpty == false },
-         read: @escaping (String) -> String? = { KeychainStore.get($0) },
+         has: @escaping (String) -> Bool = { SharedCredentials.has($0) },
+         read: @escaping (String) -> String? = { SharedCredentials.get($0) },
+         own: @escaping (String) -> String? = { KeychainStore.get($0) },
          write: @escaping (String, String) -> Bool = { KeychainStore.set($0, for: $1) },
          delete: @escaping (String) -> Bool = { KeychainStore.delete($0) },
          persist: @escaping (OCRProvider, Bool, Bool, String) -> Bool,
          transport: OCRTransport = NativeOCRTransport()) {
-        self.provider = provider; self.read = read; self.write = write; self.delete = delete; self.persist = persist; self.transport = transport
+        self.provider = provider; self.has = has; self.own = own; self.read = read; self.write = write; self.delete = delete; self.persist = persist; self.transport = transport
         consent = settings.ocrConsent[provider.rawValue] == true
         accurate = settings.ocrAccurate[provider.rawValue] == true
         region = settings.ocrTencentRegion
+        refreshSaved()
+    }
+
+    /// Which fields have a key, and which of those are served by the speech recognition key rather than one of their own.
+    private func refreshSaved() {
         saved = Set(provider.credentialFields.compactMap { has(OCRProvider.keychainKey(provider, $0.0)) ? $0.0 : nil })
+        shared = Set(saved.filter { (own(OCRProvider.keychainKey(provider, $0)) ?? "").isEmpty })
     }
 
     /// 每个字段要么已保存、要么刚输入了新值
@@ -50,7 +61,7 @@ final class OCRProviderDraft {
         var failed = false
         for (field, _) in provider.credentialFields {
             guard let value = values[field]?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else { continue }
-            if write(value, OCRProvider.keychainKey(provider, field)) { saved.insert(field); values[field] = "" } else { failed = true }
+            if write(value, OCRProvider.keychainKey(provider, field)) { saved.insert(field); shared.remove(field); values[field] = "" } else { failed = true }
         }
         if failed { fail("ocr.sheet.keychainFailed"); return false }
         let cleanRegion = region.trimmingCharacters(in: .whitespaces)
@@ -63,8 +74,8 @@ final class OCRProviderDraft {
     func persistOptionsForTest() -> Bool { persist(provider, consent, accurate, region) }
 
     func clearCredentials() {
-        for (field, _) in provider.credentialFields { _ = delete(OCRProvider.keychainKey(provider, field)) }
-        saved.removeAll(); values.removeAll(); consent = false
+        for (field, _) in provider.credentialFields where !shared.contains(field) { _ = delete(OCRProvider.keychainKey(provider, field)) }
+        values.removeAll(); consent = false; refreshSaved()
         _ = persist(provider, false, accurate, region)
         feedback = L10n.tr("ocr.sheet.cleared"); isError = false
     }
@@ -250,13 +261,14 @@ struct OCRProviderSheet: View {
                 Section {
                     ForEach(draft.provider.credentialFields, id: \.0) { field, labelKey in
                         LabeledContent(L10n.tr(labelKey)) {
-                            SecureField("", text: Binding(get: { draft.values[field] ?? "" }, set: { draft.values[field] = $0 }), prompt: Text(L10n.tr(draft.saved.contains(field) ? "ocr.sheet.saved.placeholder" : "ocr.sheet.enter")))
+                            SecureField("", text: Binding(get: { draft.values[field] ?? "" }, set: { draft.values[field] = $0 }), prompt: Text(L10n.tr(draft.shared.contains(field) ? "ocr.sheet.shared.placeholder" : draft.saved.contains(field) ? "ocr.sheet.saved.placeholder" : "ocr.sheet.enter")))
                                 .textFieldStyle(.roundedBorder).frame(maxWidth: 260)
                         }
                     }
                     if draft.provider == .tencent {
                         LabeledContent(L10n.tr("ocr.field.region")) { TextField("", text: $draft.region, prompt: Text("ap-guangzhou")).textFieldStyle(.roundedBorder).frame(maxWidth: 260) }
                     }
+                    if !draft.shared.isEmpty { Text(L10n.tr("ocr.sheet.shared")).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
                     if draft.provider.supportsAccurate { Toggle(L10n.tr("ocr.sheet.accurate"), isOn: $draft.accurate) }
                 }
                 Section {
@@ -272,7 +284,7 @@ struct OCRProviderSheet: View {
                 Link(destination: ProviderHelp.credentialGuideURL(ocrProvider: draft.provider, language: L10n.language)) {
                     Label(L10n.tr("provider.credentialGuide"), systemImage: "book")
                 }.buttonStyle(.borderless)
-                if !draft.saved.isEmpty { Button(L10n.tr("ocr.sheet.clear"), role: .destructive) { draft.clearCredentials() }.buttonStyle(.borderless) }
+                if !draft.saved.subtracting(draft.shared).isEmpty { Button(L10n.tr("ocr.sheet.clear"), role: .destructive) { draft.clearCredentials() }.buttonStyle(.borderless) }
                 Spacer()
                 if draft.testing { ProgressView().controlSize(.small) }
                 Button(L10n.tr("ocr.sheet.test")) { Task { await draft.test() } }.disabled(draft.testing)
