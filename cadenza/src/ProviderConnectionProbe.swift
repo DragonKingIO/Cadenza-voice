@@ -51,7 +51,7 @@ final class ProviderConnectionProbe {
     }
     /// Batch services have no connection to open; their model list answers 200 for a valid key and sends no audio.
     private func checkKey(){
-        guard let request=BatchTranscription.keyCheckRequest(engine,key:credentials["apikey"] ?? "") else{finish(false);return}
+        guard let request=BatchTranscription.keyCheckRequest(engine,key:credentials["apikey"] ?? "",options:options) else{finish(false);return}
         http.exchange(request){[weak self] result in self?.queue.async{
             guard let self,!self.terminal else{return}
             if case .success(let reply)=result,(200...299).contains(reply.status){self.finish(true)}else{self.finish(false)}

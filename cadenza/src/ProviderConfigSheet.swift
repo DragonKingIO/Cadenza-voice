@@ -150,7 +150,7 @@ struct ProviderConfigSheet:View {
                     }
                 } header:{Text(L10n.tr("provider.credentials"))} footer:{VStack(alignment:.leading,spacing:6){Label(L10n.tr("provider.localKeychain"),systemImage:"lock");Text(L10n.tr("provider.testExplanation"));if !draft.options.consent {Text(L10n.tr("provider.testConsent"))}}.font(.callout).foregroundStyle(.primary)}
                 Section {
-                    Toggle(L10n.format("provider.consent",engine.title),isOn:$draft.options.consent)
+                    Toggle(L10n.format("provider.consent",engine == .compat ? BatchTranscription.destination(engine,draft.options):engine.title),isOn:$draft.options.consent)
                     VStack(alignment:.leading,spacing:8){
                         Text(L10n.tr("provider.privacy.streaming"))
                         Text(L10n.tr("provider.privacy.irrevocable")).fontWeight(.semibold)
@@ -182,8 +182,17 @@ struct ProviderConfigSheet:View {
             }
             Text(L10n.tr("deepgram.languageHint")).font(.callout)
         }
+        if engine == .compat {
+            Picker(L10n.tr("compat.preset"),selection:Binding(get:{BatchTranscription.preset(forBaseURL:draft.options.baseURL)?.id ?? ""},set:{id in if let p=BatchTranscription.compatPresets.first(where:{$0.id==id}){draft.options.baseURL=p.baseURL;draft.options.model=p.model}})){
+                Text(L10n.tr("compat.preset.other")).tag("")
+                ForEach(BatchTranscription.compatPresets){Text($0.title).tag($0.id)}
+            }
+            TextField(L10n.tr("compat.baseURL"),text:$draft.options.baseURL,prompt:Text("https://api.example.com/v1"))
+            TextField(L10n.tr("provider.model"),text:$draft.options.model)
+            Text(L10n.tr("compat.hint")).font(.callout)
+        }
         if let service=BatchTranscription.service(engine) {
-            Picker(L10n.tr("provider.model"),selection:$draft.options.model){ForEach(service.models,id:\.self){Text($0).tag($0)}}
+            if engine != .compat {Picker(L10n.tr("provider.model"),selection:$draft.options.model){ForEach(service.models,id:\.self){Text($0).tag($0)}}}
             Picker(L10n.tr("provider.language"),selection:$draft.options.language){
                 ForEach(BatchTranscription.languages,id:\.self){code in Text(code == "multi" ? L10n.tr("batch.language.auto"):Locale(identifier:L10n.language).localizedString(forIdentifier:code) ?? code).tag(code)}
             }

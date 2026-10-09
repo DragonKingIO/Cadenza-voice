@@ -25,7 +25,7 @@ macOS, Apple, and the speech providers you choose have their own behavior and re
 | Testing provider credentials (you press Test) | A short silent test request | The provider |
 | Local developer API (off by default) | Nothing leaves the Mac: it listens on 127.0.0.1 only. A program or device bridge on this Mac can submit audio; it is handled like a recording (a local model keeps it on the Mac, a cloud engine uploads it to that provider after your consent) | Programs on this Mac holding your owner token or a device token you created |
 
-Cloud providers integrated in this version: iFlytek, Volcengine, Tencent Cloud, Alibaba Cloud, Baidu, Deepgram, OpenAI and Groq. OpenAI and Groq receive the whole recording once you release the key, together with the terms you gave for hot words (as a short list), and nothing else; the key stays in the Keychain. Their names are trademarks of their owners; Cadenza is not affiliated with or endorsed by them.
+Cloud providers integrated in this version: iFlytek, Volcengine, Tencent Cloud, Alibaba Cloud, Baidu, Deepgram, OpenAI and Groq. OpenAI and Groq, and any other OpenAI-compatible service you add by its address, receive the whole recording once you release the key, together with the terms you gave for hot words (as a short list), and nothing else; the key stays in the Keychain. Their names are trademarks of their owners; Cadenza is not affiliated with or endorsed by them.
 
 ## Capture and destinations
 

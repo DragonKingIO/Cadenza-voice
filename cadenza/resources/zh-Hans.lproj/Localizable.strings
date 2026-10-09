@@ -895,6 +895,11 @@
 "provider.console.deepgram" = "打开 Deepgram 控制台";
 "engine.openai" = "OpenAI 语音转文字";
 "engine.groq" = "Groq Whisper";
+"engine.compat" = "其他兼容 OpenAI 的服务";
+"compat.preset" = "服务";
+"compat.preset.other" = "其他地址";
+"compat.baseURL" = "地址";
+"compat.hint" = "任何照搬 OpenAI 语音转文字接口的服务都可以用：填它的地址（以 /v1 结尾）和它提供的模型名。密钥只发给这个地址。本机上的服务可以用 http://localhost；如果它不要密钥，密钥那里随便填一段文字即可。";
 "provider.console.openai" = "打开 OpenAI 密钥页面";
 "provider.console.groq" = "打开 Groq 密钥页面";
 "batch.step.1" = "打开该服务的密钥页面，登录或注册。";

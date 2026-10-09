@@ -95,7 +95,7 @@ class CloudASRRecorder:HoldRecordingSession {
     private func finish(_ text:String){guard gate.take() else{return};transition(.completed);capture.stop();cleanup();whole.removeAll();buffer=ASRPCMQueue(limit:256000);let cb=onFinal;onFinal=nil;onPartial=nil;cb?(text.isEmpty || !capture.hasSignal ? nil:text)}
     private func armDeadline(_ seconds:Double){deadline?.cancel();let current=id;let w=DispatchWorkItem{[weak self] in guard let self=self,self.id==current,!self.gate.terminal else{return};self.fail("识别连接或最终结果等待超时；未提交部分结果")};deadline=w;queue.asyncAfter(deadline:.now()+seconds,execute:w)}
     private func ingest(_ data:Data){guard !gate.terminal,!userEnding else{return};do{
-        if provider.uploadsWholeRecording {guard whole.count+data.count<=provider.wholeRecordingSeconds*32000 else{fail(provider == .baidu ? "百度短语音最多60秒；本次超限未上传，请缩短录音":L10n.format("batch.err.limit",provider.title,String(provider.wholeRecordingSeconds)));return};whole.append(data)}
+        if provider.uploadsWholeRecording {guard whole.count+data.count<=provider.wholeRecordingSeconds*32000 else{fail(provider == .baidu ? "百度短语音最多60秒；本次超限未上传，请缩短录音":L10n.format("batch.err.limit",destinationName,String(provider.wholeRecordingSeconds)));return};whole.append(data)}
         else{try buffer.append(data)}
     }catch{fail("音频发送缓冲已满，请检查连接后重试")}}
     private var cacheKey:String {provider.rawValue+":"+credentials.keys.sorted().map{credentials[$0] ?? ""}.joined(separator:"\u{0}").data(using:.utf8)!.sha256Hex}
@@ -184,15 +184,16 @@ class CloudASRRecorder:HoldRecordingSession {
             guard token.valid() else{throw ASRFailure.tokenInvalid};self.token=token;ASRTokenCache.shared.put(token,key:self.cacheKey);done(token)
         }catch{self.fail("Token获取失败，请核对凭据、服务授权和网络")}}}
     }
+    private var destinationName:String{let n=BatchTranscription.destination(provider,options);return n.isEmpty ? provider.title:n}
     private func uploadTranscription(){guard userEnding,!gate.terminal else{return}
-        guard !whole.isEmpty,whole.count%2==0 else{fail(L10n.format("batch.err.empty",provider.title));return}
+        guard !whole.isEmpty,whole.count%2==0 else{fail(L10n.format("batch.err.empty",destinationName));return}
         guard capture.hasSignal else{gate.streamConfirmed();finish("");return}
         guard let request=BatchTranscription.request(provider,options:options,key:credentials["apikey"] ?? "",pcm:whole) else{fail(L10n.tr("batch.invalidOptions"));return}
         let current=id
         http.exchange(request){[weak self] result in self?.queue.async{guard let self=self,self.id==current,!self.gate.terminal else{return}
-            do{let reply=try result.get();let text=try BatchTranscription.parse(status:reply.status,data:reply.data,engine:self.provider);self.gate.streamConfirmed();self.finish(text)}
+            do{let reply=try result.get();let text=try BatchTranscription.parse(status:reply.status,data:reply.data,engine:self.provider,name:BatchTranscription.destination(self.provider,self.options));self.gate.streamConfirmed();self.finish(text)}
             catch let error as ASRServiceError{self.fail(error.hint)}
-            catch{self.fail(L10n.format("batch.err.network",self.provider.title))}
+            catch{self.fail(L10n.format("batch.err.network",self.destinationName))}
         }}
     }
     private func uploadBaidu(){guard userEnding,!gate.terminal else{return};guard !whole.isEmpty,whole.count<=60*32000,whole.count%2==0 else{fail("百度音频为空或超出60秒限制");return}

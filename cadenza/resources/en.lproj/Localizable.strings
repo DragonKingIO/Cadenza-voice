@@ -895,6 +895,11 @@
 "provider.console.deepgram" = "Open the Deepgram Console";
 "engine.openai" = "OpenAI Speech to Text";
 "engine.groq" = "Groq Whisper";
+"engine.compat" = "Other OpenAI-compatible service";
+"compat.preset" = "Service";
+"compat.preset.other" = "Another address";
+"compat.baseURL" = "Address";
+"compat.hint" = "Any service that copies the OpenAI speech-to-text API works: type its address (ending in /v1) and the model it offers. The key is sent only to that address. A server on this Mac may use http://localhost; if it needs no key, type any text as the key.";
 "provider.console.openai" = "Open the OpenAI API keys page";
 "provider.console.groq" = "Open the Groq keys page";
 "batch.step.1" = "Open the keys page of the service and sign in or register.";

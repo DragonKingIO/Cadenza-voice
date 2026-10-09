@@ -23,7 +23,7 @@ enum ASROptionPolicy {
             guard ["cn-shanghai","cn-beijing","cn-shenzhen"].contains(o.region) else{return L10n.tr("ui.7f2f898f4f79")}
         case .baidu:
             guard ["1537","1737","1637","1837"].contains(o.model),o.vocabularyID.isEmpty || o.model=="1537" && Int(o.vocabularyID).map({$0>0})==true else{return L10n.tr("ui.3a69fc7da08b")}
-        case .openai,.groq:
+        case .openai,.groq,.compat:
             if let problem=BatchTranscription.validate(e,o){return problem}
         default:break
         }
@@ -41,7 +41,7 @@ enum ASROptionPolicy {
     case .apple:return L10n.tr("ui.a556c4a215de")
     case .local:return L10n.tr("local.capability")
     case .deepgram:return L10n.tr("deepgram.capability")
-    case .openai,.groq:return L10n.tr("batch.capability")
+    case .openai,.groq,.compat:return L10n.tr("batch.capability")
     }}
 }
 protocol ASRCredentialWriting:AnyObject {
@@ -115,7 +115,7 @@ final class ASRSettingsController:NSWindowController,NSWindowDelegate {
         case .baidu:url="https://console.bce.baidu.com/ai/#/ai/speech/overview/index"
         case .openai:url="https://platform.openai.com/api-keys"
         case .groq:url="https://console.groq.com/keys"
-        case .apple,.local:return
+        case .apple,.local,.compat:return
         }
         guard let u=URL(string:url),u.scheme=="https",let host=u.host,!host.isEmpty,host.contains(".") else{return}
         NSWorkspace.shared.open(u)

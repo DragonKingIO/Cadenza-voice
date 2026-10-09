@@ -26,7 +26,7 @@ enum BatchTranscriptionFixtures {
         c("engines: OpenAI and Groq are listed, upload the whole recording and keep no Chinese-service switches",
           ASREngine.allCases.contains(.openai) && ASREngine.allCases.contains(.groq) && ASREngine.openai.uploadsWholeRecording && ASREngine.groq.uploadsWholeRecording
           && !ASREngine.openai.hasTextSwitches && ASREngine.tencent.hasTextSwitches && !ASREngine.tencent.uploadsWholeRecording)
-        c("engines: default models are ones the service offers", ASREngine.allCases.filter { BatchTranscription.service($0) != nil }.allSatisfy { e in BatchTranscription.service(e)!.models.contains(CloudASROptions.defaults(e).model) })
+        c("engines: default models are ones the service offers", ASREngine.allCases.filter { BatchTranscription.service($0) != nil && $0 != .compat }.allSatisfy { e in BatchTranscription.service(e)!.models.contains(CloudASROptions.defaults(e).model) })
         c("engines: one API key is the only credential", ASREngine.openai.credentialFields.map(\.0) == ["apikey"] && ASREngine.groq.credentialFields.map(\.0) == ["apikey"])
 
         // Options
@@ -63,6 +63,33 @@ enum BatchTranscriptionFixtures {
           && BatchTranscription.request(.tencent, options: options(.tencent), key: "k", pcm: pcm) == nil)
         c("key check: a model-list request with the key and no audio", BatchTranscription.keyCheckRequest(.openai, key: "k")?.url?.path == "/v1/models" && BatchTranscription.keyCheckRequest(.openai, key: "k")?.httpBody == nil && BatchTranscription.keyCheckRequest(.openai, key: "") == nil)
 
+        // A service of the person's own
+        func custom(_ base: String, _ model: String = "m-1") -> CloudASROptions { options(.compat) { $0.baseURL = base; $0.model = model } }
+        c("compat: listed, takes the whole recording, not in the old window's list", ASREngine.allCases.contains(.compat) && ASREngine.compat.uploadsWholeRecording && !ASREngine.legacyListed.contains(.compat))
+        c("compat: the default is the first preset and is valid", BatchTranscription.validate(.compat, options(.compat)) == nil && options(.compat).baseURL == BatchTranscription.compatPresets[0].baseURL)
+        c("compat: every preset is valid and recognized by its address", BatchTranscription.compatPresets.allSatisfy { p in BatchTranscription.validate(.compat, custom(p.baseURL, p.model)) == nil && BatchTranscription.preset(forBaseURL: p.baseURL)?.id == p.id } && BatchTranscription.preset(forBaseURL: "https://example.com/v1") == nil)
+        c("compat: the address gets the transcription path, with or without a trailing slash or the path itself",
+          BatchTranscription.endpointURL(.compat, custom("https://api.example.com/v1"))?.absoluteString == "https://api.example.com/v1/audio/transcriptions"
+          && BatchTranscription.endpointURL(.compat, custom("https://api.example.com/v1/"))?.absoluteString == "https://api.example.com/v1/audio/transcriptions"
+          && BatchTranscription.endpointURL(.compat, custom("https://api.example.com/v1/audio/transcriptions"))?.absoluteString == "https://api.example.com/v1/audio/transcriptions"
+          && BatchTranscription.modelsURL(.compat, custom("https://api.example.com/v1"))?.absoluteString == "https://api.example.com/v1/models")
+        c("compat: http is for this Mac only; credentials, queries and other schemes are refused",
+          BatchTranscription.validate(.compat, custom("http://localhost:8000/v1")) == nil && BatchTranscription.validate(.compat, custom("http://192.168.1.5:8000/v1")) != nil
+          && BatchTranscription.validate(.compat, custom("https://user:pw@api.example.com/v1")) != nil && BatchTranscription.validate(.compat, custom("https://api.example.com/v1?key=1")) != nil
+          && BatchTranscription.validate(.compat, custom("ftp://api.example.com/v1")) != nil && BatchTranscription.validate(.compat, custom("")) != nil)
+        c("compat: a model name is a short plain word, not empty and not with spaces", BatchTranscription.validate(.compat, custom("https://a.example.com/v1", "")) != nil && BatchTranscription.validate(.compat, custom("https://a.example.com/v1", "two words")) != nil && BatchTranscription.validate(.compat, custom("https://a.example.com/v1", "org/model-v3.1")) == nil)
+        let cr = BatchTranscription.request(.compat, options: custom("https://api.example.com/v1", "org/model"), key: "k", pcm: pcm, boundary: "B")
+        c("compat: the request goes to that address with that model, and the key only in the header", cr?.url?.host == "api.example.com" && body(cr).contains("name=\"model\"\r\n\r\norg/model") && !body(cr).contains("name=\"k\"") && cr?.value(forHTTPHeaderField: "Authorization") == "Bearer k")
+        c("compat: the destination named to the person is the host, the key check asks that host's model list", BatchTranscription.destination(.compat, custom("https://api.example.com/v1")) == "api.example.com" && BatchTranscription.keyCheckRequest(.compat, key: "k", options: custom("https://api.example.com/v1"))?.url?.path == "/v1/models")
+        let oldFile = try? JSONDecoder().decode(CloudASROptions.self, from: Data("{\"consent\":true,\"model\":\"nova-3\"}".utf8))
+        c("compat: saved settings from before have no address and still load", oldFile?.baseURL == "" && oldFile?.consent == true)
+        let again = try? JSONDecoder().decode(CloudASROptions.self, from: JSONEncoder().encode(custom("https://api.example.com/v1")))
+        c("compat: the address survives saving", again?.baseURL == "https://api.example.com/v1")
+        let named = FakeHTTP([(401, Data("{}".utf8))])
+        let namedResult = CloudClipTranscriber.transcribe([Float](repeating: 0.2, count: 16000), provider: .compat, options: custom("https://api.example.com/v1"), credentials: ["apikey": "k"], language: "zh_cn", speed: 100, timeout: 5,
+                                                          makeRecorder: { CloudASRRecorder(provider: .compat, options: custom("https://api.example.com/v1"), credentials: ["apikey": "k"], capture: $0, http: named) })
+        if case .failed(let why) = namedResult { c("compat: a rejected key names the host, not a brand", why.contains("api.example.com") && named.requests.first?.url?.host == "api.example.com") } else { c("compat: a rejected key names the host, not a brand", false) }
+
         // The answer
         func parsed(_ status: Int, _ json: String, _ engine: ASREngine = .openai) -> Result<String, Error> { Result { try BatchTranscription.parse(status: status, data: Data(json.utf8), engine: engine) } }
         func hint(_ status: Int, _ json: String) -> String { if case .failure(let e) = parsed(status, json), let s = e as? ASRServiceError { return s.hint }; return "" }
@@ -96,5 +123,19 @@ enum BatchTranscriptionFixtures {
         c("vocabulary: the terms join the hint for OpenAI and stay within its length", withVocab.hotwords == "Cadenza\nKubernetes" && BatchTranscription.prompt(withVocab.hotwords) == "Cadenza, Kubernetes")
         vocab.sendToCloud = false
         c("vocabulary: nothing is added unless the person allowed sending it", VocabularyHotwords.apply(.openai, to: options(.openai), settings: vocab, store: store).hotwords == "")
+    }
+
+    /// `--selftest-batch-real`: one second of a tone through the real network path to a server of your own
+    /// (CADENZA_BATCH_BASE, e.g. http://127.0.0.1:8765/v1; CADENZA_BATCH_MODEL, CADENZA_BATCH_KEY). Prints what the server answered.
+    static func real() -> Int32 {
+        let env = ProcessInfo.processInfo.environment
+        var o = CloudASROptions.defaults(.compat); o.consent = true
+        o.baseURL = env["CADENZA_BATCH_BASE"] ?? "http://127.0.0.1:8765/v1"; o.model = env["CADENZA_BATCH_MODEL"] ?? "fixture-model"; o.language = "zh"; o.hotwords = "Cadenza\nGitHub"
+        let key = env["CADENZA_BATCH_KEY"] ?? "fixture-key"
+        let tone = (0..<16000).map { Float(sin(Double($0) * 2 * .pi * 440 / 16000)) * 0.3 }
+        let result = CloudClipTranscriber.transcribe(tone, provider: .compat, options: o, credentials: ["apikey": key], language: "zh_cn", speed: 100, timeout: 20)
+        print("[batch-real] \(result)")
+        if case .text(let t) = result, !t.isEmpty { return 0 }
+        return 1
     }
 }
