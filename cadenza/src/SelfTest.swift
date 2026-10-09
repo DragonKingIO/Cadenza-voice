@@ -29,7 +29,7 @@ enum SelfTest {
         ScreenshotFixtures.run(check)
         SharedCredentialsFixtures.run(check)
         BatchTranscriptionFixtures.run(check)
-        AIVisionOCRFixtures.run(check)
+        CloudOCRMoreFixtures.run(check)
         LocalAPIFixtures.run(check)
         LocalAPIAudioFixtures.run(check)
         CharacterFixtures.run(check)
