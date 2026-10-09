@@ -101,6 +101,29 @@ struct BridgeConfig: Codable {
     var holdShortcutEnabled = true
     var toggleShortcutEnabled = false
     var toggleTrigger: HotkeySpec? = nil
+    /// The tap shortcut is on only when it is set and switched on.
+    var toggleActive: Bool { toggleShortcutEnabled && toggleTrigger != nil }
+    /// At least one way of starting dictation by key is on.
+    var anyShortcutOn: Bool { holdShortcutEnabled || toggleActive }
+    /// Wording only: tap when that is the only shortcut on, hold otherwise. Both shortcuts work at the same time.
+    var primaryIsToggle: Bool { toggleActive && !holdShortcutEnabled }
+    /// Keeps the older `inputMode` field in step with the two shortcut switches.
+    mutating func syncInputMode() { inputMode = primaryIsToggle ? "toggle" : "hold" }
+    /// The configuration after the person sets, switches or clears one of the two shortcuts ("hold" or "toggle"). A shortcut that was
+    /// just set is switched on: there is no separate mode to pick afterwards.
+    func settingShortcut(mode: String, candidate: HotkeySpec?, enabled: Bool?) -> BridgeConfig {
+        var c = self
+        if mode == "toggle" {
+            c.toggleTrigger = candidate
+            if candidate == nil { c.toggleShortcutEnabled = enabled ?? false } else { c.toggleShortcutEnabled = enabled ?? true }
+        } else {
+            if let candidate { c.trigger = candidate }
+            if let enabled { c.holdShortcutEnabled = enabled } else if candidate != nil { c.holdShortcutEnabled = true }
+            c.triggerConsume = false
+        }
+        c.syncInputMode()
+        return c
+    }
     var enabled: Bool
     var mode: String
     var trigger: HotkeySpec

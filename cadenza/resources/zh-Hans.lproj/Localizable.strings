@@ -153,7 +153,7 @@
 "ready.unavailable" = "当前语言的系统识别不可用，请检查语言或云端授权";
 "settings.current" = "当前配置";
 "shortcut.conflict" = "与其他快捷键冲突。";
-"shortcut.explain" = "按住说话：松开结束。点按切换：点一下开始，再点一下结束。";
+"shortcut.explain" = "两种开始方式可以只用一种，也可以同时用。用上面的开关可以一次关闭所有快捷键。";
 "shortcut.leftOption" = "左 Option";
 "shortcut.noToggle" = "点按切换模式下，可单独设置一个快捷键。";
 "shortcut.notSet" = "未设置";
@@ -770,6 +770,17 @@
 /* Settings detail polish */
 "shortcut.change" = "更换…";
 "shortcut.set" = "设置…";
+"shortcut.hold" = "按住说话";
+"shortcut.tap" = "点按开始和结束";
+"shortcut.remove" = "移除";
+"shortcut.hold.hint" = "按住说话：按住按键说话，松开就结束。";
+"shortcut.tap.hint" = "点按开始和结束：按一下开始，再按一下结束。在这里设置一个按键就会开启它。";
+"shortcut.summary.hold" = "按住 %@";
+"shortcut.summary.tap" = "点按 %@";
+"shortcut.summary.none" = "没有开启任何快捷键";
+"ready.both" = "就绪 · 按住 %@ 说话，或点按 %@ 开始和结束";
+"trial.empty.both" = "按住 %@ 说一句话试试，或点按 %@，说完再点按一次结束。";
+"menu.ready.both" = "就绪 — 按住 %@，或点按 %@ 开始和结束";
 "shortcut.optionAdvice" = "Option 也用于输入符号和组合键。为减少误触，建议改用组合快捷键。";
 "provider.console.iflytek" = "打开讯飞开放平台控制台";
 "provider.console.volcengine" = "打开火山引擎控制台";

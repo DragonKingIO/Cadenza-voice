@@ -7,6 +7,9 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
+### Changed
+- **Two shortcuts, no "trigger mode" to pick.** Settings → Shortcuts used to have a Hold / Tap switch on top of two shortcut rows, and choosing Tap before a tap shortcut was set silently went back to Hold, which looked like the click did nothing. Now there are two rows, *Hold to talk* and *Tap to start and stop*, each with its own switch and key; setting a key turns it on, Remove clears it, and both can work at the same time. The menu bar's "Trigger Method" submenu is gone for the same reason, and its header names every shortcut that is on. Existing settings carry over: a tap shortcut that was on and a hold shortcut that was off stays that way.
+
 ### Compatibility
 - CI now runs the package on Apple silicon with macOS 14, 15 and 26 and on Intel with macOS 15 and 26, so the claims about Intel and older systems are checked on real systems at every change. That run found that Vision's QR code detector finds nothing on macOS 14 in that environment; QR codes now fall back to Core Image's detector when Vision finds none.
 

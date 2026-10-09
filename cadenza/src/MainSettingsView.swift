@@ -74,6 +74,10 @@ final class SettingsModel {
     var holdBinding = ""
     var toggleBinding = ""
     var inputModeIndex = 0
+    /// The two shortcuts are independent: either, both or neither can be on.
+    var holdShortcutOn = true
+    var toggleShortcutOn = false
+    var shortcutsMaster = true
     let previewReadOnly=CommandLine.arguments.contains(where:{$0.hasPrefix("--preview-brand-page=")})
     var configuring: ASREngine?
     var onSettingsChanged: (() -> Void)?
@@ -133,7 +137,10 @@ final class SettingsModel {
         consent = cfg.options(engine).consent
         credentialsConfigured = engine.configured
         languageIndex = cfg.iflytekLanguage == "en_us" ? 1 : (cfg.iflytekLanguage == "auto" ? 2 : 0)
-        inputModeIndex = cfg.inputMode == "toggle" ? 1 : 0
+        inputModeIndex = cfg.primaryIsToggle ? 1 : 0
+        holdShortcutOn = cfg.holdShortcutEnabled
+        toggleShortcutOn = cfg.toggleActive
+        shortcutsMaster = cfg.enabled
         holdBinding = HotkeySpecDisplay.string(cfg.trigger)
         toggleBinding = cfg.toggleTrigger.map { HotkeySpecDisplay.string($0) } ?? L10n.tr("ui.2f5f1d6fbfb0")
         let t = pipeline?.lastTranscript ?? ""
@@ -155,7 +162,7 @@ final class SettingsModel {
         ocrBinding = cfg.screenshot.ocrTrigger.map { HotkeySpecDisplay.string($0) } ?? ""
         let recognizer = SFSpeechRecognizer(locale:Locale(identifier:cfg.recognitionLocale))
         engineAvailable = (engine != .apple || (recognizer?.isAvailable == true && (cfg.allowCloudRecognition || recognizer?.supportsOnDeviceRecognition == true))) && (engine != .local || LocalTranscriberLoader.supported)
-        shortcutEnabled = cfg.enabled && (cfg.inputMode == "toggle" ? cfg.toggleShortcutEnabled && cfg.toggleTrigger != nil : cfg.holdShortcutEnabled)
+        shortcutEnabled = cfg.enabled && cfg.anyShortcutOn
         toggleAvailable = cfg.toggleTrigger != nil
     }
 
@@ -289,10 +296,25 @@ final class SettingsModel {
         }; store?.save(); sync()
     }
     func setAllowCloud(_ on: Bool) { _ = store?.mutate { $0.allowCloudRecognition = on }; store?.save(); sync() }
-    func setInputMode(_ i: Int) {
-        guard i == 0 || toggleAvailable else{sync();return}
-        persist{$0.inputMode = i == 1 ? "toggle":"hold";$0.holdShortcutEnabled = i == 0;$0.toggleShortcutEnabled = i == 1}
+    /// "Hold ⌥ · Tap ⌃⌥D": what is on, in words for the summary.
+    var shortcutSummary: String {
+        var parts: [String] = []
+        if holdShortcutOn { parts.append(L10n.format("shortcut.summary.hold", holdBinding)) }
+        if toggleShortcutOn { parts.append(L10n.format("shortcut.summary.tap", toggleBinding)) }
+        return parts.isEmpty ? L10n.tr("shortcut.summary.none") : parts.joined(separator: " · ")
     }
+    var readyText: String {
+        if holdShortcutOn && toggleShortcutOn { return L10n.format("ready.both", holdBinding, toggleBinding) }
+        return L10n.format(toggleShortcutOn && !holdShortcutOn ? "ready.toggle" : "ready.hold", toggleShortcutOn && !holdShortcutOn ? toggleBinding : holdBinding)
+    }
+    var trialHint: String {
+        if holdShortcutOn && toggleShortcutOn { return L10n.format("trial.empty.both", holdBinding, toggleBinding) }
+        return L10n.format(toggleShortcutOn && !holdShortcutOn ? "trial.empty.toggle" : "trial.empty.hold", toggleShortcutOn && !holdShortcutOn ? toggleBinding : holdBinding)
+    }
+    func setHoldShortcut(_ on: Bool) { persist { $0.holdShortcutEnabled = on; $0.syncInputMode() } }
+    func setToggleShortcut(_ on: Bool) { persist { $0.toggleShortcutEnabled = on && $0.toggleTrigger != nil; $0.syncInputMode() } }
+    /// Takes the tap shortcut away; setting one again (the Set button) turns it back on.
+    func removeToggleShortcut() { persist { $0.toggleTrigger = nil; $0.toggleShortcutEnabled = false; $0.syncInputMode() } }
     func copy() {
         guard !previewReadOnly,let t = pipeline?.lastTranscript, !t.isEmpty else { return }
         NSPasteboard.general.clearContents(); NSPasteboard.general.setString(t, forType: .string)
@@ -457,8 +479,7 @@ struct VoiceInputPage: View {
             }
             Section {
                 SummaryRow(title:L10n.tr("ui.8545bbfc5af9"),value:model.primaryModelName){model.scope = model.engineScope;model.tab = .engines}
-                SummaryRow(title:L10n.tr("ui.3c7b79b73494"),value:model.inputModeIndex == 1 ? L10n.tr("ui.c3c686d13dc5"):L10n.tr("ui.e4947a64758a")){model.tab = .shortcuts}
-                SummaryRow(title:L10n.tr("ui.ee2638183d3e"),value:model.inputModeIndex == 1 ? model.toggleBinding:model.holdBinding){model.tab = .shortcuts}
+                SummaryRow(title:L10n.tr("ui.ee2638183d3e"),value:model.shortcutSummary){model.tab = .shortcuts}
             } header:{Text(L10n.tr("settings.current"))}
             TextPolishSection(model:model)
             TextRefineSection(model:model)
@@ -504,7 +525,7 @@ struct ReadinessBanner:View {
     var body:some View {
         HStack(alignment:.top,spacing:12){
             Image(systemName:issue == .ready ? "checkmark.circle.fill":"exclamationmark.triangle.fill").foregroundStyle(issue == .ready ? Color(nsColor:DesignTokens.accent):.orange)
-            Text(issue == .ready ? L10n.format(model.inputModeIndex == 1 ? "ready.toggle":"ready.hold",model.inputModeIndex == 1 ? model.toggleBinding:model.holdBinding):L10n.tr("ready."+issue.rawValue)).frame(maxWidth:.infinity,alignment:.leading)
+            Text(issue == .ready ? model.readyText:L10n.tr("ready."+issue.rawValue)).frame(maxWidth:.infinity,alignment:.leading)
             if issue != .ready {Button(L10n.tr("ready.action")){model.tab=issue == .credentials || issue == .consent || issue == .unavailable ? .engines:issue == .shortcut ? .shortcuts:.privacy}.buttonStyle(.bordered)}
         }
         .accessibilityElement(children:.combine)
@@ -538,7 +559,7 @@ struct TryCard: View {
 
     var hint: some View {
         HStack(spacing: 6) {
-            Text(L10n.format(model.inputModeIndex == 1 ? "trial.empty.toggle":"trial.empty.hold",model.inputModeIndex == 1 ? model.toggleBinding:model.holdBinding)).foregroundStyle(.secondary).font(.callout)
+            Text(model.trialHint).foregroundStyle(.secondary).font(.callout)
         }
     }
 
@@ -764,16 +785,31 @@ struct ShortcutsView:View {
     var body:some View {
         SettingsPage {
             Section {
-                Toggle(L10n.tr("shortcut.enabled"),isOn:Binding(get:{model.shortcutEnabled},set:{value in model.persist{$0.enabled=value;$0.holdShortcutEnabled=value && $0.inputMode == "hold";$0.toggleShortcutEnabled=value && $0.inputMode == "toggle"}}))
-                Picker(L10n.tr("ui.3c7b79b73494"),selection:Binding(get:{model.inputModeIndex},set:{model.setInputMode($0)})){
-                    Text(L10n.tr("ui.e4947a64758a")).tag(0)
-                    Text(L10n.tr("ui.c3c686d13dc5")).tag(1).disabled(!model.toggleAvailable)
-                }.pickerStyle(.segmented)
+                Toggle(L10n.tr("shortcut.enabled"),isOn:Binding(get:{model.shortcutsMaster},set:{value in model.persist{$0.enabled=value}}))
             } footer:{Text(L10n.tr("shortcut.explain")).font(.callout).foregroundStyle(.primary)}
             Section {
-                LabeledContent(L10n.tr("ui.e4947a64758a")){HStack{Text(model.holdBinding);Button(L10n.tr("shortcut.change")){model.onEditShortcut?("hold")}.buttonStyle(.bordered).disabled(model.listening || model.recognizing)}}
-                LabeledContent(L10n.tr("ui.c3c686d13dc5")){HStack{if model.toggleAvailable {Text(model.toggleBinding)};Button(L10n.tr(model.toggleAvailable ? "shortcut.change":"shortcut.set")){model.onEditShortcut?("toggle")}.buttonStyle(.bordered).disabled(model.listening || model.recognizing)}}
-            } header:{Text(L10n.tr("ui.ee2638183d3e"))} footer:{Text(L10n.tr("shortcut.optionAdvice")).font(.callout).foregroundStyle(.primary)}
+                LabeledContent(L10n.tr("shortcut.hold")){
+                    HStack{
+                        Toggle("",isOn:Binding(get:{model.holdShortcutOn},set:{model.setHoldShortcut($0)})).labelsHidden().accessibilityLabel(L10n.tr("shortcut.hold"))
+                        Text(model.holdBinding).foregroundStyle(model.holdShortcutOn ? .primary:.secondary)
+                        Button(L10n.tr("shortcut.change")){model.onEditShortcut?("hold")}.buttonStyle(.bordered).disabled(model.listening || model.recognizing)
+                    }
+                }
+                LabeledContent(L10n.tr("shortcut.tap")){
+                    HStack{
+                        if model.toggleAvailable {Toggle("",isOn:Binding(get:{model.toggleShortcutOn},set:{model.setToggleShortcut($0)})).labelsHidden().accessibilityLabel(L10n.tr("shortcut.tap"))}
+                        Text(model.toggleAvailable ? model.toggleBinding:L10n.tr("ui.2f5f1d6fbfb0")).foregroundStyle(model.toggleShortcutOn ? .primary:.secondary)
+                        Button(L10n.tr(model.toggleAvailable ? "shortcut.change":"shortcut.set")){model.onEditShortcut?("toggle")}.buttonStyle(.bordered).disabled(model.listening || model.recognizing)
+                        if model.toggleAvailable {Button(L10n.tr("shortcut.remove")){model.removeToggleShortcut()}.buttonStyle(.borderless).disabled(model.listening || model.recognizing)}
+                    }
+                }
+            } header:{Text(L10n.tr("ui.ee2638183d3e"))} footer:{
+                VStack(alignment:.leading,spacing:6){
+                    Text(L10n.tr("shortcut.hold.hint"))
+                    Text(L10n.tr("shortcut.tap.hint"))
+                    Text(L10n.tr("shortcut.optionAdvice"))
+                }.font(.callout).foregroundStyle(.primary)
+            }
             ScreenshotShortcutSection(model:model)
         }
     }

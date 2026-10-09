@@ -23,7 +23,7 @@ enum StatusMenuFixtures {
             check("\(state) status uses readable colored text",entry("status")?.attributedTitle != nil)
             check("\(state) settings and quit shortcuts",entry("settings")?.keyEquivalent=="," && entry("quit")?.keyEquivalent=="q" && entry("settings")?.keyEquivalentModifierMask == .command)
             check("\(state) copy protects empty or active results",entry("copy")?.isEnabled == !s.busy)
-            check("\(state) busy blocks config and pause",entry("mode")?.submenu?.items.first?.isEnabled == !s.busy && entry("pause")?.isEnabled == !s.busy)
+            check("\(state) busy blocks config and pause",entry("engine")?.submenu?.items.first?.isEnabled == !s.busy && entry("pause")?.isEnabled == !s.busy)
             check("\(state) current values are native subtitles",entry("engine")?.subtitleText==L10n.tr("engine.iflytek") && entry("mic")?.subtitleText==L10n.tr("ui.04b77083689b"))
             check("\(state) unconfigured engine disabled",entry("engine")?.submenu?.items[2].isEnabled==false)
             check("\(state) symbol respects template color",StatusMenuController.image(s)?.isTemplate==s.template)
@@ -48,7 +48,16 @@ enum StatusMenuFixtures {
         check("menu tests leave new coordinator disabled",!store.config.triggerCoordinatorEnabled)
         var s=snapshot("idle");s.toggleAvailable=false;s.hasResult=false
         StatusMenuController.rebuild(menu,s:s,target:target)
-        check("no toggle binding disables toggle selection",entry("mode")?.submenu?.items[1].isEnabled==false)
+        check("the menu no longer has a trigger-mode picker that could silently fall back",entry("mode")==nil)
+        var h=StatusMenuSnapshot();h.phase = .idle
+        h.shortcut="左 Option";h.toggleShortcut=""
+        check("header: only the hold shortcut on",h.header==L10n.format("menu.ready.hold","左 Option"))
+        h.shortcut="";h.toggleShortcut="⌃⌥D"
+        check("header: only the tap shortcut on",h.header==L10n.format("menu.ready.toggle","⌃⌥D"))
+        h.shortcut="左 Option";h.toggleShortcut="⌃⌥D"
+        check("header: both shortcuts on name both",h.header==L10n.format("menu.ready.both","左 Option","⌃⌥D"))
+        h.shortcut="";h.toggleShortcut=""
+        check("header: no shortcut on points to the menu",h.header==L10n.tr("menu.ready.manual"))
         check("empty result disables copy",entry("copy")?.isEnabled==false)
         s.microphone="fixture-mic";s.microphones.removeLast();s.microphones.append(.init(title:L10n.tr("menu.disconnected"),value:"fixture-mic",available:false))
         StatusMenuController.rebuild(menu,s:s,target:target)
