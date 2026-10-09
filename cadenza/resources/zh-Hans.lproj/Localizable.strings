@@ -896,6 +896,12 @@
 "engine.openai" = "OpenAI 语音转文字";
 "engine.groq" = "Groq Whisper";
 "engine.compat" = "其他兼容 OpenAI 的服务";
+"engine.google" = "Google Cloud 语音转文字";
+"engine.azure" = "微软 Azure 语音";
+"azure.place" = "区域或地址";
+"azure.hint" = "填语音资源的密钥和它的区域（例如 eastus），在 Azure 门户的“密钥和终结点”里能找到。区域也可以换成资源的地址（https://名称.cognitiveservices.azure.com）。Azure 每段录音只用一种语言，请选你说的语言。这个服务不支持词语列表。";
+"google.hint" = "在 Google Cloud 控制台（API 和服务 → 凭据）创建 API 密钥，并为该项目启用 Cloud Speech-to-Text API。如果也启用了 Vision API，同一个密钥还能用于文字识别。Google 每段录音只用一种语言，请选你说的语言。录音最长一分钟。";
+"batch.err.googleDenied" = "%@ 拒绝了请求。请为这个密钥所在的项目启用 Cloud Speech-to-Text API，并检查密钥的限制。";
 "compat.preset" = "服务";
 "compat.preset.other" = "其他地址";
 "compat.baseURL" = "地址";

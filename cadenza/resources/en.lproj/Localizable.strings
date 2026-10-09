@@ -896,6 +896,12 @@
 "engine.openai" = "OpenAI Speech to Text";
 "engine.groq" = "Groq Whisper";
 "engine.compat" = "Other OpenAI-compatible service";
+"engine.google" = "Google Cloud Speech-to-Text";
+"engine.azure" = "Microsoft Azure Speech";
+"azure.place" = "Region or address";
+"azure.hint" = "Use the key of a Speech resource and its region (for example eastus) from the Azure portal, under Keys and Endpoint. Instead of the region you can paste the address of the resource (https://NAME.cognitiveservices.azure.com). Azure takes one language per recording; choose the language you speak. This service does not take a list of terms.";
+"google.hint" = "Create an API key in the Google Cloud console (APIs and services, Credentials) and turn on the Cloud Speech-to-Text API for that project. The same key also serves text recognition if the Vision API is on. Google takes one language per recording; choose the language you speak. Recordings can be up to a minute.";
+"batch.err.googleDenied" = "%@ refused the request. Turn on the Cloud Speech-to-Text API for the project of this key, and check the key's restrictions.";
 "compat.preset" = "Service";
 "compat.preset.other" = "Another address";
 "compat.baseURL" = "Address";

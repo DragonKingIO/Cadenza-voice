@@ -41,7 +41,7 @@ enum ASREntryFixtures {
         for engine in ASREngine.legacyListed where engine != .apple {
             selector.selectItem(at:ASREngine.legacyListed.firstIndex(of:engine)!);_=action(selector)
             main.show(page:1)
-            check("ASR entry \(engine.rawValue) dynamic visible entry matches provider",!entry.isHidden && entry.isEnabled && entry.title.contains(L10n.tr(engine == .iflytek ? "ui.daf29ef7cb93":engine == .volcengine ? "ui.746f101ac011":engine == .tencent ? "ui.42ad801d45fd":engine == .aliyun ? "ui.7c0e5b76f059":engine == .deepgram ? "engine.deepgram":engine == .openai ? "engine.openai":engine == .groq ? "engine.groq":"ui.a33d5a21ef34")))
+            check("ASR entry \(engine.rawValue) dynamic visible entry matches provider",!entry.isHidden && entry.isEnabled && entry.title.contains(L10n.tr(engine == .iflytek ? "ui.daf29ef7cb93":engine == .volcengine ? "ui.746f101ac011":engine == .tencent ? "ui.42ad801d45fd":engine == .aliyun ? "ui.7c0e5b76f059":engine == .deepgram ? "engine.deepgram":engine == .openai ? "engine.openai":engine == .groq ? "engine.groq":engine == .google ? "engine.google":"ui.a33d5a21ef34")))
             check("ASR entry \(engine.rawValue) language reflects real provider",engine == .iflytek ? language.isHidden:!language.isHidden && !language.stringValue.isEmpty && !language.stringValue.contains("中文（普通话）"))
             if live {
                 buttonReveal(entry)

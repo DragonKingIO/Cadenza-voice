@@ -12,7 +12,7 @@ final class ProviderConnectionProbe {
         self.engine=engine;self.options=options;self.credentials=credentials;self.socketFactory=socketFactory;self.http=http
     }
     static func consoleURL(_ engine:ASREngine)->URL? {
-        let addresses:[ASREngine:String]=[.deepgram:"https://console.deepgram.com",.iflytek:"https://console.xfyun.cn",.volcengine:"https://console.volcengine.com/speech/app",.tencent:"https://console.cloud.tencent.com/asr",.aliyun:"https://nls-portal.console.aliyun.com",.baidu:"https://console.bce.baidu.com/ai/#/ai/speech/overview/index",.openai:"https://platform.openai.com/api-keys",.groq:"https://console.groq.com/keys"]
+        let addresses:[ASREngine:String]=[.deepgram:"https://console.deepgram.com",.iflytek:"https://console.xfyun.cn",.volcengine:"https://console.volcengine.com/speech/app",.tencent:"https://console.cloud.tencent.com/asr",.aliyun:"https://nls-portal.console.aliyun.com",.baidu:"https://console.bce.baidu.com/ai/#/ai/speech/overview/index",.openai:"https://platform.openai.com/api-keys",.groq:"https://console.groq.com/keys",.google:"https://console.cloud.google.com/apis/credentials",.azure:"https://portal.azure.com/#view/Microsoft_Azure_ProjectOxford/CognitiveServicesHub/~/SpeechServices"]
         return addresses[engine].flatMap(URL.init(string:))
     }
     func start(completion:@escaping(Bool)->Void){queue.async{
@@ -54,7 +54,7 @@ final class ProviderConnectionProbe {
         guard let request=BatchTranscription.keyCheckRequest(engine,key:credentials["apikey"] ?? "",options:options) else{finish(false);return}
         http.exchange(request){[weak self] result in self?.queue.async{
             guard let self,!self.terminal else{return}
-            if case .success(let reply)=result,(200...299).contains(reply.status){self.finish(true)}else{self.finish(false)}
+            if case .success(let reply)=result,BatchTranscription.keyCheckPassed(self.engine,status:reply.status,data:reply.data){self.finish(true)}else{self.finish(false)}
         }}
     }
     private func requestToken(){

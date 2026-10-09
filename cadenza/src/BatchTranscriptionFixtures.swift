@@ -26,7 +26,7 @@ enum BatchTranscriptionFixtures {
         c("engines: OpenAI and Groq are listed, upload the whole recording and keep no Chinese-service switches",
           ASREngine.allCases.contains(.openai) && ASREngine.allCases.contains(.groq) && ASREngine.openai.uploadsWholeRecording && ASREngine.groq.uploadsWholeRecording
           && !ASREngine.openai.hasTextSwitches && ASREngine.tencent.hasTextSwitches && !ASREngine.tencent.uploadsWholeRecording)
-        c("engines: default models are ones the service offers", ASREngine.allCases.filter { BatchTranscription.service($0) != nil && $0 != .compat }.allSatisfy { e in BatchTranscription.service(e)!.models.contains(CloudASROptions.defaults(e).model) })
+        c("engines: default models are ones the service offers", ASREngine.allCases.filter { BatchTranscription.service($0) != nil && $0 != .compat && $0 != .azure }.allSatisfy { e in BatchTranscription.service(e)!.models.contains(CloudASROptions.defaults(e).model) })
         c("engines: one API key is the only credential", ASREngine.openai.credentialFields.map(\.0) == ["apikey"] && ASREngine.groq.credentialFields.map(\.0) == ["apikey"])
 
         // Options
@@ -65,7 +65,7 @@ enum BatchTranscriptionFixtures {
 
         // A service of the person's own
         func custom(_ base: String, _ model: String = "m-1") -> CloudASROptions { options(.compat) { $0.baseURL = base; $0.model = model } }
-        c("compat: listed, takes the whole recording, not in the old window's list", ASREngine.allCases.contains(.compat) && ASREngine.compat.uploadsWholeRecording && !ASREngine.legacyListed.contains(.compat))
+        c("compat: listed, takes the whole recording, not in the old window's list", ASREngine.allCases.contains(.compat) && ASREngine.compat.uploadsWholeRecording && !ASREngine.legacyListed.contains(.compat) && !ASREngine.legacyListed.contains(.azure))
         c("compat: the default is the first preset and is valid", BatchTranscription.validate(.compat, options(.compat)) == nil && options(.compat).baseURL == BatchTranscription.compatPresets[0].baseURL)
         c("compat: every preset is valid and recognized by its address", BatchTranscription.compatPresets.allSatisfy { p in BatchTranscription.validate(.compat, custom(p.baseURL, p.model)) == nil && BatchTranscription.preset(forBaseURL: p.baseURL)?.id == p.id } && BatchTranscription.preset(forBaseURL: "https://example.com/v1") == nil)
         c("compat: the address gets the transcription path, with or without a trailing slash or the path itself",
@@ -89,6 +89,77 @@ enum BatchTranscriptionFixtures {
         let namedResult = CloudClipTranscriber.transcribe([Float](repeating: 0.2, count: 16000), provider: .compat, options: custom("https://api.example.com/v1"), credentials: ["apikey": "k"], language: "zh_cn", speed: 100, timeout: 5,
                                                           makeRecorder: { CloudASRRecorder(provider: .compat, options: custom("https://api.example.com/v1"), credentials: ["apikey": "k"], capture: $0, http: named) })
         if case .failed(let why) = namedResult { c("compat: a rejected key names the host, not a brand", why.contains("api.example.com") && named.requests.first?.url?.host == "api.example.com") } else { c("compat: a rejected key names the host, not a brand", false) }
+
+        // Google Cloud
+        func json(_ r: URLRequest?) -> [String: Any]? { r?.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } }
+        c("google: listed, one minute at most, language and model are chosen", ASREngine.google.uploadsWholeRecording && ASREngine.google.wholeRecordingSeconds == 60 && options(.google).language == "zh" && options(.google).model == "default" && BatchTranscription.validate(.google, options(.google)) == nil)
+        c("google: it needs a language named, and a known model", BatchTranscription.validate(.google, options(.google) { $0.language = "multi" }) != nil && BatchTranscription.validate(.google, options(.google) { $0.model = "x" }) != nil && BatchTranscription.validate(.google, options(.google) { $0.language = "yue" }) == nil)
+        let gr = BatchTranscription.request(.google, options: options(.google) { $0.hotwords = "Cadenza\nGitHub" }, key: "g-key", pcm: pcm)
+        let gj = json(gr), gconfig = gj?["config"] as? [String: Any], gaudio = gj?["audio"] as? [String: Any]
+        c("google: the key is a header, never in the address or the body", gr?.url?.absoluteString == "https://speech.googleapis.com/v1/speech:recognize" && gr?.value(forHTTPHeaderField: "X-Goog-Api-Key") == "g-key" && !body(gr).contains("g-key") && gr?.httpMethod == "POST")
+        c("google: the recording, the language and the terms go in the body", gconfig?["languageCode"] as? String == "cmn-Hans-CN" && gconfig?["encoding"] as? String == "LINEAR16" && gconfig?["sampleRateHertz"] as? Int == 16000 && gconfig?["model"] as? String == "default"
+          && gconfig?["enableAutomaticPunctuation"] as? Bool == true && ((gconfig?["speechContexts"] as? [[String: Any]])?.first?["phrases"] as? [String]) == ["Cadenza", "GitHub"] && (gaudio?["content"] as? String).flatMap { Data(base64Encoded: $0) } == pcm)
+        c("google: no terms, no speech context", (json(BatchTranscription.request(.google, options: options(.google), key: "k", pcm: pcm))?["config"] as? [String: Any])?["speechContexts"] == nil)
+        let goodGoogle = "{\"results\":[{\"alternatives\":[{\"transcript\":\"你好\"}]},{\"alternatives\":[{\"transcript\":\"世界\"}]}]}"
+        func gparsed(_ status: Int, _ s: String, _ o: CloudASROptions? = nil) -> Result<String, Error> { Result { try BatchTranscription.parse(status: status, data: Data(s.utf8), engine: .google, options: o ?? options(.google)) } }
+        c("google: sentences are joined without spaces for Chinese and with one for English", (try? gparsed(200, goodGoogle).get()) == "你好世界" && (try? gparsed(200, "{\"results\":[{\"alternatives\":[{\"transcript\":\"hello\"}]},{\"alternatives\":[{\"transcript\":\"world\"}]}]}", options(.google) { $0.language = "en" }).get()) == "hello world")
+        c("google: a recording with nothing recognized is an empty answer, not a failure", (try? gparsed(200, "{}").get()) == "")
+        func ghint(_ status: Int, _ s: String) -> String { if case .failure(let e) = gparsed(status, s), let x = e as? ASRServiceError { return x.hint }; return "" }
+        c("google: a wrong key, a project without the API, a limit each say so", ghint(400, "{\"error\":{\"message\":\"API key not valid. Please pass a valid API key.\",\"status\":\"INVALID_ARGUMENT\"}}") == L10n.format("batch.err.auth", ASREngine.google.title)
+          && ghint(403, "{\"error\":{\"status\":\"PERMISSION_DENIED\"}}") == L10n.format("batch.err.googleDenied", ASREngine.google.title) && ghint(429, "{}") == L10n.format("batch.err.quota", ASREngine.google.title))
+        let gk = BatchTranscription.keyCheckRequest(.google, key: "g", options: options(.google))
+        c("google: the key check sends an empty request and no audio", gk?.httpMethod == "POST" && gk?.httpBody == Data("{}".utf8) && gk?.value(forHTTPHeaderField: "X-Goog-Api-Key") == "g")
+        c("google: a good key is told from a wrong one by the answer to the empty request", BatchTranscription.keyCheckPassed(.google, status: 400, data: Data("{\"error\":{\"status\":\"INVALID_ARGUMENT\",\"message\":\"Invalid recognition config\"}}".utf8))
+          && !BatchTranscription.keyCheckPassed(.google, status: 400, data: Data("{\"error\":{\"status\":\"INVALID_ARGUMENT\",\"message\":\"API key not valid.\",\"details\":[{\"reason\":\"API_KEY_INVALID\"}]}}".utf8))
+          && !BatchTranscription.keyCheckPassed(.google, status: 403, data: Data("{}".utf8)) && BatchTranscription.keyCheckPassed(.openai, status: 200, data: Data()) && !BatchTranscription.keyCheckPassed(.openai, status: 401, data: Data()))
+
+        // Microsoft Azure
+        c("azure: listed, one minute at most, region eastus and a language are the defaults", ASREngine.azure.uploadsWholeRecording && ASREngine.azure.wholeRecordingSeconds == 60 && options(.azure).region == "eastus" && options(.azure).language == "zh" && BatchTranscription.validate(.azure, options(.azure)) == nil)
+        c("azure: a region or the address of the resource is accepted", BatchTranscription.azureEndpoints("westeurope")?.recognize.absoluteString == "https://westeurope.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1"
+          && BatchTranscription.azureEndpoints("westeurope")?.token.absoluteString == "https://westeurope.api.cognitive.microsoft.com/sts/v1.0/issueToken"
+          && BatchTranscription.azureEndpoints("https://my-speech.cognitiveservices.azure.com")?.recognize.absoluteString == "https://my-speech.cognitiveservices.azure.com/stt/speech/recognition/conversation/cognitiveservices/v1"
+          && BatchTranscription.azureEndpoints("https://my-speech.cognitiveservices.azure.com/")?.token.absoluteString == "https://my-speech.cognitiveservices.azure.com/sts/v1.0/issueToken")
+        c("azure: an address that could send the key elsewhere is refused",
+          BatchTranscription.azureEndpoints("http://my-speech.cognitiveservices.azure.com") == nil && BatchTranscription.azureEndpoints("https://evil.example.com") == nil && BatchTranscription.azureEndpoints("https://azure.com.evil.example") == nil
+          && BatchTranscription.azureEndpoints("https://" + "u" + ":" + "p" + "@my.azure.com") == nil && BatchTranscription.azureEndpoints("https://my.azure.com/path?x=1") == nil && BatchTranscription.azureEndpoints("East US") == nil && BatchTranscription.azureEndpoints("") == nil)
+        c("azure: it takes no list of terms and needs a named language", BatchTranscription.validate(.azure, options(.azure) { $0.hotwords = "a" }) != nil && BatchTranscription.validate(.azure, options(.azure) { $0.language = "multi" }) != nil)
+        let ar = BatchTranscription.request(.azure, options: options(.azure) { $0.language = "en" }, key: "a-key", pcm: pcm)
+        c("azure: language, plain result format and unmasked words are in the address; the key is a header only",
+          ar?.url?.host == "eastus.stt.speech.microsoft.com" && ar?.url?.query == "language=en-US&format=simple&profanity=raw" && ar?.value(forHTTPHeaderField: "Ocp-Apim-Subscription-Key") == "a-key" && !(ar?.url?.absoluteString.contains("a-key") ?? true))
+        c("azure: the body is the recording as a WAV file", ar?.httpBody == BatchTranscription.wav(pcm: pcm) && ar?.value(forHTTPHeaderField: "Content-Type") == "audio/wav; codecs=audio/pcm; samplerate=16000")
+        func aparsed(_ status: Int, _ s: String) -> Result<String, Error> { Result { try BatchTranscription.parse(status: status, data: Data(s.utf8), engine: .azure, options: options(.azure)) } }
+        c("azure: the display text of a success", (try? aparsed(200, "{\"RecognitionStatus\":\"Success\",\"DisplayText\":\" 你好，世界。 \"}").get()) == "你好，世界。")
+        c("azure: nothing recognized is an empty answer; an internal error and a wrong key are failures",
+          (try? aparsed(200, "{\"RecognitionStatus\":\"NoMatch\"}").get()) == "" && (try? aparsed(200, "{\"RecognitionStatus\":\"InitialSilenceTimeout\"}").get()) == ""
+          && { if case .failure = aparsed(200, "{\"RecognitionStatus\":\"Error\"}") { return true }; return false }() && { if case .failure = aparsed(401, "{}") { return true }; return false }())
+        let ak = BatchTranscription.keyCheckRequest(.azure, key: "a", options: options(.azure))
+        c("azure: the key check asks for a token and sends no audio", ak?.url?.host == "eastus.api.cognitive.microsoft.com" && ak?.httpMethod == "POST" && ak?.httpBody == Data() && ak?.value(forHTTPHeaderField: "Ocp-Apim-Subscription-Key") == "a")
+
+        // The explicit connection check for each of the new services, with scripted answers
+        func probed(_ engine: ASREngine, _ reply: (Int, String)) -> Bool? {
+            let http = FakeHTTP([(reply.0, Data(reply.1.utf8))])
+            let probe = ProviderConnectionProbe(engine: engine, options: options(engine), credentials: ["apikey": "k"], http: http)
+            var outcome: Bool?
+            probe.start { outcome = $0 }
+            for _ in 0..<6 { probe.synchronizeForTests() }
+            return outcome.flatMap { http.requests.count == 1 && http.requests[0].httpBody.map { $0.count <= 2 } != false ? $0 : nil }
+        }
+        c("check: Google passes on invalid-argument and fails on a wrong key or a project without the API",
+          probed(.google, (400, "{\"error\":{\"status\":\"INVALID_ARGUMENT\"}}")) == true && probed(.google, (400, "{\"error\":{\"status\":\"INVALID_ARGUMENT\",\"details\":[{\"reason\":\"API_KEY_INVALID\"}]}}")) == false && probed(.google, (403, "{}")) == false)
+        c("check: Azure passes on a token and fails on a wrong key", probed(.azure, (200, "eyJ.token")) == true && probed(.azure, (401, "{}")) == false)
+        c("check: OpenAI, Groq and a custom address pass on the model list", probed(.openai, (200, "{}")) == true && probed(.groq, (200, "{}")) == true && probed(.compat, (200, "{}")) == true && probed(.openai, (401, "{}")) == false)
+
+        // Through the recorder
+        func dictateWith(_ engine: ASREngine, _ http: FakeHTTP) -> ClipResult {
+            CloudClipTranscriber.transcribe([Float](repeating: 0.2, count: 16000), provider: engine, options: options(engine), credentials: ["apikey": "k"], language: "zh_cn", speed: 100, timeout: 5,
+                                            makeRecorder: { CloudASRRecorder(provider: engine, options: options(engine), credentials: ["apikey": "k"], capture: $0, http: http) })
+        }
+        let gh = FakeHTTP([(200, Data(goodGoogle.utf8))])
+        c("recorder: Google uploads once and its text comes back", dictateWith(.google, gh) == .text("你好世界") && gh.requests.count == 1 && gh.requests[0].url?.host == "speech.googleapis.com")
+        let ah = FakeHTTP([(200, Data("{\"RecognitionStatus\":\"Success\",\"DisplayText\":\"你好世界\"}".utf8))])
+        c("recorder: Azure uploads once and its text comes back", dictateWith(.azure, ah) == .text("你好世界") && ah.requests.count == 1 && ah.requests[0].url?.host == "eastus.stt.speech.microsoft.com")
+        let gd = FakeHTTP([(403, Data("{}".utf8))])
+        if case .failed(let why) = dictateWith(.google, gd) { c("recorder: a project without the API is reported with what to do", why == L10n.format("batch.err.googleDenied", ASREngine.google.title)) } else { c("recorder: a project without the API is reported with what to do", false) }
 
         // The answer
         func parsed(_ status: Int, _ json: String, _ engine: ASREngine = .openai) -> Result<String, Error> { Result { try BatchTranscription.parse(status: status, data: Data(json.utf8), engine: engine) } }
@@ -122,6 +193,8 @@ enum BatchTranscriptionFixtures {
         let withVocab = VocabularyHotwords.apply(.openai, to: options(.openai) { $0.hotwords = "Cadenza" }, settings: vocab, store: store)
         c("vocabulary: the terms join the hint for OpenAI and stay within its length", withVocab.hotwords == "Cadenza\nKubernetes" && BatchTranscription.prompt(withVocab.hotwords) == "Cadenza, Kubernetes")
         vocab.sendToCloud = false
+        var withAzure = vocab; withAzure.sendToCloud = true
+        c("vocabulary: Google gets the terms as phrases, Azure takes none", VocabularyHotwords.apply(.google, to: options(.google), settings: withAzure, store: store).hotwords == "Kubernetes" && VocabularyHotwords.apply(.azure, to: options(.azure), settings: withAzure, store: store).hotwords == "")
         c("vocabulary: nothing is added unless the person allowed sending it", VocabularyHotwords.apply(.openai, to: options(.openai), settings: vocab, store: store).hotwords == "")
     }
 

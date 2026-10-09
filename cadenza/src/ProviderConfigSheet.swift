@@ -192,12 +192,13 @@ struct ProviderConfigSheet:View {
             Text(L10n.tr("compat.hint")).font(.callout)
         }
         if let service=BatchTranscription.service(engine) {
-            if engine != .compat {Picker(L10n.tr("provider.model"),selection:$draft.options.model){ForEach(service.models,id:\.self){Text($0).tag($0)}}}
+            if !service.models.isEmpty {Picker(L10n.tr("provider.model"),selection:$draft.options.model){ForEach(service.models,id:\.self){Text($0).tag($0)}}}
+            if engine == .azure {TextField(L10n.tr("azure.place"),text:$draft.options.region,prompt:Text("eastus"))}
             Picker(L10n.tr("provider.language"),selection:$draft.options.language){
-                ForEach(BatchTranscription.languages,id:\.self){code in Text(code == "multi" ? L10n.tr("batch.language.auto"):Locale(identifier:L10n.language).localizedString(forIdentifier:code) ?? code).tag(code)}
+                ForEach(BatchTranscription.languageChoices(engine),id:\.self){code in Text(code == "multi" ? L10n.tr("batch.language.auto"):Locale(identifier:L10n.language).localizedString(forIdentifier:code) ?? code).tag(code)}
             }
-            Text(L10n.tr("batch.languageHint")).font(.callout)
-            TextField(L10n.tr("provider.hotwords"),text:$draft.options.hotwords).help(L10n.tr("batch.hotwords.placeholder"))
+            Text(L10n.tr(engine == .google ? "google.hint":engine == .azure ? "azure.hint":"batch.languageHint")).font(.callout)
+            if engine != .azure {TextField(L10n.tr("provider.hotwords"),text:$draft.options.hotwords).help(L10n.tr("batch.hotwords.placeholder"))}
         }
         if engine == .iflytek {
             Picker(L10n.tr("provider.language"),selection:$draft.recognitionLanguage){Text(L10n.tr("language.chinese")).tag("zh_cn");Text(L10n.tr("language.english")).tag("en_us");Text(L10n.tr("language.auto")).tag("auto")}
