@@ -1,7 +1,7 @@
 import Foundation
 
 // Speech recognition by services that take a whole recording and answer with its text: the OpenAI transcription API and the
-// services that copy it (Groq and others), Google Cloud Speech-to-Text and Microsoft Azure Speech. The recording is sent once,
+// services that copy it (Groq and others), Google Cloud Speech-to-Text, Microsoft Azure Speech, AssemblyAI and ElevenLabs. The recording is sent once,
 // when the key is released.
 
 enum BatchTranscription {
@@ -22,6 +22,11 @@ enum BatchTranscription {
         case .compat:
             // The address and the model are the person's own (see `compatPresets`).
             return Service(endpoint: "", modelsEndpoint: "", models: [], defaultModel: "")
+        case .assemblyai:
+            // The short-clip API answers in the same call; the key check uses the main API, which lists transcripts.
+            return Service(endpoint: "https://sync.assemblyai.com/v1/transcribe/live", modelsEndpoint: "https://api.assemblyai.com/v2/transcript?limit=1", models: ["universal-3-5-pro"], defaultModel: "universal-3-5-pro")
+        case .elevenlabs:
+            return Service(endpoint: "https://api.elevenlabs.io/v1/speech-to-text", modelsEndpoint: "https://api.elevenlabs.io/v1/models", models: ["scribe_v2", "scribe_v1"], defaultModel: "scribe_v2")
         case .google:
             return Service(endpoint: "https://speech.googleapis.com/v1/speech:recognize", modelsEndpoint: "", models: ["default", "latest_short", "latest_long"], defaultModel: "default")
         case .azure:
@@ -65,7 +70,15 @@ enum BatchTranscription {
 
     /// Google and Azure need the language named; OpenAI-style services can detect it. "yue" is Cantonese.
     static let explicitLanguages = languages.filter { $0 != "multi" } + ["yue"]
-    static func languageChoices(_ engine: ASREngine) -> [String] { engine == .google || engine == .azure ? explicitLanguages : languages }
+    /// What AssemblyAI's short-clip model covers of the languages listed here (it assumes English when none is named).
+    static let assemblyLanguages = ["en", "zh", "ja", "es", "fr", "de", "pt", "it", "nl", "ar", "hi", "tr", "vi"]
+    static func languageChoices(_ engine: ASREngine) -> [String] {
+        switch engine {
+        case .google, .azure: return explicitLanguages
+        case .assemblyai: return assemblyLanguages
+        default: return languages
+        }
+    }
     private static let regionalCodes: [String: (google: String, azure: String)] = [
         "zh": ("cmn-Hans-CN", "zh-CN"), "yue": ("yue-Hant-HK", "zh-HK"), "en": ("en-US", "en-US"), "ja": ("ja-JP", "ja-JP"), "ko": ("ko-KR", "ko-KR"),
         "es": ("es-ES", "es-ES"), "fr": ("fr-FR", "fr-FR"), "de": ("de-DE", "de-DE"), "ru": ("ru-RU", "ru-RU"), "pt": ("pt-BR", "pt-BR"), "it": ("it-IT", "it-IT"),
@@ -127,18 +140,40 @@ enum BatchTranscription {
               let url = endpointURL(engine, options) else { return nil }
         if engine == .google { return googleRequest(url: url, options: options, key: key, pcm: pcm) }
         if engine == .azure { return azureRequest(url: url, options: options, key: key, pcm: pcm) }
-        var fields: [(String, String)] = [("model", options.model), ("response_format", "json"), ("temperature", "0")]
-        if options.language != "multi" { fields.append(("language", options.language)) }
-        let hint = prompt(options.hotwords)
-        if !hint.isEmpty { fields.append(("prompt", hint)) }
-        var body = Data()
-        for (name, value) in fields { body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(name)\"\r\n\r\n\(value)\r\n".utf8)) }
-        body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"file\"; filename=\"speech.wav\"\r\nContent-Type: audio/wav\r\n\r\n".utf8))
-        body.append(wav(pcm: pcm)); body.append(Data("\r\n--\(boundary)--\r\n".utf8))
+        // The terms, one per line or comma, as the lists these services take.
+        let terms = options.hotwords.split(whereSeparator: { $0 == "\n" || $0 == "," }).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        var fields: [(name: String, value: String, json: Bool)] = []
+        var filePart = "file"
         var r = URLRequest(url: url)
+        switch engine {
+        case .assemblyai:
+            // The settings come first, as a JSON part; the model is a header.
+            var config: [String: Any] = ["language_codes": [options.language]]
+            let list = terms.filter { $0.split(separator: " ").count <= 6 }
+            if !list.isEmpty { config["keyterms_prompt"] = Array(list.prefix(200)) }
+            guard let json = try? JSONSerialization.data(withJSONObject: config) else { return nil }
+            fields.append(("config", String(decoding: json, as: UTF8.self), true)); filePart = "audio"
+            r.setValue(key, forHTTPHeaderField: "Authorization"); r.setValue(options.model, forHTTPHeaderField: "X-AAI-Model")
+        case .elevenlabs:
+            fields.append(("model_id", options.model, false))
+            if options.language != "multi" { fields.append(("language_code", options.language, false)) }
+            // Key terms are a feature of the newer model, at most five words and fifty characters each.
+            if options.model == "scribe_v2" { for t in terms where t.count < 50 && t.split(separator: " ").count <= 5 { fields.append(("keyterms", t, false)) } }
+            fields.append(("tag_audio_events", "false", false))
+            r.setValue(key, forHTTPHeaderField: "xi-api-key")
+        default:
+            fields += [("model", options.model, false), ("response_format", "json", false), ("temperature", "0", false)]
+            if options.language != "multi" { fields.append(("language", options.language, false)) }
+            let hint = prompt(options.hotwords)
+            if !hint.isEmpty { fields.append(("prompt", hint, false)) }
+            r.setValue("Bearer " + key, forHTTPHeaderField: "Authorization")
+        }
+        var body = Data()
+        for f in fields { body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(f.name)\"\r\n\(f.json ? "Content-Type: application/json\r\n" : "")\r\n\(f.value)\r\n".utf8)) }
+        body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(filePart)\"; filename=\"speech.wav\"\r\nContent-Type: audio/wav\r\n\r\n".utf8))
+        body.append(wav(pcm: pcm)); body.append(Data("\r\n--\(boundary)--\r\n".utf8))
         r.httpMethod = "POST"; r.httpBody = body
         r.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-        r.setValue("Bearer " + key, forHTTPHeaderField: "Authorization")
         r.timeoutInterval = 60
         return r
     }
@@ -189,7 +224,12 @@ enum BatchTranscription {
         default:
             guard let url = modelsURL(engine, options) else { return nil }
             var r = URLRequest(url: url)
-            r.setValue("Bearer " + key, forHTTPHeaderField: "Authorization"); r.timeoutInterval = 10
+            switch engine {
+            case .assemblyai: r.setValue(key, forHTTPHeaderField: "Authorization")
+            case .elevenlabs: r.setValue(key, forHTTPHeaderField: "xi-api-key")
+            default: r.setValue("Bearer " + key, forHTTPHeaderField: "Authorization")
+            }
+            r.timeoutInterval = 10
             return r
         }
     }
@@ -208,7 +248,9 @@ enum BatchTranscription {
         guard data.count <= 1_048_576 else { throw ASRFailure.protocolInvalid }
         let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
         guard (200...299).contains(status) else {
-            let detail = ((object?["error"] as? [String: Any])?["message"] as? String).map { String($0.prefix(160)) } ?? ""
+            // OpenAI-style {"error":{"message"}}, AssemblyAI {"error":"…"}, ElevenLabs {"detail":{"message"}}.
+            let raw = ((object?["error"] as? [String: Any])?["message"] as? String) ?? (object?["error"] as? String) ?? ((object?["detail"] as? [String: Any])?["message"] as? String) ?? ""
+            let detail = String(raw.prefix(160))
             let who = name ?? engine.title
             // Google answers a wrong key with 400, and a project without the API turned on with 403.
             if engine == .google, status == 400, detail.lowercased().contains("api key not valid") { throw ASRServiceError(hint: L10n.format("batch.err.auth", who), code: status) }

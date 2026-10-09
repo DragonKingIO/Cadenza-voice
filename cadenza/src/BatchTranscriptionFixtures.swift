@@ -149,6 +149,38 @@ enum BatchTranscriptionFixtures {
         c("check: Azure passes on a token and fails on a wrong key", probed(.azure, (200, "eyJ.token")) == true && probed(.azure, (401, "{}")) == false)
         c("check: OpenAI, Groq and a custom address pass on the model list", probed(.openai, (200, "{}")) == true && probed(.groq, (200, "{}")) == true && probed(.compat, (200, "{}")) == true && probed(.openai, (401, "{}")) == false)
 
+        // AssemblyAI
+        c("assemblyai: listed, two minutes at most, English-free defaults valid", ASREngine.assemblyai.uploadsWholeRecording && ASREngine.assemblyai.wholeRecordingSeconds == 120 && options(.assemblyai).language == "zh" && BatchTranscription.validate(.assemblyai, options(.assemblyai)) == nil)
+        c("assemblyai: only the languages its model covers, and a language must be named", BatchTranscription.validate(.assemblyai, options(.assemblyai) { $0.language = "multi" }) != nil && BatchTranscription.validate(.assemblyai, options(.assemblyai) { $0.language = "th" }) != nil && BatchTranscription.validate(.assemblyai, options(.assemblyai) { $0.language = "ja" }) == nil)
+        let sr = BatchTranscription.request(.assemblyai, options: options(.assemblyai) { $0.language = "en"; $0.hotwords = "Cadenza\nGitHub\none two three four five six seven" }, key: "aai-key", pcm: pcm, boundary: "BOUND")
+        let sb = body(sr)
+        c("assemblyai: the address, the key and the model are in the headers only", sr?.url?.absoluteString == "https://sync.assemblyai.com/v1/transcribe/live" && sr?.value(forHTTPHeaderField: "Authorization") == "aai-key" && sr?.value(forHTTPHeaderField: "X-AAI-Model") == "universal-3-5-pro" && !sb.contains("aai-key"))
+        c("assemblyai: the settings come first as JSON, then the recording as the audio part",
+          { guard let a = sb.range(of: "name=\"config\""), let b = sb.range(of: "name=\"audio\"") else { return false }; return a.lowerBound < b.lowerBound }() && sb.contains("name=\"config\"\r\nContent-Type: application/json\r\n\r\n") && sb.contains("\"language_codes\":[\"en\"]") && sb.contains("RIFF"))
+        c("assemblyai: the terms go as key terms, a phrase of more than six words is left out", sb.contains("\"keyterms_prompt\":[\"Cadenza\",\"GitHub\"]"))
+        func sparsed(_ status: Int, _ s: String) -> Result<String, Error> { Result { try BatchTranscription.parse(status: status, data: Data(s.utf8), engine: .assemblyai, options: options(.assemblyai)) } }
+        func shint(_ status: Int, _ s: String) -> String { if case .failure(let e) = sparsed(status, s), let x = e as? ASRServiceError { return x.hint }; return "" }
+        c("assemblyai: the text, a plain error string and a wrong key", (try? sparsed(200, "{\"text\":\" 你好 \",\"confidence\":0.9}").get()) == "你好" && shint(401, "{\"error\":\"Invalid API key\"}") == L10n.format("batch.err.auth", ASREngine.assemblyai.title) && shint(400, "{\"error\":\"Audio too short\"}").contains("Audio too short"))
+        let sk = BatchTranscription.keyCheckRequest(.assemblyai, key: "aai", options: options(.assemblyai))
+        c("assemblyai: the key check lists transcripts and sends no audio", sk?.url?.host == "api.assemblyai.com" && sk?.url?.query == "limit=1" && sk?.value(forHTTPHeaderField: "Authorization") == "aai" && sk?.httpBody == nil)
+
+        // ElevenLabs
+        c("elevenlabs: listed, defaults valid, the language is detected unless named", ASREngine.elevenlabs.uploadsWholeRecording && options(.elevenlabs).model == "scribe_v2" && options(.elevenlabs).language == "multi" && BatchTranscription.validate(.elevenlabs, options(.elevenlabs)) == nil)
+        let er = BatchTranscription.request(.elevenlabs, options: options(.elevenlabs) { $0.language = "zh"; $0.hotwords = "Cadenza\nGitHub\nthis phrase has far too many words in it" }, key: "xi-key", pcm: pcm, boundary: "BOUND")
+        let eb = body(er)
+        c("elevenlabs: the key is a header only, the address is the speech-to-text one", er?.url?.absoluteString == "https://api.elevenlabs.io/v1/speech-to-text" && er?.value(forHTTPHeaderField: "xi-api-key") == "xi-key" && !eb.contains("xi-key") && er?.value(forHTTPHeaderField: "Authorization") == nil)
+        c("elevenlabs: model, language, one field per key term, no sound descriptions, the recording as the file",
+          eb.contains("name=\"model_id\"\r\n\r\nscribe_v2") && eb.contains("name=\"language_code\"\r\n\r\nzh") && eb.contains("name=\"keyterms\"\r\n\r\nCadenza") && eb.contains("name=\"keyterms\"\r\n\r\nGitHub")
+          && !eb.contains("far too many") && eb.contains("name=\"tag_audio_events\"\r\n\r\nfalse") && eb.contains("name=\"file\"; filename=\"speech.wav\""))
+        let eOld = body(BatchTranscription.request(.elevenlabs, options: options(.elevenlabs) { $0.model = "scribe_v1"; $0.hotwords = "Cadenza" }, key: "k", pcm: pcm, boundary: "B"))
+        c("elevenlabs: the older model gets no key terms, and auto-detection sends no language", !eOld.contains("name=\"keyterms\"") && !body(BatchTranscription.request(.elevenlabs, options: options(.elevenlabs), key: "k", pcm: pcm, boundary: "B")).contains("name=\"language_code\""))
+        func eparsed(_ status: Int, _ s: String) -> Result<String, Error> { Result { try BatchTranscription.parse(status: status, data: Data(s.utf8), engine: .elevenlabs, options: options(.elevenlabs)) } }
+        func ehint(_ status: Int, _ s: String) -> String { if case .failure(let e) = eparsed(status, s), let x = e as? ASRServiceError { return x.hint }; return "" }
+        c("elevenlabs: the text, a wrong key, a limit and a message that echoes the key", (try? eparsed(200, "{\"text\":\"hello\",\"language_code\":\"eng\"}").get()) == "hello" && ehint(401, "{\"detail\":{\"status\":\"invalid_api_key\"}}") == L10n.format("batch.err.auth", ASREngine.elevenlabs.title)
+          && ehint(429, "{}") == L10n.format("batch.err.quota", ASREngine.elevenlabs.title) && !ehint(400, "{\"detail\":{\"message\":\"Invalid key xi-abc\"}}").contains("xi-abc"))
+        let ek = BatchTranscription.keyCheckRequest(.elevenlabs, key: "xi", options: options(.elevenlabs))
+        c("elevenlabs: the key check lists models with the key header and sends no audio", ek?.url?.path == "/v1/models" && ek?.value(forHTTPHeaderField: "xi-api-key") == "xi" && ek?.httpBody == nil)
+
         // Through the recorder
         func dictateWith(_ engine: ASREngine, _ http: FakeHTTP) -> ClipResult {
             CloudClipTranscriber.transcribe([Float](repeating: 0.2, count: 16000), provider: engine, options: options(engine), credentials: ["apikey": "k"], language: "zh_cn", speed: 100, timeout: 5,
@@ -195,6 +227,7 @@ enum BatchTranscriptionFixtures {
         vocab.sendToCloud = false
         var withAzure = vocab; withAzure.sendToCloud = true
         c("vocabulary: Google gets the terms as phrases, Azure takes none", VocabularyHotwords.apply(.google, to: options(.google), settings: withAzure, store: store).hotwords == "Kubernetes" && VocabularyHotwords.apply(.azure, to: options(.azure), settings: withAzure, store: store).hotwords == "")
+        c("vocabulary: AssemblyAI and ElevenLabs get the terms", VocabularyHotwords.apply(.assemblyai, to: options(.assemblyai), settings: withAzure, store: store).hotwords == "Kubernetes" && VocabularyHotwords.apply(.elevenlabs, to: options(.elevenlabs), settings: withAzure, store: store).hotwords == "Kubernetes")
         c("vocabulary: nothing is added unless the person allowed sending it", VocabularyHotwords.apply(.openai, to: options(.openai), settings: vocab, store: store).hotwords == "")
     }
 
