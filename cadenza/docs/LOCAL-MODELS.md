@@ -194,3 +194,33 @@ real room. Differences of about one point (for example 2.8 and 3.3) are within t
 more than about 10 dB louder than the speech (a whisper at −58 under white noise at −45, or speech at −66 under noise at −55)
 nothing recovers the words, and the tool does not pretend otherwise. Synthetic speech and noise are cleaner than a real
 microphone in a real room; this has not been measured on real recordings.
+
+## Translating dictation with a model on this Mac
+
+`Cadenza --bench-translate` sends twelve dictated sentences (with hesitations, as a recognizer writes them) through a chat service
+the way the app does: six into English, three into Japanese, three into Simplified Chinese, one of them an attempt to give the
+model instructions. It counts the answers the app would use, the answers its own checks refuse (wrong language, words of the
+other language left in the middle, a missing number or term), and the facts a good translation must keep (a time, an amount, a
+name). Qwen2.5 through Ollama, one run each, the request temperature is 0.2 so a second run differs a little:
+
+| Model | Run | Answers used | Refused by the checks | Facts kept | Time per sentence |
+|---|---|---|---|---|---|
+| Qwen2.5 3B (1.9 GB) | first | 12 | 0 | 29 / 30 | 0.6 s |
+| Qwen2.5 3B | after the prompt and check were tightened | 11 | 1 | 24 / 30 (the refused one counts as lost) | 0.8 s |
+| Qwen2.5 7B (4.7 GB) | first | 12 | 0 | 29 / 30 | 1.6 s (the first request took 7 s to load the model) |
+| Qwen2.5 7B | after the prompt and check were tightened | 11 | 1 | 26 / 30 (the refused one counts as lost) | 1.8 s |
+
+What the printed sentences showed, which is the real evidence:
+
+- Both models translate plain sentences into English well enough to send, in under two seconds.
+- Both sometimes give up halfway: a Japanese answer with English and Chinese words left in it (3B), an English answer with one
+  Chinese word left in the middle (7B). The first version of the check accepted both. It now refuses them, and the dictation is
+  inserted untranslated with a note, which is better than a sentence in two languages.
+- Chinese amounts are the weak spot: "二十五万" came back as "twenty-five thousand" from both models. The prompt now states that
+  万 is ten thousand with that very example; the 7B model then answered "250,000", the 3B model still did not. The check cannot
+  catch this, because the original has no digits to compare. Amounts in Chinese units deserve a glance, or a larger model.
+- "ship it on Friday" was translated as "进行" (go ahead) by the 3B model. Idioms are where a small model loses meaning.
+
+So: for translation on this Mac, 7B is the better choice when about 5 GB of memory can be spared, 3B is acceptable for short
+plain sentences, and neither is something to send unread. Cloud models were not measured here. Twelve sentences and one model
+family is a small sample: the table shows what the checks do, not how good a model is.

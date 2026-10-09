@@ -61,6 +61,8 @@ enum TranslateFixtures {
         c("check: a Japanese answer with English words the speaker never said is refused", !verdict("明日 afternoon 三点に会議をしたいです", "我想明天下午三点开会", "Japanese") && verdict("明日の午後三時に会議をしたいです", "我想明天下午三点开会", "Japanese"))
         c("check: a Japanese answer with simplified Chinese left in is refused", !verdict("会議室を帮我预约一下好吗", "请帮我预约会议室", "Japanese") && verdict("会議室を予約してください", "请帮我预约会议室", "Japanese"))
         c("check: words the speaker said, and glossary terms, may stay in the answer", verdict("commit の結果を確認してください", "请看一下 commit 的结果", "Japanese") && verdict("GitHub に提交してください", "把它提交到吉特哈勃", "Japanese", ["GitHub"]))
+        c("check: an English answer with a Chinese word left in the middle is refused", !verdict("I think this方案 costs too much.", "我觉得这个方案成本太高", "English") && verdict("I think this plan costs too much.", "我觉得这个方案成本太高", "English"))
+        c("check: Chinese characters of a glossary term may stay", verdict("Open 微信 and send it.", "打开微信发一下", "English", ["微信"]) && !verdict("Open 微信 and send it.", "打开微信发一下", "English"))
         c("check: a glossary term must stay", !verdict("We use Git Hub", "我们用 GitHub", "English", ["GitHub"]) && verdict("We use GitHub", "我们用 GitHub", "English", ["GitHub"]))
         c("check: text already in the target language is accepted as it is", verdict("I want a meeting.", "I want a meeting", "English"))
 
