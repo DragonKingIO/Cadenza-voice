@@ -156,6 +156,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     let input: InputSourceController
     let hotkey: HotkeyCenter
     let listenTrigger: ListenTrigger
+    /// The key that dictates and translates; a second, separate listener so the two ordinary shortcuts stay as they are.
+    let translateTrigger = ListenTrigger()
     let pipeline: VoicePipeline
     /// Local developer API (loopback only, off unless the user turns it on).
     lazy var localAPI = LocalAPIService(pipeline: pipeline)
@@ -283,6 +285,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             let alert=NSAlert();alert.messageText=L10n.tr("ui.01dec732402b");alert.informativeText=self.pipeline.lastResult;alert.addButton(withTitle:L10n.tr("ui.de32e20193ad"));alert.runModal()
         }
         capsule.onRetry = { [weak self] in self?.pipeline.holdStarted(source: .menu, target: FocusProbe.snapshot()) }
+        translateTrigger.onHoldStart = { [weak self] in self?.handleTranslateStart() }
+        translateTrigger.onHoldEnd = { [weak self] in self?.handleTranslateEnd() }
+        translateTrigger.onHoldChord = { [weak self] in self?.pipeline.forceEnd(reason: L10n.tr("ui.4460c389c8a2")) }
+        translateTrigger.onSleep = { [weak self] in self?.pipeline.forceEnd(reason: L10n.tr("ui.44a169431a26")) }
         applyHotkey()
         // Permission requests are user actions in privacy/onboarding and depend on the chosen engine.
         Log.write("startup mode=\(configStore.config.mode) trigger=\(HotkeySpecDisplay.string(configStore.config.trigger)) diagnostic=\(HotkeySpecDisplay.string(configStore.config.diagnosticTrigger)) iflytekHotkey=\(HotkeySpecDisplay.string(configStore.config.iflytekVoiceHotkey)) configErrors=\(configStore.validationErrors.count)")
@@ -658,7 +664,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         }
     }
     @objc private func selectTranslate(_ sender: NSMenuItem) { if let value = sender.representedObject as? String,TranslationLanguages.valid(value) { changeConfig { $0.translate.target = value } } }
-    @objc private func showTranslateSettings() { showSwiftMain(.input) }
+    @objc private func showTranslateSettings() { showSwiftMain(.translate) }
     @objc private func selectMicrophone(_ sender: NSMenuItem) { if let value = sender.representedObject as? String { changeConfig { $0.microphoneUID = value } } }
     @objc private func showShortcutSettings() { showSettings(); settingsWindow?.show(page: 2) }
     @objc private func showEngineSettings() { showSettings(); settingsWindow?.show(page: 1) }
@@ -672,25 +678,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     func handleHoldEnd() {
         if pipeline.session?.source == .hotkey || pipeline.session?.source == .button {pipeline.holdEnded()}
     }
+    func handleTranslateStart() {
+        if pipeline.session?.state == .voiceStarted {pipeline.holdEnded();return}
+        if onboardingWindow?.ownsInputFocus == true {onboardingWindow?.markTrialStarted()}
+        pipeline.holdStarted(source:settingsWindow?.ownsInputFocus == true || onboardingWindow?.ownsInputFocus == true ? .button : .hotkey,translate:true)
+        if onboardingWindow?.ownsInputFocus == true {onboardingWindow?.captureTrialSession()}
+    }
+    func handleTranslateEnd() {
+        if pipeline.session?.translate == true,pipeline.session?.source == .hotkey || pipeline.session?.source == .button {pipeline.holdEnded()}
+    }
     func handleTogglePress() {
         if onboardingWindow?.ownsInputFocus == true && !pipeline.hasActiveSession {onboardingWindow?.markTrialStarted()}
         pipeline.togglePressed(localOnly:settingsWindow?.ownsInputFocus == true || onboardingWindow?.ownsInputFocus == true)
         if onboardingWindow?.ownsInputFocus == true {onboardingWindow?.captureTrialSession()}
     }
     private func activateBindings(_ c:BridgeConfig)->Bool {
-        guard !pipeline.inputSuspendedForDiagnostic else{listenTrigger.stop();return false}
-        return listenTrigger.startBindings(hold:c.holdShortcutEnabled ? c.trigger : nil,toggle:c.toggleShortcutEnabled ? c.toggleTrigger : nil,coordinated:c.triggerCoordinatorEnabled)
+        guard !pipeline.inputSuspendedForDiagnostic else{listenTrigger.stop();translateTrigger.stop();return false}
+        let main=listenTrigger.startBindings(hold:c.holdShortcutEnabled ? c.trigger : nil,toggle:c.toggleShortcutEnabled ? c.toggleTrigger : nil,coordinated:c.triggerCoordinatorEnabled)
+        return activateTranslate(c) && main
+    }
+    /// The translation key listens on its own, whenever it is set and shortcuts are on.
+    private func activateTranslate(_ c:BridgeConfig)->Bool {
+        guard c.enabled,let key=c.translate.trigger,ShortcutPolicy.reason(key) == nil else{translateTrigger.stop();return true}
+        return translateTrigger.startBindings(hold:key,toggle:nil)
     }
     func resumeAfterDiagnostic() {
-        guard !pipeline.inputSuspendedForDiagnostic else{listenTrigger.stop();hotkey.unregister();return}
+        guard !pipeline.inputSuspendedForDiagnostic else{listenTrigger.stop();translateTrigger.stop();hotkey.unregister();return}
         applyHotkey()
         Log.write("diagnostic-listening-restored status=\(listenTrigger.status) active-session=\(pipeline.hasActiveSession)")
     }
     private func applyHotkey() {
         applyScreenshotHotkey()
         hotkey.unregister()
-        guard !pipeline.inputSuspendedForDiagnostic else{listenTrigger.stop();return}
-        guard configStore.validationErrors.isEmpty else {listenTrigger.stop();refreshStatus();return}
+        guard !pipeline.inputSuspendedForDiagnostic else{listenTrigger.stop();translateTrigger.stop();return}
+        guard configStore.validationErrors.isEmpty else {listenTrigger.stop();translateTrigger.stop();refreshStatus();return}
         let c=configStore.config
         for binding in [c.holdShortcutEnabled ? c.trigger:nil,c.toggleShortcutEnabled ? c.toggleTrigger:nil].compactMap({$0}) {
             if let reason=ShortcutPolicy.reason(binding) {listenTrigger.stop();pipeline.note(L10n.tr("ui.b956c234bea2")+reason,isError:true);refreshStatus();return}
@@ -702,6 +723,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     private func saveShortcut(_ candidate:HotkeySpec)->String? {configureShortcut(mode:"hold",candidate:candidate,enabled:nil)}
     private func configureShortcut(mode:String,candidate:HotkeySpec?,enabled:Bool?)->String? {
         guard !pipeline.hasActiveSession,!pipeline.inputSuspendedForDiagnostic else{return L10n.tr("ui.e1513aa9be4e")}
+        guard ["hold","toggle","translate"].contains(mode) else{return L10n.tr("ui.5e211d63af42")}
         if let candidate=candidate {
             if let reason=ShortcutPolicy.reason(candidate){return reason}
             if let reason=ShortcutPolicy.registrationReason(candidate){return reason}

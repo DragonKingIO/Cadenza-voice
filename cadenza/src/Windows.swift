@@ -507,6 +507,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             if i == 0 {shortcutRecord=change;shortcutSave=save;shortcutCancel=cancel}
             bindings.append(row(i == 0 ? L10n.tr("ui.e4947a64758a"):L10n.tr("ui.f4dfe64726ba"),i == 0 ? L10n.tr("ui.fa3894134288"):L10n.tr("ui.53ed8a97e3d6"),[cap,change,enabled],height:62))
         }
+        // The translation shortcut is edited in the same sheet but has no row on this old page.
+        let translateSave=button(L10n.tr("ui.a3030bf8f16d"),#selector(saveShortcut)),translateCancel=button(L10n.tr("ui.2cd0f3be8738"),#selector(cancelShortcut));modeSave.append(translateSave);modeCancel.append(translateCancel)
         let listener=text("",size:12);shortcutState=listener
         addPage([heading(L10n.tr("ui.ee2638183d3e"),L10n.tr("ui.54b45a728b00")),group(bindings),group([row(L10n.tr("ui.0649096192cc"),"",[button(L10n.tr("ui.bb6d995724f4"),#selector(openListen))]),listener]),button(L10n.tr("ui.9a22a6fb40f1"),#selector(showShortcutProtection))])
         let permissionHint=text("",size:11);permissionState=permissionHint
@@ -608,20 +610,25 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     }
     @objc private func resetShortcut(_ sender:NSButton) {
         guard pipeline?.hasActiveSession != true else{return};editingMode=sender.tag;endShortcut(resume:false)
-        shortcutError=onSaveModeShortcut?(editingMode == 1 ? "toggle":"hold",editingMode == 1 ? nil:BridgeConfig.default().trigger,editingMode == 1 ? false:nil)
+        shortcutError=onSaveModeShortcut?(modeName(editingMode),editingMode == 0 ? BridgeConfig.default().trigger:nil,editingMode == 0 ? nil:false)
         onEndShortcutRecording?();refresh()
     }
     private func candidateReason(_ spec:HotkeySpec)->String? {
         if let reason=ShortcutPolicy.reason(spec){return reason}
         guard let c=configStore?.config else{return L10n.tr("ui.6534bf83b03f")}
-        let peer=editingMode == 0 ? c.toggleTrigger:c.trigger
-        if let peer=peer,peer.keyCode == spec.keyCode,peer.modifiers == spec.modifiers {return L10n.tr("ui.2e02adb592a9")}
+        var peers:[HotkeySpec]=[]
+        if editingMode != 0 {peers.append(c.trigger)}
+        if editingMode != 1,let toggle=c.toggleTrigger {peers.append(toggle)}
+        if editingMode != 2,let translate=c.translate.trigger {peers.append(translate)}
+        if peers.contains(where:{$0.keyCode == spec.keyCode && $0.modifiers == spec.modifiers}) {return L10n.tr("ui.2e02adb592a9")}
+        if editingMode == 2,peers.contains(where:{ShortcutPolicy.overlaps(spec,$0)}) {return L10n.tr("translate.shortcut.conflict")}
+        if editingMode != 2,let translate=c.translate.trigger,ShortcutPolicy.overlaps(spec,translate) {return L10n.tr("translate.shortcut.conflict")}
         return nil
     }
     private func showShortcutSheet() {
         guard let parent=window else{return}
         let sheet=NSWindow(contentRect:NSRect(x:0,y:0,width:510,height:244),styleMask:[.titled],backing:.buffered,defer:false)
-        sheet.delegate=self;sheet.title=editingMode == 0 ? L10n.tr("ui.3308d08e80c2"):L10n.tr("ui.87dc7fbdde52");sheet.appearance=parent.appearance
+        sheet.delegate=self;sheet.title=editingMode == 0 ? L10n.tr("ui.3308d08e80c2"):editingMode == 2 ? L10n.tr("translate.shortcut"):L10n.tr("ui.87dc7fbdde52");sheet.appearance=parent.appearance
         let cap=text(L10n.tr("ui.32c3cad8e171"),size:20,weight:.semibold);cap.alignment = .center;sheetCap=cap
         let feedback=text(L10n.tr("ui.3c07efc857f1"),size:13);sheetFeedback=feedback
         let reset=button(L10n.tr("ui.ba2e93e73037"),#selector(resetShortcut(_:)));reset.tag=editingMode
@@ -640,9 +647,10 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     var shortcutEditorHasError:Bool {shortcutError != nil}
     func inspectSaveActiveShortcut(){shortcutSave?.performClick(nil)}
     func editShortcut(mode:String) {
-        guard ["hold","toggle"].contains(mode),pipeline?.hasActiveSession != true,window?.attachedSheet == nil else{return}
-        editingMode=mode == "toggle" ? 1:0;beginShortcut()
+        guard ["hold","toggle","translate"].contains(mode),pipeline?.hasActiveSession != true,window?.attachedSheet == nil else{return}
+        editingMode=mode == "translate" ? 2:mode == "toggle" ? 1:0;beginShortcut()
     }
+    private func modeName(_ index:Int)->String {index == 2 ? "translate":index == 1 ? "toggle":"hold"}
     @objc private func beginHoldShortcut(){editingMode=0;beginShortcut()}
     @objc private func beginToggleShortcut(){editingMode=1;beginShortcut()}
     @objc private func beginShortcut() {
@@ -691,7 +699,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         guard let spec = candidate, shortcutError == nil, pipeline?.hasActiveSession != true else { return }
         guard !ListenTrigger.downKeys().contains(spec.keyCode), ListenTrigger.downKeys().intersection(Set(spec.modifierKeyCodes ?? [])).isEmpty else { shortcutError = L10n.tr("ui.0817f92e1983"); refresh(); return }
         endShortcut(resume: false)
-        shortcutError = onSaveModeShortcut?(editingMode == 1 ? "toggle":"hold",spec,nil) ?? (onSaveModeShortcut == nil ? onSaveShortcut?(spec):nil)
+        shortcutError = onSaveModeShortcut?(modeName(editingMode),spec,nil) ?? (onSaveModeShortcut == nil ? onSaveShortcut?(spec):nil)
         onEndShortcutRecording?(); refresh()
         if let error=shortcutError {showInformation(L10n.tr("ui.76ef2625f5ea"),error)}
     }
@@ -787,6 +795,10 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             modeCancel[i].isEnabled=shortcutRecording && own
             modeEnable[i].state=(i == 0 ? config.holdShortcutEnabled:config.toggleShortcutEnabled) ? .on:.off
             modeEnable[i].isEnabled = !busy && !shortcutRecording && current != nil
+        }
+        if modeSave.count > 2 {
+            modeSave[2].isEnabled = !busy && shortcutRecording && editingMode == 2 && candidate != nil && shortcutError == nil
+            modeCancel[2].isEnabled = shortcutRecording && editingMode == 2
         }
         sheetCap?.stringValue=candidate.map(HotkeySpecDisplay.string) ?? L10n.tr("ui.32c3cad8e171")
         sheetFeedback?.stringValue=shortcutError ?? (candidate == nil ? L10n.tr("ui.3c07efc857f1"):L10n.tr("ui.d4e256affc6c"))

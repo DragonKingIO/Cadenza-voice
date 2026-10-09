@@ -1499,7 +1499,7 @@
 "translate.other" = "其他语言…";
 "translate.custom" = "语言";
 "translate.custom.prompt" = "例如：拉丁语、威尔士语";
-"translate.hint" = "说出的话先识别，再翻译，插入的是翻译后的文字。所选模型会的语言都能用；常用语言也在菜单栏里。翻译失败时会照原样插入未翻译的文字，并在结果行说明原因。";
+"translate.hint" = "用下面的翻译快捷键听写：说的话先识别，再翻译，输入的是译文。所选模型会的语言都能用；常用语言也在菜单栏里。翻译失败时会照原样输入未翻译的文字，并在结果行说明原因。";
 "translate.kept" = "已跳过翻译（%@），按原话插入";
 "translate.err.noService" = "还没有设置 AI 服务";
 "menu.translate" = "翻译成";
@@ -1507,6 +1507,15 @@
 "menu.translate.manage" = "更多语言…";
 "llm.err.profiles" = "保存的 AI 模型设置不合格。";
 "translate.header" = "语音翻译";
+"translate.title" = "翻译";
+"translate.shortcut" = "翻译快捷键";
+"translate.shortcut.header" = "快捷键";
+"translate.shortcut.hint" = "按住这个键说话：说的话先被识别，再翻译成所选语言，输入的是译文。普通听写的快捷键从不翻译。如果左 Option 已用于听写，右 Option 很适合用来做翻译键。";
+"translate.shortcut.none" = "设置一个按键，就能边听写边翻译。";
+"translate.shortcut.needTarget" = "请先选择要翻译成的语言。";
+"translate.shortcut.conflict" = "翻译快捷键不能和其他快捷键相同，也不能包含其中一个。";
+"translate.models" = "添加或更改 AI 模型";
+"translate.models.hint" = "翻译使用你的 AI 模型之一（本机的，或你有密钥的服务）。模型在“输入”页的“我的 AI 模型”里添加。";
 "llm.header" = "我的 AI 模型";
 "llm.empty" = "还没有添加模型。添加一个，才能使用 AI 润色或语音翻译。";
 "llm.none" = "请先在下面的“我的 AI 模型”里添加一个模型。";

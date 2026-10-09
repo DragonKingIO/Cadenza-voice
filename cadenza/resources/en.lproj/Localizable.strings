@@ -1499,7 +1499,7 @@
 "translate.other" = "Another language…";
 "translate.custom" = "Language";
 "translate.custom.prompt" = "e.g. Latin, Welsh, Klingon";
-"translate.hint" = "What you say is recognized, then translated, and the translation is what gets inserted. Any language the chosen model knows works; the common ones are also in the menu bar. If the translation fails, the text is inserted untranslated and the result line says why.";
+"translate.hint" = "Dictate with the translation shortcut (see below) and what you say is recognized, translated, and typed as the translation. Any language the chosen model knows works; the common ones are also in the menu bar. If the translation fails, the text is inserted untranslated and the result line says why.";
 "translate.kept" = "Translation skipped (%@), inserted as spoken";
 "translate.err.noService" = "no AI service is set up";
 "menu.translate" = "Translate into";
@@ -1507,6 +1507,15 @@
 "menu.translate.manage" = "More languages…";
 "llm.err.profiles" = "The saved AI models are not valid.";
 "translate.header" = "Voice translation";
+"translate.title" = "Translation";
+"translate.shortcut" = "Translate shortcut";
+"translate.shortcut.header" = "Shortcut";
+"translate.shortcut.hint" = "Hold this key and speak: what you say is recognized, translated into the chosen language, and the translation is typed. The ordinary dictation shortcuts never translate. Right Option is a good key for it if Left Option is used for dictation.";
+"translate.shortcut.none" = "Set a key to dictate and translate.";
+"translate.shortcut.needTarget" = "Choose the language to translate into first.";
+"translate.shortcut.conflict" = "The translation shortcut must differ from the other shortcuts, and must not contain one of them.";
+"translate.models" = "Add or change AI models";
+"translate.models.hint" = "Translation uses one of your AI models (a local one, or a service you have a key for). Models are added under Input, My AI models.";
 "llm.header" = "My AI models";
 "llm.empty" = "No model added yet. Add one to use AI polish or voice translation.";
 "llm.none" = "Add a model under “My AI models” below first.";

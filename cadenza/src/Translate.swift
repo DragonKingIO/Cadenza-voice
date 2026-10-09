@@ -9,14 +9,17 @@ struct TranslateSettings: Codable, Equatable {
     var target = ""
     /// The "my AI models" profile translation runs on; empty = the same service as AI polish (older configurations).
     var profileID = ""
+    /// The shortcut that dictates and translates (hold to talk). Ordinary dictation never translates.
+    var trigger: HotkeySpec? = nil
     init() {}
-    enum CodingKeys: String, CodingKey { case target, profileID }
+    enum CodingKeys: String, CodingKey { case target, profileID, trigger }
     init(from decoder: Decoder) throws {
         let d = try decoder.container(keyedBy: CodingKeys.self)
         let t = ((try? d.decodeIfPresent(String.self, forKey: .target)) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         target = TranslationLanguages.valid(t) ? t : ""
         let pid = (try? d.decodeIfPresent(String.self, forKey: .profileID)) ?? ""
         profileID = pid.range(of: "^[a-z0-9]{0,16}$", options: .regularExpression) != nil ? pid : ""
+        trigger = try? d.decodeIfPresent(HotkeySpec.self, forKey: .trigger)
     }
     var active: Bool { !target.isEmpty }
 }

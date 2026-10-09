@@ -6,12 +6,12 @@ import Speech
 // MARK: - 模型
 
 enum MainTab: String, CaseIterable, Identifiable, Hashable {
-    case input, engines, ocr, shortcuts, vocabulary, general, privacy, developer, about
+    case input, engines, ocr, translate, shortcuts, vocabulary, general, privacy, developer, about
     var id: String { rawValue }
     /// The Developer page is for people who ask for it (Settings → General → Advanced).
     static func visible(showDeveloper: Bool) -> [MainTab] { allCases.filter { $0 != .developer || showDeveloper } }
-    var title: String { switch self { case .input: L10n.tr("ui.2087c777c06f"); case .engines: L10n.tr("ui.8545bbfc5af9"); case .ocr: L10n.tr("ocr.title"); case .shortcuts: L10n.tr("ui.ee2638183d3e"); case .vocabulary: L10n.tr("vocab.title"); case .general: L10n.tr("general.title"); case .privacy: L10n.tr("ui.86651d17a401"); case .developer: L10n.tr("developer.title"); case .about: L10n.tr("ui.52d25a9e30ba") } }
-    var icon: String { switch self { case .input: "mic"; case .engines: "cpu"; case .ocr: "text.viewfinder"; case .shortcuts: "keyboard"; case .vocabulary: "text.book.closed"; case .general: "gearshape"; case .privacy: "checkmark.shield"; case .developer: "curlybraces"; case .about: "info.circle" } }
+    var title: String { switch self { case .input: L10n.tr("ui.2087c777c06f"); case .engines: L10n.tr("ui.8545bbfc5af9"); case .ocr: L10n.tr("ocr.title"); case .translate: L10n.tr("translate.title"); case .shortcuts: L10n.tr("ui.ee2638183d3e"); case .vocabulary: L10n.tr("vocab.title"); case .general: L10n.tr("general.title"); case .privacy: L10n.tr("ui.86651d17a401"); case .developer: L10n.tr("developer.title"); case .about: L10n.tr("ui.52d25a9e30ba") } }
+    var icon: String { switch self { case .input: "mic"; case .engines: "cpu"; case .ocr: "text.viewfinder"; case .translate: "character.bubble"; case .shortcuts: "keyboard"; case .vocabulary: "text.book.closed"; case .general: "gearshape"; case .privacy: "checkmark.shield"; case .developer: "curlybraces"; case .about: "info.circle" } }
 }
 
 enum EngineScope: String, CaseIterable, Identifiable {
@@ -76,6 +76,8 @@ final class SettingsModel {
     var inputModeIndex = 0
     /// The two shortcuts are independent: either, both or neither can be on.
     var holdShortcutOn = true
+    /// The display text of the translation shortcut; empty when it is not set.
+    var translateBinding = ""
     var toggleShortcutOn = false
     var shortcutsMaster = true
     let previewReadOnly=CommandLine.arguments.contains(where:{$0.hasPrefix("--preview-brand-page=")})
@@ -139,6 +141,7 @@ final class SettingsModel {
         languageIndex = cfg.iflytekLanguage == "en_us" ? 1 : (cfg.iflytekLanguage == "auto" ? 2 : 0)
         inputModeIndex = cfg.primaryIsToggle ? 1 : 0
         holdShortcutOn = cfg.holdShortcutEnabled
+        translateBinding = cfg.translate.trigger.map { HotkeySpecDisplay.string($0) } ?? ""
         toggleShortcutOn = cfg.toggleActive
         shortcutsMaster = cfg.enabled
         holdBinding = HotkeySpecDisplay.string(cfg.trigger)
@@ -311,6 +314,7 @@ final class SettingsModel {
         if holdShortcutOn && toggleShortcutOn { return L10n.format("trial.empty.both", holdBinding, toggleBinding) }
         return L10n.format(toggleShortcutOn && !holdShortcutOn ? "trial.empty.toggle" : "trial.empty.hold", toggleShortcutOn && !holdShortcutOn ? toggleBinding : holdBinding)
     }
+    func removeTranslateShortcut() { persist { $0.translate.trigger = nil } }
     func setHoldShortcut(_ on: Bool) { persist { $0.holdShortcutEnabled = on; $0.syncInputMode() } }
     func setToggleShortcut(_ on: Bool) { persist { $0.toggleShortcutEnabled = on && $0.toggleTrigger != nil; $0.syncInputMode() } }
     /// Takes the tap shortcut away; setting one again (the Set button) turns it back on.
@@ -455,6 +459,7 @@ struct MainSettingsView: View {
         case .input: VoiceInputPage(model: model)
         case .engines: EngineSettingsView(model: model)
         case .ocr: OCRSettingsView(model: model)
+        case .translate: TranslatePage(model: model)
         case .shortcuts: ShortcutsView(model: model)
         case .vocabulary: VocabularyView(model: model)
         case .general: GeneralView(model: model)
@@ -483,7 +488,6 @@ struct VoiceInputPage: View {
             } header:{Text(L10n.tr("settings.current"))}
             TextPolishSection(model:model)
             TextRefineSection(model:model)
-            TranslateSection(model:model)
             LLMModelsSection(model:model)
         }
         .onExitCommand {if model.listening{model.cancelTry()}}
@@ -777,6 +781,30 @@ struct EngineSettingsView: View {
         .confirmationDialog(L10n.format("local.delete.title", deleting?.name() ?? ""), isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), titleVisibility: .visible) {
             Button(L10n.tr("local.delete"), role: .destructive) { if let e = deleting { center.delete(e.id) }; deleting = nil }
         } message: { Text(L10n.tr("local.delete.detail")) }
+    }
+}
+
+/// Voice translation: the language, the model, and its own shortcut. Ordinary dictation is never translated.
+struct TranslatePage:View {
+    @Bindable var model:SettingsModel
+    var body:some View {
+        SettingsPage {
+            TranslateSection(model:model)
+            Section {
+                LabeledContent(L10n.tr("translate.shortcut")){
+                    HStack{
+                        Text(model.translateBinding.isEmpty ? L10n.tr("ui.2f5f1d6fbfb0"):model.translateBinding).foregroundStyle(model.translateBinding.isEmpty ? .secondary:.primary)
+                        Button(L10n.tr(model.translateBinding.isEmpty ? "shortcut.set":"shortcut.change")){model.onEditShortcut?("translate")}.buttonStyle(.bordered).disabled(model.listening || model.recognizing)
+                        if !model.translateBinding.isEmpty {Button(L10n.tr("shortcut.remove")){model.removeTranslateShortcut()}.buttonStyle(.borderless).disabled(model.listening || model.recognizing)}
+                    }
+                }
+                if model.translateBinding.isEmpty {Label(L10n.tr("translate.shortcut.none"),systemImage:"keyboard").font(.callout).foregroundStyle(.secondary)}
+                if !model.translate.active {Label(L10n.tr("translate.shortcut.needTarget"),systemImage:"exclamationmark.circle").font(.callout).foregroundStyle(.orange)}
+            } header:{Text(L10n.tr("translate.shortcut.header"))} footer:{Text(L10n.tr("translate.shortcut.hint")).font(.callout).foregroundStyle(.primary)}
+            Section {
+                Button(L10n.tr("translate.models")){model.tab = .input}.buttonStyle(.link)
+            } footer:{Text(L10n.tr("translate.models.hint")).font(.callout).foregroundStyle(.secondary)}
+        }
     }
 }
 
