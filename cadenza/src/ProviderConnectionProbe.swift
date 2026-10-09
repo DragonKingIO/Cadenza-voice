@@ -12,7 +12,7 @@ final class ProviderConnectionProbe {
         self.engine=engine;self.options=options;self.credentials=credentials;self.socketFactory=socketFactory;self.http=http
     }
     static func consoleURL(_ engine:ASREngine)->URL? {
-        let addresses:[ASREngine:String]=[.deepgram:"https://console.deepgram.com",.iflytek:"https://console.xfyun.cn",.volcengine:"https://console.volcengine.com/speech/app",.tencent:"https://console.cloud.tencent.com/asr",.aliyun:"https://nls-portal.console.aliyun.com",.baidu:"https://console.bce.baidu.com/ai/#/ai/speech/overview/index",.openai:"https://platform.openai.com/api-keys",.groq:"https://console.groq.com/keys",.google:"https://console.cloud.google.com/apis/credentials",.azure:"https://portal.azure.com/#view/Microsoft_Azure_ProjectOxford/CognitiveServicesHub/~/SpeechServices"]
+        let addresses:[ASREngine:String]=[.deepgram:"https://console.deepgram.com",.iflytek:"https://console.xfyun.cn",.volcengine:"https://console.volcengine.com/speech/app",.tencent:"https://console.cloud.tencent.com/asr",.aliyun:"https://nls-portal.console.aliyun.com",.baidu:"https://console.bce.baidu.com/ai/#/ai/speech/overview/index",.openai:"https://platform.openai.com/api-keys",.groq:"https://console.groq.com/keys",.assemblyai:"https://www.assemblyai.com/dashboard/api-keys",.elevenlabs:"https://elevenlabs.io/app/settings/api-keys",.google:"https://console.cloud.google.com/apis/credentials",.azure:"https://portal.azure.com/#view/Microsoft_Azure_ProjectOxford/CognitiveServicesHub/~/SpeechServices"]
         return addresses[engine].flatMap(URL.init(string:))
     }
     func start(completion:@escaping(Bool)->Void){queue.async{
