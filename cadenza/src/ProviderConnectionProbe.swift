@@ -12,14 +12,14 @@ final class ProviderConnectionProbe {
         self.engine=engine;self.options=options;self.credentials=credentials;self.socketFactory=socketFactory;self.http=http
     }
     static func consoleURL(_ engine:ASREngine)->URL? {
-        let addresses:[ASREngine:String]=[.deepgram:"https://console.deepgram.com",.iflytek:"https://console.xfyun.cn",.volcengine:"https://console.volcengine.com/speech/app",.tencent:"https://console.cloud.tencent.com/asr",.aliyun:"https://nls-portal.console.aliyun.com",.baidu:"https://console.bce.baidu.com/ai/#/ai/speech/overview/index"]
+        let addresses:[ASREngine:String]=[.deepgram:"https://console.deepgram.com",.iflytek:"https://console.xfyun.cn",.volcengine:"https://console.volcengine.com/speech/app",.tencent:"https://console.cloud.tencent.com/asr",.aliyun:"https://nls-portal.console.aliyun.com",.baidu:"https://console.bce.baidu.com/ai/#/ai/speech/overview/index",.openai:"https://platform.openai.com/api-keys",.groq:"https://console.groq.com/keys"]
         return addresses[engine].flatMap(URL.init(string:))
     }
     func start(completion:@escaping(Bool)->Void){queue.async{
         guard !self.started,!self.terminal else{return};self.started=true;self.completion=completion
         guard self.options.consent,self.engine != .apple,self.engine.credentialFields.allSatisfy({!(self.credentials[$0.0] ?? "").isEmpty}) else{self.finish(false);return}
         let timeout=DispatchWorkItem{[weak self] in self?.finish(false)};self.timeout=timeout;self.queue.asyncAfter(deadline:.now()+12,execute:timeout)
-        if self.engine == .aliyun || self.engine == .baidu {self.requestToken()}else{self.openSocket()}
+        if BatchTranscription.service(self.engine) != nil {self.checkKey()}else if self.engine == .aliyun || self.engine == .baidu {self.requestToken()}else{self.openSocket()}
     }}
     func cancel(){queue.async{self.terminal=true;self.completion=nil;self.cleanup()}}
     func synchronizeForTests(){queue.sync{}}
@@ -48,6 +48,14 @@ final class ProviderConnectionProbe {
         s.authRejected={[weak self] in self?.queue.async{self?.finish(false)}}
         // No send() call: even synthesized silence would be an audio upload.
         s.connect(request)
+    }
+    /// Batch services have no connection to open; their model list answers 200 for a valid key and sends no audio.
+    private func checkKey(){
+        guard let request=BatchTranscription.keyCheckRequest(engine,key:credentials["apikey"] ?? "") else{finish(false);return}
+        http.exchange(request){[weak self] result in self?.queue.async{
+            guard let self,!self.terminal else{return}
+            if case .success(let reply)=result,(200...299).contains(reply.status){self.finish(true)}else{self.finish(false)}
+        }}
     }
     private func requestToken(){
         let request:URLRequest

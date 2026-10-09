@@ -155,7 +155,7 @@ enum EngineReadiness {
         switch engine {
         case "apple": return speech && (local || cloud)
         case "local": return LocalTranscriberLoader.supported && LocalModelCenter.shared.installedEntries.contains{LocalModelCatalog.usable($0)}
-        case "iflytek", "volcengine", "tencent", "aliyun", "baidu", "deepgram": return credentials && consent
+        case "iflytek", "volcengine", "tencent", "aliyun", "baidu", "deepgram", "openai", "groq": return credentials && consent
         default: return false
         }
     }

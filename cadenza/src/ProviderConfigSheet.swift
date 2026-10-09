@@ -37,7 +37,7 @@ final class ProviderSettingsDraft {
     }
     var complete:Bool{engine.credentialFields.allSatisfy{saved.contains($0.0) || !(credentials[$0.0] ?? "").isEmpty}}
     var canSave:Bool{complete || (store.config.options(engine).consent && !options.consent)}
-    var supportsOptions:Bool{engine != .baidu && (engine != .tencent || CloudASROptions.tencentTextModels.contains(options.model)) && (engine != .iflytek || recognitionLanguage != "en_us")}
+    var supportsOptions:Bool{engine.hasTextSwitches && (engine != .tencent || CloudASROptions.tencentTextModels.contains(options.model)) && (engine != .iflytek || recognitionLanguage != "en_us")}
     func fail(_ key:String){feedback=L10n.tr(key);isError=true}
     @discardableResult func save()->Bool {
         guard !previewReadOnly else{return false}
@@ -123,7 +123,7 @@ struct ProviderConfigSheet:View {
             Form {
                 Section {
                     VStack(alignment:.leading,spacing:10){
-                        ForEach(0..<3,id:\.self){index in HStack(alignment:.top){Text("\(index+1).").monospacedDigit().foregroundStyle(.secondary);Text(L10n.tr((engine == .deepgram ? "deepgram.step.":"provider.step.")+String(index+1)))}}
+                        ForEach(0..<3,id:\.self){index in HStack(alignment:.top){Text("\(index+1).").monospacedDigit().foregroundStyle(.secondary);Text(L10n.tr((engine == .deepgram ? "deepgram.step.":BatchTranscription.service(engine) != nil ? "batch.step.":"provider.step.")+String(index+1)))}}
                         if let url=ProviderConnectionProbe.consoleURL(engine){Link(destination:url){Label(L10n.tr("provider.console."+engine.rawValue),systemImage:"arrow.up.right.square")}.buttonStyle(.borderedProminent)}
                         if let url=ProviderHelp.credentialGuideURL(engine:engine,language:L10n.language){
                             Link(destination:url){Label(L10n.tr("provider.credentialGuide"),systemImage:"book")}.buttonStyle(.bordered)
@@ -181,6 +181,14 @@ struct ProviderConfigSheet:View {
                 }
             }
             Text(L10n.tr("deepgram.languageHint")).font(.callout)
+        }
+        if let service=BatchTranscription.service(engine) {
+            Picker(L10n.tr("provider.model"),selection:$draft.options.model){ForEach(service.models,id:\.self){Text($0).tag($0)}}
+            Picker(L10n.tr("provider.language"),selection:$draft.options.language){
+                ForEach(BatchTranscription.languages,id:\.self){code in Text(code == "multi" ? L10n.tr("batch.language.auto"):Locale(identifier:L10n.language).localizedString(forIdentifier:code) ?? code).tag(code)}
+            }
+            Text(L10n.tr("batch.languageHint")).font(.callout)
+            TextField(L10n.tr("provider.hotwords"),text:$draft.options.hotwords).help(L10n.tr("batch.hotwords.placeholder"))
         }
         if engine == .iflytek {
             Picker(L10n.tr("provider.language"),selection:$draft.recognitionLanguage){Text(L10n.tr("language.chinese")).tag("zh_cn");Text(L10n.tr("language.english")).tag("en_us");Text(L10n.tr("language.auto")).tag("auto")}

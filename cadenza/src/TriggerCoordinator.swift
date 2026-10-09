@@ -33,9 +33,9 @@ final class TriggerCoordinator {
             let c=store.config,provider=ASREngine(rawValue:c.engine) ?? .apple
             guard let cfg=try? AppTriggerMachine.Configuration(mode:c.inputMode == "hybrid" ? .hybrid:c.inputMode == "toggle" ? .toggle:.hold,
                 longPressThreshold:c.triggerThresholdSec,lockedSilenceTimeout:c.triggerNoSpeechSec,speechSilenceTimeout:c.triggerPostSpeechSec,
-                submission:provider == .baidu ? .wholeRecording:.streaming,
-                engineMaximumDuration:min(c.recordingTimeoutSec,provider == .baidu ? 59:provider == .apple ? 60:600),
-                bufferLimitBytes:provider == .baidu ? 60*32000:256000,
+                submission:provider.uploadsWholeRecording ? .wholeRecording:.streaming,
+                engineMaximumDuration:min(c.recordingTimeoutSec,provider.uploadsWholeRecording ? Double(provider.wholeRecordingSeconds-1):provider == .apple ? 60:600),
+                bufferLimitBytes:provider.uploadsWholeRecording ? provider.wholeRecordingSeconds*32000:256000,
                 access:provider == .apple ? .local:.cloud(consented:c.options(provider).consent),
                 microphoneAllowed:microphoneAccess(),credentialsAvailable:credentialsReady(provider),
                 independentToggleEnabled:c.toggleShortcutEnabled) else{return}

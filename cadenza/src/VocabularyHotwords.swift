@@ -8,7 +8,7 @@ enum VocabularyHotwords {
     /// The options a recording should use. When the result would not be accepted by the provider's own rules, the options come
     /// back unchanged: hot words must never make a dictation fail.
     static func apply(_ engine: ASREngine, to options: CloudASROptions, settings: VocabularySettings, store: VocabularyStore = .shared) -> CloudASROptions {
-        guard settings.enabled, settings.sendToCloud, [.volcengine, .tencent, .deepgram].contains(engine) else { return options }
+        guard settings.enabled, settings.sendToCloud, [.volcengine, .tencent, .deepgram, .openai, .groq].contains(engine) else { return options }
         if engine == .deepgram && !DeepgramAPI.keytermsApply(options.language) { return options }
         let candidates = store.hotwordCandidates(settings)
         guard !candidates.isEmpty else { return options }
@@ -26,6 +26,12 @@ enum VocabularyHotwords {
                 entries.append("\(c.term)|\(c.user ? tencentUserWeight : tencentPackWeight)")
             }
             merged.hotwords = entries.joined(separator: ",")
+        case .openai, .groq:   // one term per line; they are sent as a short comma-separated hint
+            var lines = options.hotwords.split(separator: "\n").map(String.init)
+            var seen = Set(lines.map { $0.lowercased() })
+            var length = BatchTranscription.prompt(options.hotwords).count
+            for c in candidates where plain(c.term) && c.term.count <= 60 && length + c.term.count + 2 <= BatchTranscription.promptLimit && seen.insert(c.term.lowercased()).inserted { lines.append(c.term); length += c.term.count + 2 }
+            merged.hotwords = lines.joined(separator: "\n")
         default:   // Deepgram: one key term per line
             var lines = options.hotwords.split(separator: "\n").map(String.init)
             var seen = Set(lines.map { $0.lowercased() })
