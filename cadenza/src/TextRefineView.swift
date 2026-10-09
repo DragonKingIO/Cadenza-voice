@@ -12,7 +12,7 @@ private struct ProfilePicker: View {
 
     var body: some View {
         if model.llmProfiles.isEmpty {
-            Label(L10n.tr("llm.none"), systemImage: "arrow.down.circle").font(.callout).foregroundStyle(.secondary)
+            Button { model.tab = .aiModels } label: { Label(L10n.tr("llm.none"), systemImage: "arrow.down.circle") }.buttonStyle(.link)
         } else {
             Picker(L10n.tr(use == .polish ? "llm.useForPolish" : "llm.useForTranslate"), selection: Binding(get: { selected }, set: { id in
                 model.persist { if use == .polish { $0.refine.profileID = id } else { $0.translate.profileID = id } }
