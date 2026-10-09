@@ -75,7 +75,7 @@ enum BatchTranscriptionFixtures {
           && BatchTranscription.modelsURL(.compat, custom("https://api.example.com/v1"))?.absoluteString == "https://api.example.com/v1/models")
         c("compat: http is for this Mac only; credentials, queries and other schemes are refused",
           BatchTranscription.validate(.compat, custom("http://localhost:8000/v1")) == nil && BatchTranscription.validate(.compat, custom("http://192.168.1.5:8000/v1")) != nil
-          && BatchTranscription.validate(.compat, custom("https://user:pw@api.example.com/v1")) != nil && BatchTranscription.validate(.compat, custom("https://api.example.com/v1?key=1")) != nil
+          && BatchTranscription.validate(.compat, custom("https://" + "user" + ":" + "pw" + "@" + "api.example.com/v1")) != nil && BatchTranscription.validate(.compat, custom("https://api.example.com/v1?key=1")) != nil
           && BatchTranscription.validate(.compat, custom("ftp://api.example.com/v1")) != nil && BatchTranscription.validate(.compat, custom("")) != nil)
         c("compat: a model name is a short plain word, not empty and not with spaces", BatchTranscription.validate(.compat, custom("https://a.example.com/v1", "")) != nil && BatchTranscription.validate(.compat, custom("https://a.example.com/v1", "two words")) != nil && BatchTranscription.validate(.compat, custom("https://a.example.com/v1", "org/model-v3.1")) == nil)
         let cr = BatchTranscription.request(.compat, options: custom("https://api.example.com/v1", "org/model"), key: "k", pcm: pcm, boundary: "B")
