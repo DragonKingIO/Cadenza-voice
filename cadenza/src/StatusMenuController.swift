@@ -16,6 +16,8 @@ struct StatusMenuSnapshot {
     /// The language dictation is translated into; empty = translation is off.
     var translateTarget = ""
     var toggleAvailable=false,hasResult=false,busy=false
+    /// The display text of the tap shortcut when it is on; `shortcut` is the hold shortcut when it is on.
+    var toggleShortcut=""
     /// 截图快捷键的显示文字；空 = 未设置
     var screenshotShortcut="",ocrShortcut=""
     var pinCount=0,pinsHidden=false,pinsClickThrough=false
@@ -25,7 +27,10 @@ struct StatusMenuSnapshot {
     var recording:Bool {if case .recording=phase{return true};return false}
     var header:String {
         switch phase {
-        case .idle:return shortcut.isEmpty ? L10n.tr("menu.ready.manual"):L10n.format(mode == "toggle" ? "menu.ready.toggle":"menu.ready.hold",shortcut)
+        case .idle:
+            if !shortcut.isEmpty && !toggleShortcut.isEmpty {return L10n.format("menu.ready.both",shortcut,toggleShortcut)}
+            if !toggleShortcut.isEmpty {return L10n.format("menu.ready.toggle",toggleShortcut)}
+            return shortcut.isEmpty ? L10n.tr("menu.ready.manual"):L10n.format("menu.ready.hold",shortcut)
         case .recording:return L10n.tr("menu.recording")
         case .recognizing:return L10n.tr("menu.recognizing")
         case .paused:return L10n.tr("menu.paused")
@@ -84,7 +89,6 @@ enum StatusMenuController {
         }
         let engines=submenu("engine",L10n.tr("ui.8545bbfc5af9"),s.engines,s.engine,"selectEngine:")
         engines.addItem(.separator());engines.addItem(item("manage",L10n.tr("menu.manageEngines"),"showEngineSettings"))
-        _=submenu("mode",L10n.tr("menu.trigger"),[.init(title:L10n.tr("ui.e4947a64758a"),value:"hold",available:true),.init(title:L10n.tr("ui.c3c686d13dc5"),value:"toggle",available:s.toggleAvailable)],s.mode,"selectInputMode:")
         _=submenu("mic",L10n.tr("ui.714cac30e2ff"),s.microphones,s.microphone,"selectMicrophone:")
         if !s.translations.isEmpty {
             let translate=submenu("translate",L10n.tr("menu.translate"),s.translations,s.translateTarget,"selectTranslate:")

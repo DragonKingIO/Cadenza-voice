@@ -415,8 +415,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             _ = invoke(L10n.tr("ui.714cac30e2ff"), mic.uid); verify("selected-microphone")
         }
         _ = invoke(L10n.tr("ui.714cac30e2ff"), ""); verify("system-microphone")
-        _ = invoke(L10n.tr("menu.trigger"), "hold"); verify("hold")
-        _=invoke(L10n.tr("menu.trigger"),"toggle");verify("toggle");Log.write("ui-config-action unsupported-disabled=\(!invoke(L10n.tr("ui.8545bbfc5af9"),"local"))")
+        Log.write("ui-config-action unsupported-disabled=\(!invoke(L10n.tr("ui.8545bbfc5af9"),"local"))")
     }
 
     func inspectDualSave() {
@@ -584,9 +583,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     private func menuSnapshot() -> StatusMenuSnapshot {
         let c=configStore.config,engine=ASREngine(rawValue:configStore.config.engine) ?? .apple
         var s=StatusMenuSnapshot()
-        s.engine=c.engine;s.mode=c.inputMode;s.microphone=c.microphoneUID
+        s.engine=c.engine;s.mode=c.primaryIsToggle ? "toggle":"hold";s.microphone=c.microphoneUID
         s.toggleAvailable=c.toggleTrigger != nil
-        s.shortcut=c.inputMode == "toggle" ? (c.toggleShortcutEnabled ? c.toggleTrigger.map(HotkeySpecDisplay.string) ?? "":""):(c.holdShortcutEnabled ? HotkeySpecDisplay.string(c.trigger):"")
+        s.shortcut=c.holdShortcutEnabled ? HotkeySpecDisplay.string(c.trigger):""
+        s.toggleShortcut=c.toggleActive ? c.toggleTrigger.map(HotkeySpecDisplay.string) ?? "":""
         s.hasResult=pipeline.lastTranscript?.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty == false
         s.busy=pipeline.hasActiveSession || pipeline.inputSuspendedForDiagnostic
         s.screenshotShortcut=c.screenshot.trigger.map(HotkeySpecDisplay.string) ?? ""
@@ -663,7 +663,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             changeConfig { $0.engine = value }
         }
     }
-    @objc private func selectInputMode(_ sender: NSMenuItem) { if let value = sender.representedObject as? String,["hold","toggle"].contains(value),value != "toggle" || configStore.config.toggleTrigger != nil { changeConfig { $0.inputMode = value;$0.holdShortcutEnabled=value == "hold";$0.toggleShortcutEnabled=value == "toggle" } } }
     @objc private func selectTranslate(_ sender: NSMenuItem) { if let value = sender.representedObject as? String,TranslationLanguages.valid(value) { changeConfig { $0.translate.target = value } } }
     @objc private func showTranslateSettings() { showSwiftMain(.input) }
     @objc private func selectMicrophone(_ sender: NSMenuItem) { if let value = sender.representedObject as? String { changeConfig { $0.microphoneUID = value } } }
@@ -714,8 +713,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             if let reason=ShortcutPolicy.registrationReason(candidate){return reason}
         }
         let original=configStore.config;var proposed=original
-        if mode == "toggle" {proposed.toggleTrigger=candidate;if candidate == nil {proposed.toggleShortcutEnabled=false};if let enabled=enabled{proposed.toggleShortcutEnabled=enabled}}
-        else {if let candidate=candidate{proposed.trigger=candidate};if let enabled=enabled{proposed.holdShortcutEnabled=enabled};proposed.triggerConsume=false}
+        proposed=proposed.settingShortcut(mode:mode,candidate:candidate,enabled:enabled)
         let errors=BridgeConfig.validate(proposed);guard errors.isEmpty else{return errors.joined(separator:"；")}
         var failure=L10n.tr("ui.5e211d63af42")
         let ok=DualBindingTransaction.commit(proposed,old:original,activate:activateBindings,persist:{ c in

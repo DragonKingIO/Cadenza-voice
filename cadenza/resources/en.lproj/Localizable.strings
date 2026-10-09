@@ -153,7 +153,7 @@
 "ready.unavailable" = "System recognition is unavailable for this language. Check the language and cloud permission.";
 "settings.current" = "Current setup";
 "shortcut.conflict" = "Conflicts with another shortcut.";
-"shortcut.explain" = "Hold to talk: release to finish. Toggle: press once to start and again to finish.";
+"shortcut.explain" = "Use either way of starting, or both. Turn all shortcuts off with the switch above.";
 "shortcut.leftOption" = "Left Option";
 "shortcut.noToggle" = "You can set a separate shortcut for tap-to-toggle mode.";
 "shortcut.notSet" = "Not set";
@@ -770,6 +770,17 @@
 /* Settings detail polish */
 "shortcut.change" = "Change…";
 "shortcut.set" = "Set…";
+"shortcut.hold" = "Hold to talk";
+"shortcut.tap" = "Tap to start and stop";
+"shortcut.remove" = "Remove";
+"shortcut.hold.hint" = "Hold to talk: speak while you hold the key, release to finish.";
+"shortcut.tap.hint" = "Tap to start and stop: press once to start, press again to finish. Set a key here to turn it on.";
+"shortcut.summary.hold" = "Hold %@";
+"shortcut.summary.tap" = "Tap %@";
+"shortcut.summary.none" = "No shortcut is on";
+"ready.both" = "Ready · Hold %@ to talk, or press %@ to start and stop";
+"trial.empty.both" = "Hold %@ and try a sentence, or press %@, speak, and press again.";
+"menu.ready.both" = "Ready — hold %@, or press %@ to start and stop";
 "shortcut.optionAdvice" = "Option is also used for symbols and key combinations. A combined shortcut can help avoid accidental activation.";
 "provider.console.iflytek" = "Open the iFLYTEK Console";
 "provider.console.volcengine" = "Open the Volcengine Console";

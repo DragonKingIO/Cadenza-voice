@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 
 enum SettingsPolishFixtures {
     static func run(_ check:(String,Bool)->Void) {
@@ -43,6 +44,18 @@ enum SettingsPolishFixtures {
         controller.inspectSaveActiveShortcut()
         check("save uses existing transaction callback and refreshes SwiftUI",saves==1 && ends==2 && store.config.toggleTrigger==key && controller.settingsModel?.toggleAvailable==true && controller.window?.attachedSheet == nil)
         check("UI shortcut changes do not enable the new trigger path",!store.config.triggerCoordinatorEnabled && !pipeline.hasActiveSession)
+        // The two shortcuts are independent; setting one switches it on
+        let spec = HotkeySpec(keyCode: 2, modifiers: UInt32(controlKey) | UInt32(optionKey))
+        var base = BridgeConfig.default(); base.holdShortcutEnabled = true; base.toggleTrigger = nil; base.toggleShortcutEnabled = false; base.syncInputMode()
+        let withTap = base.settingShortcut(mode: "toggle", candidate: spec, enabled: nil)
+        check("setting the tap shortcut switches it on and leaves the hold shortcut on", withTap.toggleActive && withTap.holdShortcutEnabled && withTap.toggleTrigger == spec && !withTap.primaryIsToggle && withTap.inputMode == "hold")
+        let holdOff = withTap.settingShortcut(mode: "hold", candidate: nil, enabled: false)
+        check("switching hold off leaves only the tap shortcut, and the tap wording follows", holdOff.primaryIsToggle && holdOff.inputMode == "toggle" && holdOff.anyShortcutOn && holdOff.toggleActive)
+        let removed = holdOff.settingShortcut(mode: "toggle", candidate: nil, enabled: nil)
+        check("removing the tap shortcut clears and switches it off", removed.toggleTrigger == nil && !removed.toggleShortcutEnabled && !removed.toggleActive && !removed.anyShortcutOn && BridgeConfig.validate(removed).isEmpty)
+        let holdBack = removed.settingShortcut(mode: "hold", candidate: BridgeConfig.default().trigger, enabled: nil)
+        check("setting the hold shortcut again switches it back on", holdBack.holdShortcutEnabled && holdBack.anyShortcutOn && holdBack.inputMode == "hold")
+        check("a stale tap switch without a key is not active", { var c = base; c.toggleShortcutEnabled = true; return !c.toggleActive && !c.anyShortcutOn == !c.holdShortcutEnabled }())
         controller.window?.close()
     }
 }

@@ -69,7 +69,7 @@ final class OnboardingModel {
         engineReady = EngineReadiness.ready(engine: c.engine, mic: mic, speech: speech, local: deviceReady, cloud: c.allowCloudRecognition, credentials: current.configured, consent: c.options(current).consent)
         busy = pipeline.hasActiveSession && pipeline.session?.id != trialSessionID
         bindingText = L10n.tr("ui.16f89c29238b") + HotkeySpecDisplay.string(c.trigger) + L10n.tr("ui.127c959d39e5") + (c.toggleTrigger.map(HotkeySpecDisplay.string) ?? L10n.tr("ui.2f5f1d6fbfb0"))
-        holdTitle = c.inputMode == "toggle" ? (pipeline.session?.state == .voiceStarted ? L10n.tr("ui.7c28416dc186") : L10n.tr("ui.830bde5107c5")) : L10n.tr("ui.1ac211466803")
+        holdTitle = c.primaryIsToggle ? (pipeline.session?.state == .voiceStarted ? L10n.tr("ui.7c28416dc186") : L10n.tr("ui.830bde5107c5")) : L10n.tr("ui.1ac211466803")
         let placeholder = L10n.tr("ui.1b7d4a33e2fa")
         trialText = trialActive ? (pipeline.lastTranscript ?? (pipeline.lastResult == "—" ? placeholder : pipeline.lastResult)) : placeholder
     }
@@ -100,11 +100,11 @@ final class OnboardingModel {
     func markTrialStarted() { trialActive = true; trialSessionID = nil; pipeline?.clearTranscript() }
     func captureTrialSession() { trialSessionID = pipeline?.session?.id }
     func pressStart() {
-        guard store.config.inputMode != "toggle" else { return }
+        guard !store.config.primaryIsToggle else { return }
         markTrialStarted(); pipeline?.holdStarted(source: .button); captureTrialSession()
     }
     func pressEnd() {
-        if store.config.inputMode == "toggle" {
+        if store.config.primaryIsToggle {
             if pipeline?.hasActiveSession != true { markTrialStarted() }
             pipeline?.togglePressed(localOnly: true); captureTrialSession()
         } else { pipeline?.holdEnded() }
