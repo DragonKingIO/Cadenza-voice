@@ -63,6 +63,9 @@ final class VoicePipeline {
     var selfTestMode = false
     var inputSuspendedForDiagnostic=false
     var recorderFactory: (() -> HoldRecordingSession)?
+    /// Polishing is skipped for text shorter than this, and given up on after this many seconds.
+    static var polishMinCharacters = 12
+    static var polishDeadlineSeconds = 4.0
     var insertText: (String,FocusIdentity) -> Bool = TextInserter.insert
     var insertIntoWindow: (String,FocusIdentity) -> Bool = {TextInserter.sendUnicode($0,target:$1,windowBound:true)}
     var now: () -> Date = Date.init
@@ -305,15 +308,24 @@ final class VoicePipeline {
                 }
                 // Optional AI polishing: only text goes out, only when the person turned it on, and any failure keeps the text as it is.
                 let refine=self.config.llmService(.polish)
-                if let text=corrected,refine.enabled,refine.configured,self.recorder?.capturedAudioHasSignal != false,!text.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty {
+                // Short utterances gain almost nothing from polishing (measured: only punctuation changed) and the call costs
+                // about a second, so they go in as they are.
+                if let text=corrected,refine.enabled,refine.configured,self.recorder?.capturedAudioHasSignal != false,
+                   text.trimmingCharacters(in:.whitespacesAndNewlines).count >= Self.polishMinCharacters {
                     self.refining=true;self.refineNote=nil;self.notifyUI()
-                    self.textRefiner.refine(text,settings:refine,glossary:VocabularyStore.shared.glossary(for:text,self.config.vocabulary)){[weak self] refined,note in
-                        DispatchQueue.main.async {
-                            guard let self=self,self.session?.id == sid else{return}
-                            self.refining=false;self.refineNote=note.map{L10n.format("refine.kept",$0)}
-                            finish(refined ?? text)
-                        }
+                    // The text is inserted at the latest after a fixed time, whatever the service does: waiting longer only
+                    // makes the person move on, and then the text cannot be put where it was meant.
+                    var settled=false
+                    let settle:(String?,String?)->Void={[weak self] refined,note in
+                        guard !settled,let self=self,self.session?.id == sid else{return}
+                        settled=true
+                        self.refining=false;self.refineNote=note.map{L10n.format("refine.kept",$0)}
+                        finish(refined ?? text)
                     }
+                    self.textRefiner.refine(text,settings:refine,glossary:VocabularyStore.shared.glossary(for:text,self.config.vocabulary)){refined,note in
+                        DispatchQueue.main.async{settle(refined,note)}
+                    }
+                    DispatchQueue.main.asyncAfter(deadline:.now()+min(refine.timeoutSec,Self.polishDeadlineSeconds)){settle(nil,L10n.tr("refine.err.timeout"))}
                     return
                 }
                 finish(corrected)

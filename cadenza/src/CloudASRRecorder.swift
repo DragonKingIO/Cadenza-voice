@@ -116,7 +116,7 @@ class CloudASRRecorder:HoldRecordingSession {
             let voiceID=UUID().uuidString
             guard let u=ASRAuth.tencent(appID:credentials["appid"]!,secretID:credentials["secretid"]!,secret:credentials["secretkey"]!,model:options.model,hotwords:options.hotwords,punc:options.punctuation,itn:options.itn,smoothing:options.smoothing,voiceID:voiceID) else{fail("腾讯鉴权参数无效");return};request=URLRequest(url:u);wire=TencentWire(voiceID:voiceID)
         case .aliyun:
-            guard let token=token else{fail("阿里Token未取得");return};var c=URLComponents(string:"wss://nls-gateway-\(options.region).aliyuncs.com/ws/v1")!;c.queryItems=[URLQueryItem(name:"token",value:token)];request=URLRequest(url:c.url!);wire=AliyunWire(taskID:UUID().uuidString.replacingOccurrences(of:"-",with:""),appKey:credentials["appkey"]!,options:options)
+            guard let token=token else{fail("阿里Token未取得");return};var c=URLComponents(string:"wss://nls-gateway-\(options.region).aliyuncs.com/ws/v1")!;c.queryItems=[URLQueryItem(name:"token",value:token)];request=URLRequest(url:c.url!);wire=AliyunWire(taskID:UUID().uuidString.replacingOccurrences(of:"-",with:"").lowercased(),appKey:credentials["appkey"]!,options:options)
         default:fail("识别引擎不可用");return
         }
         let current=id,s=socketFactory();socket=s
@@ -191,7 +191,7 @@ class CloudASRRecorder:HoldRecordingSession {
         guard let request=BatchTranscription.request(provider,options:options,key:credentials["apikey"] ?? "",pcm:whole) else{fail(L10n.tr("batch.invalidOptions"));return}
         let current=id
         http.exchange(request){[weak self] result in self?.queue.async{guard let self=self,self.id==current,!self.gate.terminal else{return}
-            do{let reply=try result.get();let text=try BatchTranscription.parse(status:reply.status,data:reply.data,engine:self.provider,name:BatchTranscription.destination(self.provider,self.options),options:self.options);self.gate.streamConfirmed();self.finish(text)}
+            do{let reply=try result.get();let text=try BatchTranscription.parse(status:reply.status,data:reply.data,engine:self.provider,name:BatchTranscription.destination(self.provider,self.options),options:self.options);self.gate.streamConfirmed();self.finish(BatchTranscription.scriptFixed(text,options:self.options))}
             catch let error as ASRServiceError{self.fail(error.hint)}
             catch{self.fail(L10n.format("batch.err.network",self.destinationName))}
         }}

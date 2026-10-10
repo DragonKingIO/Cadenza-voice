@@ -223,7 +223,7 @@ extension LLMClient {
         if let blocked = gate(settings, localOnly: localOnly, key: apiKey) { return .failure(blocked) }
         guard TranslationLanguages.valid(target), !target.isEmpty,
               let request = request(settings: settings, apiKey: apiKey, system: TranslatePrompt.system(target: target, glossary: glossary),
-                                    user: RefinePrompt.user(text), maxTokens: min(4096, max(256, text.count * 8))) else { return .failure(.notConfigured) }
+                                    user: RefinePrompt.user(text), maxTokens: min(4096, max(1024, text.count * 8))) else { return .failure(.notConfigured) }
         do {
             let (data, status) = try await transport.send(request, timeout: settings.timeoutSec)
             guard (200...299).contains(status) else { return .failure(status == 401 || status == 403 ? .unauthorized : .http(status)) }

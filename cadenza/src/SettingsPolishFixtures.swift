@@ -59,17 +59,28 @@ enum SettingsPolishFixtures {
         // The translation shortcut
         let leftOption = HotkeySpec(keyCode: 58, modifiers: UInt32(optionKey)), rightOption = HotkeySpec(keyCode: 61, modifiers: UInt32(optionKey))
         let optionT = HotkeySpec(keyCode: 17, modifiers: UInt32(optionKey) | UInt32(controlKey) | UInt32(cmdKey) , modifierKeyCodes: [58, 59, 55])
-        check("overlap: the same key, a lone Option inside a combination, and nothing else", ShortcutPolicy.overlaps(leftOption, leftOption) && ShortcutPolicy.overlaps(leftOption, optionT) && ShortcutPolicy.overlaps(optionT, leftOption) && !ShortcutPolicy.overlaps(leftOption, rightOption) && !ShortcutPolicy.overlaps(rightOption, optionT))
+        check("overlap: only the same key with the same modifiers; a combination that contains a lone Option is fine", ShortcutPolicy.overlaps(leftOption, leftOption) && ShortcutPolicy.overlaps(optionT, optionT) && !ShortcutPolicy.overlaps(leftOption, optionT) && !ShortcutPolicy.overlaps(optionT, leftOption) && !ShortcutPolicy.overlaps(leftOption, rightOption) && !ShortcutPolicy.overlaps(rightOption, optionT))
         var withTranslate = BridgeConfig.default(); withTranslate.trigger = leftOption; withTranslate.translate.target = "English"
         let translateSet = withTranslate.settingShortcut(mode: "translate", candidate: rightOption, enabled: nil)
         check("translation shortcut: set leaves hold and tap alone and is valid next to Left Option", translateSet.translate.trigger == rightOption && translateSet.trigger == leftOption && translateSet.holdShortcutEnabled == withTranslate.holdShortcutEnabled && translateSet.toggleTrigger == withTranslate.toggleTrigger && BridgeConfig.validate(translateSet).isEmpty)
         let translateSame = withTranslate.settingShortcut(mode: "translate", candidate: leftOption, enabled: nil)
         check("translation shortcut: the same key as dictation is refused", !BridgeConfig.validate(translateSame).isEmpty)
-        let translateInside = withTranslate.settingShortcut(mode: "translate", candidate: optionT, enabled: nil)
-        check("translation shortcut: a combination that contains the dictation key is refused", !BridgeConfig.validate(translateInside).isEmpty)
         check("translation shortcut: removing clears only it", translateSet.settingShortcut(mode: "translate", candidate: nil, enabled: nil).translate.trigger == nil && BridgeConfig.validate(translateSet.settingShortcut(mode: "translate", candidate: nil, enabled: nil)).isEmpty)
         let saved = (try? JSONEncoder().encode(translateSet)).flatMap { try? JSONDecoder().decode(BridgeConfig.self, from: $0) }
         check("translation shortcut: survives saving, and an older file without one loads", saved?.translate.trigger == rightOption && (try? JSONDecoder().decode(TranslateSettings.self, from: Data("{\"target\":\"English\"}".utf8)))?.trigger == nil)
+        // Looser, still safe: a shortcut that is switched off cannot clash, VoiceOver's pair only matters with VoiceOver on,
+        // and Command with Shift is allowed for keys that are not editing or app commands.
+        var holdSwitchedOff = withTranslate; holdSwitchedOff.holdShortcutEnabled = false
+        let optionL = HotkeySpec(keyCode: 37, modifiers: UInt32(optionKey) | UInt32(controlKey) | UInt32(cmdKey), modifierKeyCodes: [58, 59, 55])
+        check("translation shortcut: a combination with Left Option is valid next to hold-to-talk on Left Option", ShortcutPolicy.basicReason(optionL, standardFunctionKeys: true, voiceOver: false) == nil && BridgeConfig.validate(withTranslate.settingShortcut(mode: "translate", candidate: optionL, enabled: nil)).isEmpty)
+        check("translation shortcut: the very same key as a hold-to-talk that is switched off is fine, as one that is on is not", BridgeConfig.validate(holdSwitchedOff.settingShortcut(mode: "translate", candidate: leftOption, enabled: nil)).isEmpty && !BridgeConfig.validate(translateSame).isEmpty)
+        let ctrlOpt = HotkeySpec(keyCode: 17, modifiers: UInt32(controlKey) | UInt32(optionKey)), cmdShiftL = HotkeySpec(keyCode: 37, modifiers: UInt32(cmdKey) | UInt32(shiftKey))
+        check("shortcut rules: Control+Option is refused only while VoiceOver is on", ShortcutPolicy.basicReason(ctrlOpt, voiceOver: false) == nil && ShortcutPolicy.basicReason(ctrlOpt, voiceOver: true) != nil)
+        check("shortcut rules: Command+Shift with a non-editing key is allowed, a bare Command key and the protected commands are not",
+              ShortcutPolicy.basicReason(cmdShiftL, voiceOver: false) == nil && ShortcutPolicy.basicReason(HotkeySpec(keyCode: 37, modifiers: UInt32(cmdKey)), voiceOver: false) != nil
+              && ShortcutPolicy.basicReason(HotkeySpec(keyCode: 17, modifiers: UInt32(cmdKey) | UInt32(shiftKey)), voiceOver: false) != nil && ShortcutPolicy.basicReason(HotkeySpec(keyCode: 8, modifiers: UInt32(cmdKey) | UInt32(shiftKey)), voiceOver: false) != nil)
+        check("shortcut rules: a lone letter or Option+letter is still refused, since it would type", ShortcutPolicy.basicReason(HotkeySpec(keyCode: 17, modifiers: UInt32(optionKey)), voiceOver: false) != nil && ShortcutPolicy.basicReason(HotkeySpec(keyCode: 17, modifiers: UInt32(controlKey)), voiceOver: false) != nil)
+        check("shortcut rules: there are always suggestions to offer", ShortcutPolicy.suggestions(limit: 3) { ShortcutPolicy.basicReason($0, standardFunctionKeys: true, voiceOver: false) == nil }.count == 3)
         controller.window?.close()
     }
 }

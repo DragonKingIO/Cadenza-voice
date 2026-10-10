@@ -219,7 +219,8 @@ struct BridgeConfig: Codable {
         }
         if let t=c.translate.trigger {
             if let reason=ShortcutPolicy.basicReason(t,standardFunctionKeys:true) { errs.append(reason) }
-            var others:[HotkeySpec]=[c.trigger]; if let toggle=c.toggleTrigger {others.append(toggle)}
+            // A shortcut that is switched off cannot clash with anything.
+            var others:[HotkeySpec]=[]; if c.holdShortcutEnabled {others.append(c.trigger)}; if c.toggleActive,let toggle=c.toggleTrigger {others.append(toggle)}
             if let s=c.screenshot.trigger {others.append(s)}; if let o=c.screenshot.ocrTrigger {others.append(o)}
             if others.contains(where:{ShortcutPolicy.overlaps(t,$0)}) { errs.append(L10n.tr("translate.shortcut.conflict")) }
         }
@@ -461,7 +462,14 @@ extension BridgeConfig {
     func recordingOptions(_ engine:ASREngine)->CloudASROptions {
         var o=options(engine)
         if engine == .deepgram {o.language=DeepgramAPI.effectiveLanguage(o.language,recognitionLocale:recognitionLocale)}
-        return VocabularyHotwords.apply(engine,to:o,settings:vocabulary)
+        var applied=VocabularyHotwords.apply(engine,to:o,settings:vocabulary)
+        // Whisper-style services guess the language and the script on their own: measured on real recordings they answered
+        // in Traditional characters for Simplified speech. When the app is set to Chinese, name the language and say which script.
+        if BatchTranscription.service(engine) != nil,applied.language == "multi",let hint=BatchTranscription.chineseHint(recognitionLocale:recognitionLocale) {
+            applied.language="zh"
+            applied.hotwords=applied.hotwords.isEmpty ? hint:hint+"\n"+applied.hotwords
+        }
+        return applied
     }
     func options(_ engine:ASREngine)->CloudASROptions {
         var o=cloudASR[engine.rawValue] ?? .defaults(engine)

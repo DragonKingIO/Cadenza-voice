@@ -95,6 +95,33 @@ The benchmark below was run with `--accuracy-benchmark --bench-quick` on the sam
 | SenseVoice (recommended default) | 2.0–2.2% | 24.8% | fast |
 | FireRedASR2 CTC | 2.5% | 33.3% | 52 s |
 
+### Accuracy ranking (shown in the model list)
+
+Synthesized speech is much cleaner than a person, and on it every model looks nearly perfect. The ranking shown in the model list therefore
+comes from real recordings: **15 clips of one person talking casually in Chinese** (fast, half-sentences, filler words), each
+corrected by hand (character error rate after dropping punctuation, lower is better). It is one voice and 15 clips, so small
+differences are noise; the order of the first and the rest is not.
+
+| Model | Errors on casual Chinese | Time per clip |
+|---|---|---|
+| SenseVoice (recommended) | 16.8–17.0% | 0.5 s |
+| Qwen3-ASR 0.6B | 21.1% | 2.3 s |
+| Paraformer-large | 21.4% | 0.4 s |
+| FireRedASR2 | 24.7% | 2.6 s |
+| Parakeet TDT v3 | not usable (European languages only: it writes Chinese speech as English) | 1.0 s |
+
+Cloud services on the same clips (clips of 11 s or more cannot be streamed faster than real time, so they were fed at real time):
+Volcengine 14.7%, iFlytek 16.3%, Tencent 16.2%, Groq Whisper large-v3 21.2% (after asking for Chinese and Simplified characters),
+Deepgram 46%, Alibaba NLS unusable until the paid version is activated. None of them is much better than the local SenseVoice.
+
+English was only measured on synthesized speech (`--accuracy-benchmark --bench-lang=en`, 39 clips, three voices, clean and with noise):
+Qwen3-ASR 0.5%, Paraformer 2.6%, FireRedASR2 4.3%, SenseVoice 5.1% and Parakeet 6.0%. For SenseVoice and Parakeet nearly all of that
+is digits written as digits ("25" against "twenty five"), which the character count treats as an error; without the number sentences
+they are about 1.1% and 1.4%. Treat the English order as a rough guide until someone records real English speech.
+
+AI polishing does not improve this (it does not know what was said): on the same 15 dictations it moved the error from 16.8% to
+19.6%, because it also rewrites ("他" to "它"). It is for punctuation and filler words.
+
 ### Speed and memory (shown in the model list)
 
 Every built-in model carries a `profile` in the model list (`LocalModelProfile`), and the Settings page prints it under the model as one line, for example "Speed: fast · 10 s of speech takes about 0.6 s · about 594 MB of memory · with punctuation". The numbers come from `Cadenza --bench-speed --bench-model=<kind>:<folder>`, run once per model in its own process (memory that was used does not shrink): load time, then three timed runs of each of five synthesized sentences of 4.6–7.2 s after one warm-up, 2 threads, on one Apple silicon Mac. The speed word follows the real-time factor: under 0.10 fast, under 0.20 medium, otherwise slow. Memory is the whole app's resident size after loading and using the model, so it includes about 26 MB for the app itself.

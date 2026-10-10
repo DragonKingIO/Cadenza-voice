@@ -150,8 +150,8 @@
         "zh-Hans": "高精度中文（FireRedASR2）· 实验性"
       },
       "summary": {
-        "en": "Mandarin and English. In our tests its accuracy matched the recommended model, but it writes no punctuation, does not format numbers, and is about four times slower. Runs fully on this Mac.",
-        "zh-Hans": "普通话和英文。我们的测试里准确度和推荐模型相当，但不输出标点、不规整数字，速度约慢 4 倍。完全在本机运行。"
+        "en": "Mandarin and English. On synthesized speech its accuracy matched the recommended model; on a real person talking casually it was behind (about 25% against 17%). It writes no punctuation, does not format numbers, and is about four times slower. Runs fully on this Mac.",
+        "zh-Hans": "普通话和英文。合成语音测试里准确度和推荐模型相当；真人随口说话时落后（约 25%，推荐模型约 17%）。不输出标点、不规整数字，速度约慢 4 倍。完全在本机运行。"
       },
       "kind": "fire-red-ctc",
       "languages": [
@@ -206,8 +206,8 @@
         "zh-Hans": "中文夹英文，速度最快（Paraformer）· 实验性"
       },
       "summary": {
-        "en": "Mandarin with English words, from DAMO's Paraformer-large. In our test it was the fastest model (about 9 s for 105 clips, against 52 s for FireRedASR2) and made fewer character errors than SenseVoice on Chinese. It writes no punctuation. Runs fully on this Mac.",
-        "zh-Hans": "普通话夹英文单词，来自 DAMO 的 Paraformer-large。我们的测试里它是最快的（105 句约 9 秒，FireRedASR2 要 52 秒），中文字错率比 SenseVoice 更低。不输出标点。完全在本机运行。"
+        "en": "Mandarin with English words, from DAMO's Paraformer-large. It is the fastest model (about 9 s for 105 clips, against 52 s for FireRedASR2) and made fewer character errors than SenseVoice on synthesized Chinese, but on a real person talking casually it was behind (about 21% against 17%). It writes no punctuation. Runs fully on this Mac.",
+        "zh-Hans": "普通话夹英文单词，来自 DAMO 的 Paraformer-large。它是最快的（105 句约 9 秒，FireRedASR2 要 52 秒），合成中文的字错率比 SenseVoice 更低；但真人随口说话时落后（约 21%，SenseVoice 约 17%）。不输出标点。完全在本机运行。"
       },
       "kind": "paraformer",
       "languages": [
@@ -265,12 +265,12 @@
       "id": "qwen3-asr-06b-int8",
       "version": "1.0.0",
       "display_name": {
-        "en": "Most accurate in our tests, multilingual (Qwen3-ASR) · experimental",
-        "zh-Hans": "我们测试里最准，多语言（Qwen3-ASR）· 实验性"
+        "en": "Most accurate for English, multilingual (Qwen3-ASR) · experimental",
+        "zh-Hans": "英文最准，多语言（Qwen3-ASR）· 实验性"
       },
       "summary": {
-        "en": "Qwen3-ASR 0.6B: 27+ languages and many Chinese dialects, detects the language itself. On our synthesized test speech it made the fewest character errors (0.8% against 2.2% for SenseVoice) and was the only one that got Chinese with English words right every time. It writes punctuation. It is the largest download (about 880 MB, and the first install takes a minute or two) and the slowest to answer (about a second for a short sentence), and it was only tested on synthesized speech. Runs fully on this Mac.",
-        "zh-Hans": "Qwen3-ASR 0.6B：27 种以上语言和多种中文方言，自动判断语种。在我们的合成语音测试里字错率最低（0.8%，SenseVoice 是 2.2%），中文夹英文每次都对，是唯一做到的。会输出标点。下载最大（约 880 MB，第一次安装要一两分钟）、出结果也最慢（一句短话约一秒），且只测过合成语音。完全在本机运行。"
+        "en": "Qwen3-ASR 0.6B: 27+ languages and many Chinese dialects, detects the language itself. On synthesized test speech it made the fewest character errors (0.8% against 2.2% for SenseVoice) and got Chinese with English words right every time. On a real person talking casually in Chinese it was second (about 21% against 17% for SenseVoice) and about four times slower. It writes punctuation. It is the largest download (about 880 MB, and the first install takes a minute or two). Runs fully on this Mac.",
+        "zh-Hans": "Qwen3-ASR 0.6B：27 种以上语言和多种中文方言，自动判断语种。在合成语音测试里字错率最低（0.8%，SenseVoice 是 2.2%），中文夹英文每次都对。但在真人随口说的中文上排第二（约 21%，SenseVoice 约 17%），而且慢约 4 倍。会输出标点。下载最大（约 880 MB，第一次安装要一两分钟）。完全在本机运行。"
       },
       "kind": "qwen3-asr",
       "languages": [

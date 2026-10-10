@@ -229,6 +229,10 @@ enum BatchTranscriptionFixtures {
         c("vocabulary: Google gets the terms as phrases, Azure takes none", VocabularyHotwords.apply(.google, to: options(.google), settings: withAzure, store: store).hotwords == "Kubernetes" && VocabularyHotwords.apply(.azure, to: options(.azure), settings: withAzure, store: store).hotwords == "")
         c("vocabulary: AssemblyAI and ElevenLabs get the terms", VocabularyHotwords.apply(.assemblyai, to: options(.assemblyai), settings: withAzure, store: store).hotwords == "Kubernetes" && VocabularyHotwords.apply(.elevenlabs, to: options(.elevenlabs), settings: withAzure, store: store).hotwords == "Kubernetes")
         c("vocabulary: nothing is added unless the person allowed sending it", VocabularyHotwords.apply(.openai, to: options(.openai), settings: vocab, store: store).hotwords == "")
+        var zh = CloudASROptions(); zh.language = "zh"; zh.hotwords = BatchTranscription.simplifiedHint + "\nGitHub"
+        c("Whisper-style: Simplified is asked for and an answer in Traditional is converted", BatchTranscription.scriptFixed("寶寶，你想說玩過這個東西嗎", options: zh) == "宝宝，你想说玩过这个东西吗" && BatchTranscription.scriptFixed("寶寶", options: CloudASROptions()) == "寶寶")
+        c("Whisper-style: the app set to Chinese names the language and the script; other languages are left alone",
+          BatchTranscription.chineseHint(recognitionLocale: "zh-CN") == BatchTranscription.simplifiedHint && BatchTranscription.chineseHint(recognitionLocale: "zh_TW") == BatchTranscription.traditionalHint && BatchTranscription.chineseHint(recognitionLocale: "en-US") == nil)
     }
 
     /// `--selftest-batch-real`: one second of a tone through the real network path to a server of your own

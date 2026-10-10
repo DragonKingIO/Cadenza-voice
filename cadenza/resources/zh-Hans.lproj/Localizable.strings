@@ -1513,7 +1513,7 @@
 "translate.shortcut.hint" = "按住这个键说话：说的话先被识别，再翻译成所选语言，输入的是译文。普通听写的快捷键从不翻译。如果左 Option 已用于听写，右 Option 很适合用来做翻译键。";
 "translate.shortcut.none" = "设置一个按键，就能边听写边翻译。";
 "translate.shortcut.needTarget" = "请先选择要翻译成的语言。";
-"translate.shortcut.conflict" = "翻译快捷键不能和其他快捷键相同，也不能包含其中一个。";
+"translate.shortcut.conflict" = "翻译快捷键不能和另一个已开启的快捷键完全相同。可以换一个组合，或先关掉那个快捷键。";
 "translate.models" = "添加或更改 AI 模型";
 "translate.models.hint" = "翻译使用你的 AI 模型之一（本机的，或你有密钥的服务）。模型在“AI 模型”页添加。";
 "llm.header" = "我的 AI 模型";
@@ -1537,3 +1537,11 @@
 "llm.delete.confirm" = "确认删除这个模型";
 "llm.delete.cancel" = "保留";
 "llm.hint" = "可以添加任意多个 AI 服务（地址、模型、密钥）。AI 润色和语音翻译各选一个，所以翻译可以用和润色不同的模型，比如更强的或本机的。每个模型有自己的密钥，也有自己的“允许接收文字”开关。";
+"shortcut.try" = "可以试试：%@";
+"asr.aliyun.trialEnded" = "这个阿里云语音服务的免费试用已结束，或还没有开通。请在阿里云控制台开通商用版后再试。";
+"local.rank.zh" = "中文口语：第 %d 名";
+"local.rank.zh.none" = "中文：不支持";
+"local.rank.en" = "英文：第 %d 名";
+"local.rank.en.none" = "英文：不支持";
+"engine.rank.zh" = "中文口语实测：错误约 %d%%";
+"local.profile.footnote.speech" = "速度、内存和标点是开发者在一台 Mac 上测的，你的机器会有差别。排名：中文用真人说话的录音测，英文只测过合成语音，仅供参考。";

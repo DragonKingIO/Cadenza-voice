@@ -280,11 +280,14 @@ enum LLMClient {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if let key = apiKey, !key.isEmpty { request.setValue("Bearer " + key, forHTTPHeaderField: "Authorization") }
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "model": settings.model.trimmingCharacters(in: .whitespaces),
             "messages": [["role": "system", "content": system], ["role": "user", "content": user]],
             "temperature": 0.2, "max_tokens": maxTokens, "stream": false,
         ]
+        // Cleaning up a sentence needs no reasoning. DeepSeek's newer models think first by default and spent the whole token
+        // budget doing it (measured: 40% of answers came back empty, after about two seconds), so thinking is switched off.
+        if url.host?.hasSuffix("deepseek.com") == true { body["thinking"] = ["type": "disabled"] }
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
         return request
     }
@@ -357,7 +360,7 @@ enum LLMClient {
                        transport: LLMTransport = NativeLLMTransport()) async -> Result<String, RefineFailure> {
         if let blocked = gate(settings, localOnly: localOnly, key: apiKey) { return .failure(blocked) }
         guard let request = request(settings: settings, apiKey: apiKey, system: RefinePrompt.system(style: settings.style, glossary: glossary),
-                                    user: RefinePrompt.user(text), maxTokens: min(4096, max(256, text.count * 3))) else { return .failure(.notConfigured) }
+                                    user: RefinePrompt.user(text), maxTokens: min(4096, max(1024, text.count * 3))) else { return .failure(.notConfigured) }
         do {
             let (data, status) = try await transport.send(request, timeout: settings.timeoutSec)
             guard (200...299).contains(status) else { return .failure(status == 401 || status == 403 ? .unauthorized : .http(status)) }

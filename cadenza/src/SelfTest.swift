@@ -534,6 +534,8 @@ enum SelfTest {
         check("菜单原目标身份确认后只插入一次", inserted == ["外部结果"] && pipeline.session == nil)
         // AI polishing in the pipeline: refined text is inserted, any failure inserts the plain text, a cancelled session inserts nothing
         func settle(_ done: () -> Bool) { let end = Date().addingTimeInterval(3); while !done() && Date() < end { RunLoop.main.run(until: Date().addingTimeInterval(0.02)) } }
+        VoicePipeline.polishMinCharacters = 0
+        defer { VoicePipeline.polishMinCharacters = 12 }
         var refineSettings = TextRefineSettings(); refineSettings.enabled = true; refineSettings.preset = "ollama"; refineSettings.baseURL = "http://localhost:11434/v1"; refineSettings.model = "m"
         store.mutate { $0.refine = refineSettings }
         pipeline.textRefiner = LLMRefineFixtures.FakeRefiner(result: "润色后的文字。", note: nil)
@@ -562,6 +564,26 @@ enum SelfTest {
         recorders.last?.onFinal?("没开润色的文字")
         settle { pipeline.session == nil }
         check("没开润色时不调用模型", inserted.last == "没开润色的文字")
+        // Short text is not polished at all, and a service that never answers is given up on, so the text still arrives.
+        VoicePipeline.polishMinCharacters = 12
+        store.mutate { $0.refine = refineSettings }
+        pipeline.textRefiner = LLMRefineFixtures.FakeRefiner(result: "不应被调用", note: nil)
+        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        recorders.last?.onFinal?("短短一句话")
+        settle { pipeline.session == nil }
+        check("短句不调用润色直接输入", inserted.last == "短短一句话" && !pipeline.refining)
+        struct NeverRefiner: TextRefining { func refine(_ text: String, settings: TextRefineSettings, glossary: [String], done: @escaping (String?, String?) -> Void) {} }
+        VoicePipeline.polishDeadlineSeconds = 0.3
+        pipeline.textRefiner = NeverRefiner()
+        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        recorders.last?.onFinal?("这是一句足够长的话需要润色但服务不回答")
+        pump()
+        check("润色等待期间会话保持", pipeline.refining && pipeline.session != nil)
+        settle { pipeline.session == nil }
+        check("润色服务不回答时到期后输入未润色的文字并说明原因", inserted.last == "这是一句足够长的话需要润色但服务不回答" && !pipeline.refining && pipeline.lastResult.contains(L10n.tr("refine.err.timeout")))
+        VoicePipeline.polishDeadlineSeconds = 4.0
+        VoicePipeline.polishMinCharacters = 0
+        store.mutate { $0.refine.enabled = false }
         pipeline.textRefiner = LLMTextRefiner()
         // Translation in the pipeline: the translation is inserted; any failure inserts the spoken text and says why
         store.mutate { $0.refine = refineSettings; $0.refine.enabled = false; $0.translate.target = "English" }

@@ -23,6 +23,25 @@ enum AccuracyBenchmark {
         Item(category: "privacy", text: "我的录音只在这台电脑上处理，不会上传。"), Item(category: "privacy", text: "请不要把我的语音发给任何服务器。"),
     ]
 
+    /// `--bench-lang=en`: the same kinds of sentences in English.
+    static let corpusEnglish: [Item] = [
+        Item(category: "short", text: "Okay, I will take care of it."), Item(category: "short", text: "The weather is nice today."), Item(category: "short", text: "Please wait a moment."),
+        Item(category: "daily", text: "We are meeting in the conference room tomorrow at ten."), Item(category: "daily", text: "Could you send the file to my email?"),
+        Item(category: "daily", text: "When will this feature be ready to ship?"), Item(category: "daily", text: "I have already fixed the report, please take another look."),
+        Item(category: "daily", text: "Do you want to get dinner with us tonight?"),
+        Item(category: "numbers", text: "The meeting starts at three thirty, so please come ten minutes early."), Item(category: "numbers", text: "This month we spent two thousand four hundred dollars."),
+        Item(category: "numbers", text: "There are twenty five people coming."),
+        Item(category: "tech", text: "Why is there a local model option at all?"), Item(category: "tech", text: "I only want local recognition and no cloud service."),
+        Item(category: "tech", text: "Open the settings and choose the recognition engine page."), Item(category: "tech", text: "When the shortcut conflicts, you need to set it again."),
+        Item(category: "tech", text: "Hold the key while you speak and the text appears when you let go."),
+        Item(category: "mixed", text: "Please open the browser and push this code to GitHub."), Item(category: "mixed", text: "The API returned the wrong result again."),
+        Item(category: "long", text: "I think we should make the core features stable first, and only then think about adding translation and the smart cleanup features."),
+        Item(category: "long", text: "If the network is bad, the software should switch to the local model by itself instead of making me say it again."),
+        Item(category: "spoken", text: "So, um, I wanted to ask, how does this thing actually work?"), Item(category: "spoken", text: "Well, I think that should probably be fine."),
+        Item(category: "names", text: "Tomorrow I am going to Boston to meet Sarah and Michael."), Item(category: "names", text: "Professor Johnson said the homework is due on Monday."),
+        Item(category: "question", text: "Do you know where the nearest subway station is?"), Item(category: "question", text: "Why are the words coming out wrong every time?"),
+    ]
+
     enum Condition: String, CaseIterable {
         case clean, quiet, noise20, noise10, fast, tail, quietnoise
         var rate: Int? { self == .fast ? 260 : nil }
@@ -195,7 +214,10 @@ enum AccuracyBenchmark {
         if let v = value("--bench-pad").flatMap(Double.init) { LocalDecoder.segmentPad = Int(v * 16000) }
         if let v = value("--bench-min-speech").flatMap(Float.init) { LocalDecoder.vadMinSpeech = v }
         if let v = value("--bench-min-silence").flatMap(Float.init) { LocalDecoder.vadMinSilence = v }
-        let voices = value("--bench-voices")?.split(separator: ",").map(String.init) ?? (quick ? ["Tingting"] : ["Tingting", "Eddy (中文（中国大陆）)", "Grandma (中文（中国大陆）)"])
+        let english = value("--bench-lang") == "en"
+        let corpus = english ? corpusEnglish : Self.corpus
+        let voices = value("--bench-voices")?.split(separator: ",").map(String.init)
+            ?? (english ? (quick ? ["Samantha"] : ["Samantha", "Daniel", "Karen"]) : (quick ? ["Tingting"] : ["Tingting", "Eddy (中文（中国大陆）)", "Grandma (中文（中国大陆）)"]))
         let conditions = value("--bench-conditions")?.split(separator: ",").compactMap { Condition(rawValue: String($0)) } ?? Condition.allCases
         let items = quick ? Array(corpus.enumerated().filter { $0.offset % 2 == 0 }.map(\.element)) : corpus
         var engines = args.contains("--bench-cloud-only") ? [] : localEngines()

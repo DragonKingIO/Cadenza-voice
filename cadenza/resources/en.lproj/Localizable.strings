@@ -1513,7 +1513,7 @@
 "translate.shortcut.hint" = "Hold this key and speak: what you say is recognized, translated into the chosen language, and the translation is typed. The ordinary dictation shortcuts never translate. Right Option is a good key for it if Left Option is used for dictation.";
 "translate.shortcut.none" = "Set a key to dictate and translate.";
 "translate.shortcut.needTarget" = "Choose the language to translate into first.";
-"translate.shortcut.conflict" = "The translation shortcut must differ from the other shortcuts, and must not contain one of them.";
+"translate.shortcut.conflict" = "The translation shortcut cannot be exactly the same as another shortcut that is on. Pick another combination, or switch the other shortcut off.";
 "translate.models" = "Add or change AI models";
 "translate.models.hint" = "Translation uses one of your AI models (a local one, or a service you have a key for). Models are added on the AI Models page.";
 "llm.header" = "My AI models";
@@ -1537,3 +1537,11 @@
 "llm.delete.confirm" = "Delete this model";
 "llm.delete.cancel" = "Keep it";
 "llm.hint" = "Add any number of AI services (an address, a model, a key). AI polish and voice translation each pick one, so translation can use a different model than polish, for example a stronger or a local one. Each model keeps its own key and its own permission to receive text.";
+"shortcut.try" = "Try: %@";
+"asr.aliyun.trialEnded" = "The free trial of this Alibaba Cloud speech service has ended, or it is not activated. Activate the paid version in the Alibaba Cloud console, then try again.";
+"local.rank.zh" = "Chinese speech: No. %d";
+"local.rank.zh.none" = "Chinese: not supported";
+"local.rank.en" = "English: No. %d";
+"local.rank.en.none" = "English: not supported";
+"engine.rank.zh" = "Chinese speech test: about %d%% errors";
+"local.profile.footnote.speech" = "Speed, memory and punctuation were measured on one Mac, yours will differ. Ranking: Chinese was measured on a real person talking, English only on synthesized speech, so treat it as a rough guide.";

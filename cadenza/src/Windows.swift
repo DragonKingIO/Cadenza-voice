@@ -613,12 +613,19 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         shortcutError=onSaveModeShortcut?(modeName(editingMode),editingMode == 0 ? BridgeConfig.default().trigger:nil,editingMode == 0 ? nil:false)
         onEndShortcutRecording?();refresh()
     }
+    /// The reason a combination cannot be used, with a few combinations that can, so a refusal always has a way forward.
     private func candidateReason(_ spec:HotkeySpec)->String? {
+        guard let reason=candidateReasonOnly(spec) else{return nil}
+        let c=ShortcutPolicy.suggestions(limit:3){self.candidateReasonOnly($0) == nil}
+        return c.isEmpty ? reason:reason+"\n"+L10n.format("shortcut.try",c.map{HotkeySpecDisplay.string($0)}.joined(separator:"   "))
+    }
+    private func candidateReasonOnly(_ spec:HotkeySpec)->String? {
         if let reason=ShortcutPolicy.reason(spec){return reason}
         guard let c=configStore?.config else{return L10n.tr("ui.6534bf83b03f")}
         var peers:[HotkeySpec]=[]
-        if editingMode != 0 {peers.append(c.trigger)}
-        if editingMode != 1,let toggle=c.toggleTrigger {peers.append(toggle)}
+        // A shortcut that is switched off cannot clash with anything.
+        if editingMode != 0,c.holdShortcutEnabled {peers.append(c.trigger)}
+        if editingMode != 1,c.toggleActive,let toggle=c.toggleTrigger {peers.append(toggle)}
         if editingMode != 2,let translate=c.translate.trigger {peers.append(translate)}
         if peers.contains(where:{$0.keyCode == spec.keyCode && $0.modifiers == spec.modifiers}) {return L10n.tr("ui.2e02adb592a9")}
         if editingMode == 2,peers.contains(where:{ShortcutPolicy.overlaps(spec,$0)}) {return L10n.tr("translate.shortcut.conflict")}

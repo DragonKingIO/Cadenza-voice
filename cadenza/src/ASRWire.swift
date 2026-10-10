@@ -64,7 +64,7 @@ final class AliyunWire:ASRWire {
     let frameBytes=3200,interval=0.1,rotateAfterBytes:Int?=nil,readyOnOpen=false
     let taskID:String,appKey:String,options:CloudASROptions;private var ledger=ASRTranscriptLedger()
     init(taskID:String,appKey:String,options:CloudASROptions){self.taskID=taskID;self.appKey=appKey;self.options=options}
-    func command(_ name:String,payload:[String:Any]=[:])throws->URLSessionWebSocketTask.Message {try ASRJSON.message(["header":["appkey":appKey,"message_id":UUID().uuidString.replacingOccurrences(of:"-",with:""),"task_id":taskID,"namespace":"SpeechTranscriber","name":name],"payload":payload])}
+    func command(_ name:String,payload:[String:Any]=[:])throws->URLSessionWebSocketTask.Message {try ASRJSON.message(["header":["appkey":appKey,"message_id":UUID().uuidString.replacingOccurrences(of:"-",with:"").lowercased(),"task_id":taskID,"namespace":"SpeechTranscriber","name":name],"payload":payload])}
     var start:URLSessionWebSocketTask.Message? {
         var p:[String:Any]=["format":"pcm","sample_rate":16000,"enable_intermediate_result":true,"enable_punctuation_prediction":options.punctuation,"enable_inverse_text_normalization":options.itn,"disfluency":options.smoothing]
         if !options.vocabularyID.isEmpty{p["vocabulary_id"]=options.vocabularyID};if !options.model.isEmpty{p["customization_id"]=options.model}
@@ -72,7 +72,13 @@ final class AliyunWire:ASRWire {
     }
     func audio(_ bytes:Data,first:Bool,last:Bool)throws->URLSessionWebSocketTask.Message {last ? try command("StopTranscription"):.data(bytes)}
     func parse(_ message:URLSessionWebSocketTask.Message)throws->ASRWireUpdate {
-        let o=try ASRJSON.object(message);guard let h=o["header"] as? [String:Any],h["task_id"] as? String==taskID,let name=h["name"] as? String,let code=h["status"] as? Int else{throw ASRFailure.protocolInvalid}
+        let o=try ASRJSON.object(message)
+        guard let h=o["header"] as? [String:Any],h["task_id"] as? String==taskID,let name=h["name"] as? String,let code=h["status"] as? Int else{
+            // Names and codes only, never text: what the service answered that this parser did not expect.
+            let header=(o["header"] as? [String:Any]) ?? [:]
+            Log.write("aliyun-unexpected-reply keys=\(o.keys.sorted()) header=\(header.keys.sorted()) name=\(header["name"] as? String ?? "-") status=\(header["status"].map{String(describing:$0)} ?? "-") taskMatch=\(header["task_id"] as? String == taskID)")
+            throw ASRFailure.protocolInvalid
+        }
         guard code==20000000,name != "TaskFailed" else{throw ASRServiceError(hint:ASRServiceErrors.describe(.aliyun,code:code),code:code)}
         let p=o["payload"] as? [String:Any] ?? [:]
         if name=="SentenceEnd" || name=="TranscriptionResultChanged" {
@@ -155,6 +161,7 @@ enum ASRServiceErrors {
         case (.baidu,3301):hint=L10n.tr("ui.8dba5bdeebec")
         case (.baidu,3308),(.baidu,3310),(.baidu,3311):hint=L10n.tr("ui.ebab778b7d52")
         case (.aliyun,40000001):hint=L10n.tr("ui.2d065ce10fe7")
+        case (.aliyun,40000010):hint=L10n.tr("asr.aliyun.trialEnded")
         default:hint=L10n.tr("ui.9a42af5af515")
         }
         Log.write("asr-service-error provider=\(engine.rawValue) code=\(code)");return L10n.format("engine.failure",engine.title,hint)

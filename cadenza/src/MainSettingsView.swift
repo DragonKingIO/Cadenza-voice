@@ -675,7 +675,7 @@ private struct EngineRow: View {
         HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.headline)
-                Text(subtitle).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                Text(subtitle).font(.callout).foregroundStyle(.secondary).lineLimit(2)
             }
             Spacer(minLength: 8)
             if active { Text(L10n.tr("engine.card.inuse")).font(.caption.bold()).padding(.horizontal, 8).padding(.vertical, 2).background(Color.accentColor.opacity(0.15), in: Capsule()).foregroundStyle(Color.accentColor) }
@@ -702,10 +702,20 @@ struct EngineSettingsView: View {
     @State private var tab: EngineTab = .local
 
     private var localEntries: [LocalModelEntry] {
-        func rank(_ e: LocalModelEntry) -> Int { e.id == LocalModelCatalog.recommendedID ? 0 : e.kind == "fire-red-ctc" ? 1 : 2 }
-        return center.entries.filter { !LocalModelCatalog.isOCR($0) }.sorted { rank($0) < rank($1) }
+        // Best first for Chinese (the order the ranking lines under each model state), then by English, then the rest as listed.
+        func rank(_ e: LocalModelEntry) -> Int {
+            if let i = LocalModelRanking.chinese.firstIndex(of: e.id) { return i }
+            if let i = LocalModelRanking.english.firstIndex(of: e.id) { return 100 + i }
+            return 200
+        }
+        let all = center.entries.filter { !LocalModelCatalog.isOCR($0) }
+        return all.enumerated().sorted { (rank($0.element), $0.offset) < (rank($1.element), $1.offset) }.map(\.element)
     }
-    private var cloudEngines: [ASREngine] { ASREngine.allCases.filter { $0 != .apple && $0 != .local } }
+    /// Services with a measurement come first, best first; the others keep their order.
+    private var cloudEngines: [ASREngine] {
+        let all = ASREngine.allCases.filter { $0 != .apple && $0 != .local }
+        return all.enumerated().sorted { (CloudRanking.chineseError[$0.element] ?? 1000, $0.offset) < (CloudRanking.chineseError[$1.element] ?? 1000, $1.offset) }.map(\.element)
+    }
     private var visibleTabs: [EngineTab] { model.localOnlyOn ? [.local] : EngineTab.allCases }
     private var readyEntries: [LocalModelEntry] { center.installedEntries.filter { LocalModelCatalog.usable($0) } }
 
@@ -737,7 +747,7 @@ struct EngineSettingsView: View {
                 } header: { Text(L10n.tr("engine.section.local")) } footer: {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(L10n.tr("local.models.advice")).font(.callout).foregroundStyle(.secondary)
-                        if localEntries.contains(where: { $0.profile != nil }) { Text(L10n.tr("local.profile.footnote")).font(.caption).foregroundStyle(.secondary) }
+                        if localEntries.contains(where: { $0.profile != nil }) { Text(L10n.tr("local.profile.footnote.speech")).font(.caption).foregroundStyle(.secondary) }
                     }
                 }
                 if !model.compareCandidates.isEmpty {
@@ -757,7 +767,7 @@ struct EngineSettingsView: View {
             case .cloud:
                 Section {
                     ForEach(cloudEngines, id: \.self) { engine in
-                        EngineRow(title: engine.title, subtitle: L10n.tr(engine.configured ? "engine.configured" : "engine.notConfigured"), active: model.engine == engine,
+                        EngineRow(title: engine.title, subtitle: L10n.tr(engine.configured ? "engine.configured" : "engine.notConfigured") + (CloudRanking.note(engine).map { " · " + $0 } ?? ""), active: model.engine == engine,
                                   actionTitle: L10n.tr(engine.configured ? "engine.use" : "engine.configure"), canAct: engine.configured,
                                   action: { model.selectEngine(engine) }, onConfigure: { model.openEngineSettings(engine) })
                     }

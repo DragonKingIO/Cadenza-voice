@@ -7,6 +7,17 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
+### Fixed
+- **Shortcut rules were too strict.** About 80 of 90 ordinary combinations were refused. Control+Option is now refused only while VoiceOver is on, Command+Shift with a key that is not an editing or app command is allowed, only two identical shortcuts conflict (a combination that contains Left Option is fine), and a shortcut that is switched off never conflicts. A refusal now also suggests combinations that work.
+- **AI polishing often came back empty.** DeepSeek's newer models think first by default and used up the whole answer budget (about 40% of answers were empty after two seconds of waiting); thinking is now switched off for DeepSeek. Polishing is skipped for very short text, and the text is inserted without waiting beyond four seconds, so it no longer arrives after you have moved on.
+- **Alibaba NLS speech recognition never worked:** request ids must be lower case. If the free trial has ended, the message now says so.
+- **Whisper-style services (Groq, OpenAI, compatible)** are told the language and to answer in Simplified Characters when the app is set to Chinese, and an answer in Traditional characters is converted. Groq now defaults to the more accurate whisper-large-v3.
+
+### Changed
+- **Model lists show how each model ranks** for casual Chinese (measured on real recordings) and for English (synthesized speech only, a rough guide), best first, and the cloud services show the error rate they scored. Model descriptions no longer call the synthesized-speech winner the most accurate.
+- Comparing a recording with streaming cloud services feeds it at real time, so recordings longer than about ten seconds no longer fail.
+- `--accuracy-benchmark --bench-lang=en` measures English.
+
 ## [1.2.0] - 2026-10-09
 
 Still an **early preview**.
