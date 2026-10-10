@@ -580,7 +580,7 @@ enum SelfTest {
         pump()
         check("润色等待期间会话保持", pipeline.refining && pipeline.session != nil)
         settle { pipeline.session == nil }
-        check("润色服务不回答时到期后输入未润色的文字并说明原因", inserted.last == "这是一句足够长的话需要润色但服务不回答" && !pipeline.refining && pipeline.lastResult.contains("服务响应太慢"))
+        check("润色服务不回答时到期后输入未润色的文字并说明原因", inserted.last == "这是一句足够长的话需要润色但服务不回答" && !pipeline.refining && pipeline.lastResult.contains(L10n.tr("refine.err.timeout")))
         VoicePipeline.polishDeadlineSeconds = 4.0
         VoicePipeline.polishMinCharacters = 0
         store.mutate { $0.refine.enabled = false }
