@@ -68,7 +68,7 @@ enum CloudClipTranscriber {
     /// Blocks until the service answers or `timeout` passes: call it from a background thread.
     /// The audio is fed at `speed` times real time; the recorder buffers about 8 s, so a faster feed would be refused.
     static func transcribe(_ samples: [Float], provider: ASREngine, options: CloudASROptions, credentials: [String: String], language: String,
-                           speed: Double = 4, timeout: TimeInterval = 30,
+                           speed: Double? = nil, timeout: TimeInterval = 30,
                            makeRecorder: ((CloudPCMCapturing) -> HoldRecordingSession)? = nil) -> ClipResult {
         let source = ExternalPCMSource()
         let recorder = makeRecorder?(source) ?? CloudASRRecorder(provider: provider, options: options, credentials: credentials, language: language, capture: source)
@@ -79,7 +79,10 @@ enum CloudClipTranscriber {
         guard recorder.begin() else { return .failed(recorder.lastError ?? "") }
         var pcm = Data(capacity: samples.count * 2)
         for s in samples { var v = Int16(max(-1, min(1, s)) * 32767).littleEndian; withUnsafeBytes(of: &v) { pcm.append(contentsOf: $0) } }
-        let chunk = 3200, pause = Double(chunk) / 32000 / max(1, speed)
+        // A streaming service is fed at real time, as a microphone would: it buffers only about 8 s, so a faster feed fails
+        // on any recording longer than that. A service that takes the whole recording at once just buffers it.
+        let rate = speed ?? (provider.uploadsWholeRecording ? 8 : 1)
+        let chunk = 3200, pause = Double(chunk) / 32000 / max(0.5, rate)
         var offset = 0
         while offset < pcm.count {
             source.push(pcm.subdata(in: offset..<min(offset + chunk, pcm.count)))

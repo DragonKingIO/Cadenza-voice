@@ -8,7 +8,7 @@ enum ShortcutPolicy {
     /// they are pressed all the time as part of other shortcuts, so holding one alone would start recordings by accident.
     static let standaloneModifiers: Set<UInt32> = [58, 61]
     static let navigational: Set<UInt32> = [36,48,49,51,53,71,76,114,115,116,117,119,121,123,124,125,126]
-    static func basicReason(_ s: HotkeySpec, standardFunctionKeys: Bool = false) -> String? {
+    static func basicReason(_ s: HotkeySpec, standardFunctionKeys: Bool = false, voiceOver: Bool = NSWorkspace.shared.isVoiceOverEnabled) -> String? {
         if s == BridgeConfig.default().trigger { return nil }
         if s.keyCode == 63 { return L10n.tr("ui.be1ca2ee706d") }
         if standaloneModifiers.contains(s.keyCode), HotkeySpecDisplay.isLoneModifierSpec(s), s.modifierKeyCodes == nil || s.modifierKeyCodes == [s.keyCode] { return nil }
@@ -21,11 +21,13 @@ enum ShortcutPolicy {
             let flags=sides.reduce(UInt32(0)) { $0 | (ListenTrigger.modifierKeyFlags[$1] ?? 0) }
             if sides.isEmpty && s.modifiers != 0 || Set(sides).count != sides.count || flags != s.modifiers || sides.contains(where: {ListenTrigger.modifierKeyFlags[$0] == nil}) { return L10n.tr("ui.dc418bb1654e") }
         }
-        if s.modifiers & c != 0 && s.modifiers & o != 0 { return L10n.tr("ui.52fb99b1743b") }
+        // ⌃⌥ is VoiceOver's own modifier pair: it only matters while VoiceOver is running.
+        if voiceOver && s.modifiers & c != 0 && s.modifiers & o != 0 { return L10n.tr("ui.52fb99b1743b") }
         // Protect command editing/lifecycle categories including their modifier variants.
         let essential: [UInt32:String] = [0:L10n.tr("ui.3a5040b68abf"),6:L10n.tr("ui.9fcf5d3b8e12"),7:L10n.tr("ui.410a8e8a6bf2"),8:L10n.tr("ui.63d90d977348"),9:L10n.tr("ui.335179267471"),1:L10n.tr("ui.a3030bf8f16d"),13:L10n.tr("ui.1ae6b0a0f826"),12:L10n.tr("ui.e4446e2ae00c"),3:L10n.tr("ui.7987058c656b"),4:L10n.tr("ui.b2f83ba5aafe"),46:L10n.tr("ui.ac29e57a46f4"),31:L10n.tr("ui.c771248e511f"),35:L10n.tr("ui.d7bfe7b5055c"),17:L10n.tr("ui.a626aad412b7"),43:L10n.tr("ui.df3d58c7d84b"),50:L10n.tr("ui.84d503a9b473"),18:L10n.tr("ui.4e4c695dc2eb"),19:L10n.tr("ui.4e4c695dc2eb"),20:L10n.tr("ui.c95dc99afe57"),21:L10n.tr("ui.c95dc99afe57"),23:L10n.tr("ui.c95dc99afe57")]
         if s.modifiers & m != 0, let reason=essential[s.keyCode] { return L10n.format("ui.e62285193079", String(describing: reason)) }
-        if s.modifiers & m != 0 && s.modifiers & (c|o) == 0 { return L10n.tr("ui.0c7684de9de0") }
+        // ⌘ with one ordinary key is every app's own command. ⌘ with another modifier is allowed unless it is one of the protected commands above.
+        if s.modifiers == m { return L10n.tr("ui.0c7684de9de0") }
         if !functionKeys.contains(s.keyCode) {
             guard s.modifiers & (c|m) != 0, s.modifiers.nonzeroBitCount >= 2 else { return L10n.tr("ui.17026fde4d84") }
         } else {
@@ -34,17 +36,20 @@ enum ShortcutPolicy {
         }
         return nil
     }
-    /// Two shortcuts that cannot both work: the same key, or a lone Option key that is also part of the other one's combination
-    /// (holding Option and then pressing the combination would start both).
+    /// Two shortcuts that cannot both work: the same key with the same modifiers.
+    /// A combination that merely contains another shortcut's lone Option key is allowed: the lone key starts to listen when it
+    /// goes down alone, and the combination's other keys cancel that at once, so only the combination fires.
     static func overlaps(_ a: HotkeySpec, _ b: HotkeySpec) -> Bool {
-        if a.keyCode == b.keyCode && a.modifiers == b.modifiers { return true }
-        func lone(_ s: HotkeySpec) -> Bool { HotkeySpecDisplay.isLoneModifierSpec(s) }
-        func contains(_ combo: HotkeySpec, _ key: HotkeySpec) -> Bool {
-            guard !lone(combo), let flag = ListenTrigger.modifierKeyFlags[key.keyCode], combo.modifiers & flag != 0 else { return false }
-            guard let sides = combo.modifierKeyCodes, !sides.isEmpty else { return true }
-            return sides.contains(key.keyCode)
-        }
-        return (lone(a) && contains(b, a)) || (lone(b) && contains(a, b))
+        a.keyCode == b.keyCode && a.modifiers == b.modifiers
+    }
+    /// Combinations worth offering when the person's own pick was refused: easy to press, rarely used by apps.
+    static let suggestionCandidates: [HotkeySpec] = {
+        let c = UInt32(controlKey), o = UInt32(optionKey), m = UInt32(cmdKey), h = UInt32(shiftKey)
+        return [HotkeySpec(keyCode: 17, modifiers: c | h), HotkeySpec(keyCode: 17, modifiers: c | o), HotkeySpec(keyCode: 37, modifiers: c | h), HotkeySpec(keyCode: 37, modifiers: c | m),
+                HotkeySpec(keyCode: 37, modifiers: c | o), HotkeySpec(keyCode: 105, modifiers: 0), HotkeySpec(keyCode: 106, modifiers: 0)]
+    }()
+    static func suggestions(limit: Int = 3, valid: (HotkeySpec) -> Bool) -> [HotkeySpec] {
+        Array(suggestionCandidates.filter(valid).prefix(limit))
     }
     static func systemAssignments() -> [HotkeySpec]? {
         var array: Unmanaged<CFArray>?

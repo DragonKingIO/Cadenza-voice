@@ -18,7 +18,7 @@ enum BatchTranscription {
                            models: ["gpt-4o-mini-transcribe", "gpt-4o-transcribe", "whisper-1"], defaultModel: "gpt-4o-mini-transcribe")
         case .groq:
             return Service(endpoint: "https://api.groq.com/openai/v1/audio/transcriptions", modelsEndpoint: "https://api.groq.com/openai/v1/models",
-                           models: ["whisper-large-v3-turbo", "whisper-large-v3"], defaultModel: "whisper-large-v3-turbo")
+                           models: ["whisper-large-v3", "whisper-large-v3-turbo"], defaultModel: "whisper-large-v3")
         case .compat:
             // The address and the model are the person's own (see `compatPresets`).
             return Service(endpoint: "", modelsEndpoint: "", models: [], defaultModel: "")
@@ -127,6 +127,22 @@ enum BatchTranscription {
         header.append(contentsOf: le32(sampleRate * 2)); header.append(contentsOf: le16(2)); header.append(contentsOf: le16(16))
         header.append(Data("data".utf8)); header.append(contentsOf: le32(pcm.count))
         return header + pcm
+    }
+
+    /// A sentence in the wanted script, as the prompt: these models continue in the style of what they were given, which is
+    /// the only way to ask for Simplified or Traditional characters. Nil unless the app is set to Chinese.
+    static let simplifiedHint = "以下是普通话的句子。", traditionalHint = "以下是普通話的句子。"
+    static func chineseHint(recognitionLocale: String) -> String? {
+        let l = recognitionLocale.lowercased().replacingOccurrences(of: "_", with: "-")
+        guard l == "zh" || l.hasPrefix("zh-") else { return nil }
+        return l.contains("tw") || l.contains("hk") || l.contains("hant") ? traditionalHint : simplifiedHint
+    }
+
+    /// The prompt alone does not make these models keep to one script (measured: about one answer in three came back in
+    /// Traditional characters for Simplified speech), so when Simplified was asked for, the answer is converted.
+    static func scriptFixed(_ text: String, options: CloudASROptions) -> String {
+        guard options.language == "zh", options.hotwords.hasPrefix(simplifiedHint) else { return text }
+        return text.applyingTransform(StringTransform("Hant-Hans"), reverse: false) ?? text
     }
 
     /// The vocabulary and the person's own terms, as the short text these models take to favour names and jargon.

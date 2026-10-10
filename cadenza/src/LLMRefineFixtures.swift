@@ -30,6 +30,10 @@ enum LLMRefineFixtures {
 
     static func run(_ check: (String, Bool) -> Void) {
         func c(_ name: String, _ ok: Bool) { check("Refine " + name, ok) }
+        var deepseek = TextRefineSettings(); deepseek.preset = "deepseek"; deepseek.baseURL = "https://api.deepseek.com/v1"; deepseek.model = "deepseek-flash"
+        var local = TextRefineSettings(); local.preset = "ollama"; local.baseURL = "http://localhost:11434/v1"; local.model = "qwen"
+        func body(_ s: TextRefineSettings) -> [String: Any] { LLMClient.request(settings: s, apiKey: "k", system: "s", user: "u", maxTokens: 1024)?.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:] }
+        c("DeepSeek is asked not to think first, because that used up the whole answer budget", (body(deepseek)["thinking"] as? [String: String])?["type"] == "disabled" && body(local)["thinking"] == nil)
         func settings(_ preset: String = "deepseek", consent: Bool = true) -> TextRefineSettings {
             var s = TextRefineSettings(); s.enabled = true; s.preset = preset; s.consent = consent
             if let p = LLMPresets.preset(preset) { s.baseURL = p.baseURL; s.model = p.model.isEmpty ? "test-model" : p.model }

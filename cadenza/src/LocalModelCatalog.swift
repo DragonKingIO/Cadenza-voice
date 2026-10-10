@@ -64,6 +64,30 @@ struct LocalModelProfile: Codable, Equatable {
     }
 }
 
+/// Where each speech model stands on accuracy, as measured here (see docs/LOCAL-MODELS.md). Two lists, best first, because the
+/// answer depends on the language: Chinese by real recordings of one person talking in the ordinary way (fast, casual, 15 clips),
+/// English by synthesized speech only (nobody has recorded English with these models yet, so treat it as a rough guide).
+enum LocalModelRanking {
+    static let chinese = ["sensevoice-multilingual-int8", "qwen3-asr-06b-int8", "paraformer-zh-int8", "fire-red-asr2-ctc-int8"]
+    static let english = ["qwen3-asr-06b-int8", "sensevoice-multilingual-int8", "parakeet-tdt-v3-int8", "paraformer-zh-int8", "fire-red-asr2-ctc-int8"]
+
+    /// Two short lines for a speech model's row, or nil for a model that is not ranked (text recognition models).
+    static func lines(for id: String) -> [String]? {
+        guard chinese.contains(id) || english.contains(id) else { return nil }
+        var out: [String] = []
+        if let i = chinese.firstIndex(of: id) { out.append(L10n.format("local.rank.zh", i + 1, chinese.count)) } else { out.append(L10n.tr("local.rank.zh.none")) }
+        if let i = english.firstIndex(of: id) { out.append(L10n.format("local.rank.en", i + 1, english.count)) } else { out.append(L10n.tr("local.rank.en.none")) }
+        return out
+    }
+}
+
+/// What the cloud services scored on the same 15 real recordings (one person, casual Chinese, errors in percent).
+/// Services that were not measured say nothing.
+enum CloudRanking {
+    static let chineseError: [ASREngine: Int] = [.volcengine: 15, .iflytek: 16, .tencent: 16, .groq: 21, .deepgram: 46]
+    static func note(_ engine: ASREngine) -> String? { chineseError[engine].map { L10n.format("engine.rank.zh", $0) } }
+}
+
 struct LocalModelEntry: Codable, Equatable, Identifiable {
     var id: String
     /// 清单版本（语义化版本，用于判断是否有更新，不是上游模型日期）
@@ -191,8 +215,8 @@ enum LocalModelCatalog {
         LocalModelEntry(
             id: "fire-red-asr2-ctc-int8", version: "1.0.0",
             displayName: ["en": "High-accuracy Chinese (FireRedASR2) · experimental", "zh-Hans": "高精度中文（FireRedASR2）· 实验性"],
-            summary: ["en": "Mandarin and English. In our tests its accuracy matched the recommended model, but it writes no punctuation, does not format numbers, and is about four times slower. Runs fully on this Mac.",
-                      "zh-Hans": "普通话和英文。我们的测试里准确度和推荐模型相当，但不输出标点、不规整数字，速度约慢 4 倍。完全在本机运行。"],
+            summary: ["en": "Mandarin and English. On synthesized speech its accuracy matched the recommended model; on a real person talking casually it was behind (about 25% against 17%). It writes no punctuation, does not format numbers, and is about four times slower. Runs fully on this Mac.",
+                      "zh-Hans": "普通话和英文。合成语音测试里准确度和推荐模型相当；真人随口说话时落后（约 25%，推荐模型约 17%）。不输出标点、不规整数字，速度约慢 4 倍。完全在本机运行。"],
             kind: "fire-red-ctc", languages: ["zh", "en"],
             downloadSize: 521_160_132, installedSize: 800_000_000, minAppVersion: "1.0.0",
             license: "See LICENSE in the model package", changelog: "sherpa-onnx FireRedASR2 CTC zh+en int8 (2026-02-25), Silero VAD.",
@@ -208,8 +232,8 @@ enum LocalModelCatalog {
         LocalModelEntry(
             id: "paraformer-zh-int8", version: "1.0.0",
             displayName: ["en": "Chinese with English words, fastest (Paraformer) · experimental", "zh-Hans": "中文夹英文，速度最快（Paraformer）· 实验性"],
-            summary: ["en": "Mandarin with English words, from DAMO's Paraformer-large. In our test it was the fastest model (about 9 s for 105 clips, against 52 s for FireRedASR2) and made fewer character errors than SenseVoice on Chinese. It writes no punctuation. Runs fully on this Mac.",
-                      "zh-Hans": "普通话夹英文单词，来自 DAMO 的 Paraformer-large。我们的测试里它是最快的（105 句约 9 秒，FireRedASR2 要 52 秒），中文字错率比 SenseVoice 更低。不输出标点。完全在本机运行。"],
+            summary: ["en": "Mandarin with English words, from DAMO's Paraformer-large. It is the fastest model (about 9 s for 105 clips, against 52 s for FireRedASR2) and made fewer character errors than SenseVoice on synthesized Chinese, but on a real person talking casually it was behind (about 21% against 17%). It writes no punctuation. Runs fully on this Mac.",
+                      "zh-Hans": "普通话夹英文单词，来自 DAMO 的 Paraformer-large。它是最快的（105 句约 9 秒，FireRedASR2 要 52 秒），合成中文的字错率比 SenseVoice 更低；但真人随口说话时落后（约 21%，SenseVoice 约 17%）。不输出标点。完全在本机运行。"],
             kind: "paraformer", languages: ["zh", "en"],
             downloadSize: 244_090_828, installedSize: 250_000_000, minAppVersion: "1.0.0",
             license: "Apache-2.0 (see the model package)", changelog: "Paraformer-large Chinese int8 (DAMO, via sherpa-onnx, 2023-09-14), Silero VAD.",
@@ -227,9 +251,9 @@ enum LocalModelCatalog {
             requiredFiles: ["model.int8.onnx", "tokens.txt", "silero_vad.onnx"], platforms: ["macos", "windows"], profile: LocalModelProfile(realTimeFactor: 0.048, memoryMB: 557, loadSeconds: 0.5, punctuation: false)),
         LocalModelEntry(
             id: "qwen3-asr-06b-int8", version: "1.0.0",
-            displayName: ["en": "Most accurate in our tests, multilingual (Qwen3-ASR) · experimental", "zh-Hans": "我们测试里最准，多语言（Qwen3-ASR）· 实验性"],
-            summary: ["en": "Qwen3-ASR 0.6B: 27+ languages and many Chinese dialects, detects the language itself. On our synthesized test speech it made the fewest character errors (0.8% against 2.2% for SenseVoice) and was the only one that got Chinese with English words right every time. It writes punctuation. It is the largest download (about 880 MB, and the first install takes a minute or two) and the slowest to answer (about a second for a short sentence), and it was only tested on synthesized speech. Runs fully on this Mac.",
-                      "zh-Hans": "Qwen3-ASR 0.6B：27 种以上语言和多种中文方言，自动判断语种。在我们的合成语音测试里字错率最低（0.8%，SenseVoice 是 2.2%），中文夹英文每次都对，是唯一做到的。会输出标点。下载最大（约 880 MB，第一次安装要一两分钟）、出结果也最慢（一句短话约一秒），且只测过合成语音。完全在本机运行。"],
+            displayName: ["en": "Most accurate for English, multilingual (Qwen3-ASR) · experimental", "zh-Hans": "英文最准，多语言（Qwen3-ASR）· 实验性"],
+            summary: ["en": "Qwen3-ASR 0.6B: 27+ languages and many Chinese dialects, detects the language itself. On synthesized test speech it made the fewest character errors (0.8% against 2.2% for SenseVoice) and got Chinese with English words right every time. On a real person talking casually in Chinese it was second (about 21% against 17% for SenseVoice) and about four times slower. It writes punctuation. It is the largest download (about 880 MB, and the first install takes a minute or two). Runs fully on this Mac.",
+                      "zh-Hans": "Qwen3-ASR 0.6B：27 种以上语言和多种中文方言，自动判断语种。在合成语音测试里字错率最低（0.8%，SenseVoice 是 2.2%），中文夹英文每次都对。但在真人随口说的中文上排第二（约 21%，SenseVoice 约 17%），而且慢约 4 倍。会输出标点。下载最大（约 880 MB，第一次安装要一两分钟）。完全在本机运行。"],
             kind: "qwen3-asr", languages: ["zh", "en", "yue", "ja", "ko"],
             downloadSize: 879_346_277, installedSize: 1_000_000_000, minAppVersion: "1.0.0",
             license: "Apache-2.0 (original Qwen3-ASR; see the model package)", changelog: "Qwen3-ASR 0.6B int8 ONNX export by Wasser1462 (sherpa-onnx, 2026-03-25), Silero VAD.",
