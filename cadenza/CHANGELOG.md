@@ -7,9 +7,15 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-11
+
+Still an **early preview**.
+
 ### Fixed
-- **Shortcut rules were too strict.** About 80 of 90 ordinary combinations were refused. Control+Option is now refused only while VoiceOver is on, Command+Shift with a key that is not an editing or app command is allowed, only two identical shortcuts conflict (a combination that contains Left Option is fine), and a shortcut that is switched off never conflicts. A refusal now also suggests combinations that work.
-- **AI polishing often came back empty.** DeepSeek's newer models think first by default and used up the whole answer budget (about 40% of answers were empty after two seconds of waiting); thinking is now switched off for DeepSeek. Polishing is skipped for very short text, and the text is inserted without waiting beyond four seconds, so it no longer arrives after you have moved on.
+- **Local recognition keeps more context.** Ordinary speech is decoded without automatic noise subtraction or strong gain; faint recordings receive limited gain. Recordings up to 25 seconds stay together, and longer recordings use padded, overlapping speech ranges. Invalid, silent or very short audio is rejected. This changes audio preparation, not model weights or vocabulary.
+- **Long dictation has less work left after release.** Complete chunks are prepared during recording, preview work is bounded, and identical audio decoded by the same recognizer can reuse an in-memory result for that recording only. The final result still includes the full recording; cancellation discards pending results. Individual recognition mistakes and AI rewriting mistakes remain possible.
+- **Shortcut rules were too strict.** Control+Option is now refused only while VoiceOver is on, Command+Shift with a key that is not an editing or app command is allowed, only two identical shortcuts conflict (a combination that contains Left Option is fine), and a shortcut that is switched off never conflicts. A refusal now also suggests combinations that work.
+- **AI polishing often came back empty.** DeepSeek's newer models think first by default and used up the whole answer budget; thinking is now switched off for DeepSeek. Polishing is skipped for very short text, and the text is inserted without waiting beyond four seconds, so it no longer arrives after you have moved on.
 - **Alibaba NLS speech recognition never worked:** request ids must be lower case. If the free trial has ended, the message now says so.
 - **Whisper-style services (Groq, OpenAI, compatible)** are told the language and to answer in Simplified Characters when the app is set to Chinese, and an answer in Traditional characters is converted. Groq now defaults to the more accurate whisper-large-v3.
 
@@ -131,7 +137,8 @@ many setups yet.
   folder `Cadenza`). The first launch moves your settings, models and saved keys across; macOS may ask once to read the old
   keys, and the permissions must be granted again.
 
-[Unreleased]: https://github.com/DragonKingIO/Cadenza-voice/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/DragonKingIO/Cadenza-voice/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/DragonKingIO/Cadenza-voice/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/DragonKingIO/Cadenza-voice/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/DragonKingIO/Cadenza-voice/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/DragonKingIO/Cadenza-voice/releases/tag/v1.0.0
