@@ -23,18 +23,34 @@ absolute values are optimistic and the "mixed" sentence type is not representati
 settings on identical audio and for catching regressions. It cannot measure a particular person's voice, accent or
 microphone.
 
-## Local model (SenseVoice small, int8), 3 voices × 30 sentences × 6 conditions
+## Current local audio processing
+
+Normal dictations keep their original waveform and full sentence context. VAD still rejects recordings with no detected
+speech, but recordings up to 25 seconds are decoded together rather than cropped into VAD fragments. Longer recordings
+use padded speech ranges, merge overlapping context and bound every inference call to 25 seconds.
+
+Automatic spectral subtraction is no longer applied to dictation: learning noise from the quietest frames of a short
+sentence can include quiet speech. Only genuinely faint input (99.5th-percentile magnitude below 0.05) receives a boost,
+bounded to ×10; normal input is unchanged. Silence, nonfinite input and recordings shorter than half a second stay rejected.
+
+`--accuracy-benchmark --bench-audio=legacy` retains the previous enhancement/gain/cropping for offline comparisons;
+the default benchmark uses the current dictation processing. Use the same generated audio in both runs. These options
+do not change saved settings or enable cloud recognition.
+
+## Historical synthetic results (SenseVoice small, int8), 3 voices × 30 sentences × 6 conditions
+
+These measurements informed the previous processing. They do not validate its accuracy on real microphone dictation.
 
 | Setting | clean | quiet | quiet+noise | noise 10 dB | tail noise | fast | overall |
 |---|---|---|---|---|---|---|---|
 | Before (language auto, 0.2 s VAD margin, no level) | 9.1% | 44.9% | 22.6% | 18.0% | 10.6% | 13.1% | 19.7% |
 | + loudness levelling | 9.4% | 9.7% | 16.0% | 18.3% | 10.3% | 13.8% | 12.9% |
 | + Mandarin set explicitly | 9.2% | 9.3% | 13.1% | 15.6% | 8.9% | 13.1% | 11.5% |
-| + 0.8 s margin around speech (shipped) | 6.8% | 7.0% | 13.1% | 15.5% | 7.5% | 9.8% | **10.0%** |
+| + 0.8 s margin around speech (previous processing) | 6.8% | 7.0% | 13.1% | 15.5% | 7.5% | 9.8% | **10.0%** |
 
 Short sentences: 21.2% → 1.0%. Sentences with numbers: 12% → 1.8%.
 
-Changes kept because they measurably helped:
+Changes that helped on that synthetic corpus:
 
 1. **Loudness levelling** (`LocalDecoder.levelled`): quiet recordings are raised to a normal level before recognition
    (boost only, at most ×30, based on the 99.5th percentile so one click does not block it). Quiet speech went from
@@ -62,6 +78,6 @@ before it can be compared; run the benchmark afterwards.
 
 ## Checks
 
-`--selftest` covers the scoring (normalization, edit distance, noise), levelling (boost, no change when loud, silence,
-cap, clicks), language resolution, the VAD margin, Tencent and Deepgram wire parameters. The real-model checks run when a
-model is installed.
+`--selftest` covers scoring and audio utilities. `--selftest-local-model` additionally checks complete short-sentence
+context, unchanged normal waveforms, bounded faint-speech gain, VAD silence rejection, merged long-speech margins,
+inference bounds and the legacy comparison path. The real-model checks run when a model is installed.

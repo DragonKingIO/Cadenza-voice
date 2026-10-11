@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 // MARK: - 本地识别抽象
 // 推理后端（sherpa-onnx）只出现在 SherpaTranscriber 里；没有链接静态库时（未执行 tools/fetch-sherpa-onnx.sh）
@@ -62,6 +63,8 @@ enum LocalTranscriberLoader {
 }
 
 enum LocalDecoder {
+    /// The previous processing is retained only for paired, offline benchmarks.
+    enum AudioProcessing { case preserveSpeech, legacyBenchmark }
     static let sampleRate = 16000
     /// 单次直接解码的上限；更长的录音按停顿切段
     static let directLimit = 25 * 16000
@@ -95,20 +98,44 @@ enum LocalDecoder {
         return samples.map { max(-1, min(1, $0 * gain)) }
     }
 
-    static func transcribe(_ raw: [Float], with t: LocalTranscriber) -> String {
-        let samples = levelled(SpeechEnhancer.enhance(raw))
-        guard samples.count >= sampleRate / 2, samples.allSatisfy({$0.isFinite}), samples.contains(where:{abs($0)>0.00001}) else { return "" }
+    /// Ordinary microphone speech should keep its waveform. Only raise genuinely faint clips;
+    /// the old target of 0.5 amplified even normal speech and its background noise.
+    static func recognitionSamples(_ raw: [Float]) -> [Float] {
+        guard raw.count >= 1600 else { return raw }
+        let step = max(1, raw.count / 20000)
+        let magnitudes = stride(from: 0, to: raw.count, by: step).map { abs(raw[$0]) }.sorted()
+        let loud = magnitudes[min(magnitudes.count - 1, Int(Float(magnitudes.count) * 0.995))]
+        guard loud < 0.05 else { return raw }
+        return levelled(raw, target: 0.2, maxGain: 10)
+    }
+
+    static func transcribe(_ raw: [Float], with t: LocalTranscriber, processing: AudioProcessing = .preserveSpeech, completedOnly: Bool = false) -> String {
+        // Short dictations still use the whole sentence at release. Only long recordings
+        // have complete inference chunks that can be computed ahead of time.
+        if completedOnly, raw.count <= directLimit { return "" }
+        // Reject broken input before any filtering or sorting.
+        guard raw.count >= sampleRate / 2, raw.allSatisfy({$0.isFinite}), raw.contains(where:{abs($0)>0.00001}) else { return "" }
+        let samples = processing == .legacyBenchmark ? levelled(SpeechEnhancer.enhance(raw)) : recognitionSamples(raw)
         var segments: [Range<Int>]
         if t.vadAvailable {
             segments = t.speechSegments(samples).filter { $0.lowerBound >= 0 && $0.upperBound <= samples.count && !$0.isEmpty }
             guard !segments.isEmpty else { return "" } // VAD-confirmed silence must never become text.
+            // For a normal dictation VAD is a speech gate, not a crop. Preserve quiet syllables,
+            // pauses and the sentence context instead of recognizing each fragment separately.
+            if processing == .preserveSpeech, samples.count <= directLimit {
+                return t.transcribe(samples).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
             // Retain quiet initial/final consonants while keeping adjacent segments disjoint.
             segments = segments.sorted { $0.lowerBound < $1.lowerBound }
             var padded: [Range<Int>] = []
             for r in segments {
-                let lower=max(padded.last?.upperBound ?? 0,r.lowerBound-segmentPad)
+                let lower=max(processing == .legacyBenchmark ? (padded.last?.upperBound ?? 0) : 0,r.lowerBound-segmentPad)
                 let upper=min(samples.count,r.upperBound+segmentPad)
-                if lower<upper { padded.append(lower..<upper) }
+                if lower<upper {
+                    if processing == .preserveSpeech, let last=padded.last, lower<=last.upperBound {
+                        padded[padded.count-1]=last.lowerBound..<max(last.upperBound,upper)
+                    } else { padded.append(lower..<upper) }
+                }
             }
             segments=padded
         } else if samples.count <= directLimit { return t.transcribe(samples).trimmingCharacters(in:.whitespacesAndNewlines) }
@@ -119,11 +146,50 @@ enum LocalDecoder {
             // Bound every inference call, including an unexpectedly long VAD segment.
             for lower in stride(from:segment.lowerBound,to:segment.upperBound,by:directLimit) {
                 let upper=min(segment.upperBound,lower+directLimit)
+                if completedOnly, upper-lower < directLimit, upper >= samples.count-segmentPad { continue }
                 let part=t.transcribe(Array(samples[lower..<upper])).trimmingCharacters(in:.whitespacesAndNewlines)
                 guard !part.isEmpty else {continue}
                 if let l=text.unicodeScalars.last,let f=part.unicodeScalars.first,l.isASCII,f.isASCII,!l.properties.isWhitespace {text += " "}
                 text += part
             }
+        }
+        return text
+    }
+}
+
+/// Per-recording, memory-only reuse of exactly identical inference input. It never
+/// combines approximate transcripts or replaces the final audio with a preview.
+/// Owned by the recorder's serial queue; a different recognizer gets a new memo.
+final class LocalMemoizedTranscriber: LocalTranscriber {
+    let base: LocalTranscriber
+    var vadAvailable: Bool { base.vadAvailable }
+    var shouldDecode: () -> Bool = { true }
+    private struct Entry { let text: String; var used: Int }
+    private var entries: [Data: Entry] = [:]
+    private var clock = 0, bytes = 0
+    let maxEntries: Int
+    let maxTextBytes: Int
+    private(set) var hits = 0, decodes = 0
+
+    init(_ base: LocalTranscriber, maxEntries: Int = 128, maxTextBytes: Int = 1_048_576) {
+        self.base=base; self.maxEntries=max(1,maxEntries); self.maxTextBytes=max(1,maxTextBytes)
+    }
+    func speechSegments(_ samples: [Float]) -> [Range<Int>] { base.speechSegments(samples) }
+    func transcribe(_ samples: [Float]) -> String {
+        guard shouldDecode(), !samples.isEmpty else { return "" }
+        let key = samples.withUnsafeBufferPointer { buffer in
+            Data(SHA256.hash(data: Data(bytes: buffer.baseAddress!, count: buffer.count * MemoryLayout<Float>.stride)))
+        }
+        clock += 1
+        if var entry=entries[key] { entry.used=clock; entries[key]=entry; hits += 1; return entry.text }
+        let text=base.transcribe(samples); decodes += 1
+        // Finishing while this inference runs must still keep its exact result for
+        // the final. Cancellation clears the entire memo with the recording.
+        guard text.utf8.count <= maxTextBytes else { return text }
+        entries[key]=Entry(text:text,used:clock); bytes += text.utf8.count
+        while entries.count > maxEntries || bytes > maxTextBytes {
+            guard let oldest=entries.min(by:{$0.value.used < $1.value.used}) else { break }
+            bytes -= oldest.value.text.utf8.count; entries.removeValue(forKey:oldest.key)
         }
         return text
     }
@@ -207,8 +273,12 @@ final class LocalASRRecorder: HoldRecordingSession {
     private var samples: [Float] = []
     private var timer: DispatchSourceTimer?
     private var busy = false, ended = false, began = false
-    private var cancellation = false
+    private var cancellation = false, stopping = false
     private var cancelled:Bool {dataLock.lock();defer{dataLock.unlock()};return cancellation}
+    private var recording:Bool {dataLock.lock();defer{dataLock.unlock()};return !cancellation && !stopping}
+    private var memo: LocalMemoizedTranscriber?
+    private var lastPreviewSamples = 0
+    static let previewLimit = 8 * 16000
     private var limitReached=false
     var sampleLimit = 15 * 60 * 16000
     private static let maxSamples = 15 * 60 * 16000
@@ -238,9 +308,15 @@ final class LocalASRRecorder: HoldRecordingSession {
         guard capture.start(uid: microphoneUID) else { lastError = capture.lastError ?? L10n.tr("ui.13a46616e16f"); capture.onPCM = nil; capture.onLevel = nil; return false }
         cache.preload(modelID, center: center, options:options)   // 与录音并行加载，松开时通常已就绪
         let t = DispatchSource.makeTimerSource(queue: queue)
-        t.schedule(deadline: .now() + 1.0, repeating: 1.5)
-        t.setEventHandler { [weak self] in self?.partialTick() }
-        t.resume(); timer = t
+        t.schedule(deadline: .now() + 1.0)
+        t.setEventHandler { [weak self] in
+            guard let self, self.recording else { return }
+            self.partialTick()
+            // Schedule after the work completes: slow models cannot queue previews
+            // in front of the user's request to finish.
+            if self.recording { self.timer?.schedule(deadline: .now() + 1.5) }
+        }
+        timer = t; t.resume()
         return true
     }
 
@@ -251,14 +327,34 @@ final class LocalASRRecorder: HoldRecordingSession {
     }
 
     private func partialTick() {
-        guard !busy, !ended, !cancelled, capture.hasSignal, cache.isLoaded, let t = try? cache.transcriber(for: modelID, center: center, options:options) else { return }
+        guard !busy, !ended, recording, capture.hasSignal, cache.isLoaded, let t = try? cache.transcriber(for: modelID, center: center, options:options) else { return }
         busy = true; defer { busy = false }
-        let text = LocalDecoder.transcribe(snapshot(tail: LocalDecoder.directLimit), with: t)
-        guard !text.isEmpty, !ended, !cancelled else { return }
+        let pcm=snapshot()
+        guard pcm.count != lastPreviewSamples else { return }
+        lastPreviewSamples=pcm.count
+        let reused=memoized(t)
+        reused.shouldDecode = { [weak self] in self?.recording == true }
+        if pcm.count > LocalDecoder.directLimit {
+            _ = LocalDecoder.transcribe(pcm, with: reused, completedOnly: true)
+        }
+        guard recording else { return }
+        // A preview is display-only. The final continues to use every captured sample.
+        let text = LocalDecoder.transcribe(Array(pcm.suffix(Self.previewLimit)), with: reused)
+        guard !text.isEmpty, !ended, recording else { return }
         onPartial?(text)
     }
 
+    private func memoized(_ t: LocalTranscriber) -> LocalMemoizedTranscriber {
+        if let memo, memo.base === t { return memo }
+        let made=LocalMemoizedTranscriber(t); memo=made; return made
+    }
+
     func end() {
+        // Mark before waiting for an in-flight preview. Queued/late previews must
+        // neither start more inference nor publish after release.
+        dataLock.lock()
+        guard !stopping, !cancellation else { dataLock.unlock(); return }
+        stopping=true; dataLock.unlock()
         capture.stop()
         queue.async { [self] in
             guard !cancelled, !ended else { return }
@@ -266,10 +362,15 @@ final class LocalASRRecorder: HoldRecordingSession {
             let pcm = snapshot()
             let hasSignal = capture.hasSignal
             var text = ""
-            do { text = LocalDecoder.transcribe(pcm, with: try cache.transcriber(for: modelID, center: center, options:options)) }
+            do {
+                let reused=memoized(try cache.transcriber(for:modelID,center:center,options:options))
+                reused.shouldDecode = { [weak self] in self?.cancelled == false }
+                text=LocalDecoder.transcribe(pcm,with:reused)
+            }
             catch { lastError = L10n.tr("local.err.load") }
             capture.onPCM = nil; capture.onLevel = nil
             dataLock.lock();samples.removeAll();dataLock.unlock()
+            memo=nil
             guard !cancelled else{return}
             let cb = onFinal; onFinal = nil; onPartial = nil
             cb?(text.isEmpty || !hasSignal ? nil : text)
@@ -277,9 +378,9 @@ final class LocalASRRecorder: HoldRecordingSession {
     }
 
     func abort() {
+        dataLock.lock();cancellation=true;stopping=true;samples.removeAll();dataLock.unlock()
         capture.stop(); capture.onPCM = nil; capture.onLevel = nil
-        dataLock.lock();cancellation=true;samples.removeAll();dataLock.unlock()
-        queue.async { [weak self] in self?.timer?.cancel();self?.timer=nil }
+        queue.async { [weak self] in self?.timer?.cancel();self?.timer=nil;self?.memo=nil }
         onFinal = nil; onPartial = nil; onLevel = nil
     }
 }
