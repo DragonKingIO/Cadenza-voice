@@ -6,16 +6,14 @@ struct OriginalRecognitionSheet: View {
     @Environment(\.dismiss) private var dismiss
     private var pipeline: VoicePipeline? { model.pipeline }
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             Text(L10n.tr("result.original.title")).font(.headline)
-            Form {
-                Section(L10n.tr("result.original.label")) {
-                    ScrollView { Text(pipeline?.lastOriginalTranscript ?? "").textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }.frame(height: 100)
-                }
-                Section(L10n.tr("result.processed.label")) {
-                    ScrollView { Text(pipeline?.lastProcessedTranscript ?? "").textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }.frame(height: 100)
-                }
-            }.formStyle(.grouped)
+            GroupBox(L10n.tr("result.original.label")) {
+                ScrollView { Text(pipeline?.lastOriginalTranscript ?? "").textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }.frame(height: 80)
+            }
+            GroupBox(L10n.tr("result.processed.label")) {
+                ScrollView { Text(pipeline?.lastProcessedTranscript ?? "").textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }.frame(height: 80)
+            }
             Text(L10n.tr("result.original.scope")).font(.callout).foregroundStyle(.secondary)
             HStack {
                 Button(L10n.tr("result.original.close")) { dismiss() }.keyboardShortcut(.cancelAction)
@@ -25,6 +23,6 @@ struct OriginalRecognitionSheet: View {
                 }.buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
                     .disabled(pipeline?.canCompareTranscript != true)
             }
-        }.padding(20).frame(width: 520, height: 430)
+        }.padding(16).frame(width: 520).fixedSize(horizontal: false, vertical: true).background(.background)
     }
 }
