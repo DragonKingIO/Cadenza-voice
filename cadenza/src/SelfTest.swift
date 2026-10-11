@@ -545,19 +545,34 @@ enum SelfTest {
         check("润色期间会话保持并标记等待", pipeline.refining && pipeline.session != nil && inserted.count == 1)
         settle { pipeline.session == nil }
         check("润色成功插入润色后的文字", inserted.last == "润色后的文字。" && !pipeline.refining && pipeline.lastTranscript == "润色后的文字。")
+        check("原文保留在整理和润色之前", pipeline.lastOriginalTranscript == "呃润色前的文字" && pipeline.lastProcessedTranscript == "润色后的文字。" && pipeline.canCompareTranscript)
+        let beforeVersionSwitch = inserted.count, clipboardChange = NSPasteboard.general.changeCount
+        check("一键原文只切换最近结果", pipeline.selectOriginalTranscript(true) && pipeline.lastTranscript == "呃润色前的文字" && pipeline.showingOriginalTranscript)
+        check("切换原文不写外部应用或剪贴板", inserted.count == beforeVersionSwitch && NSPasteboard.general.changeCount == clipboardChange)
+        check("可以切回处理后结果", pipeline.selectOriginalTranscript(false) && pipeline.lastTranscript == "润色后的文字。")
+        pipeline.clearTranscript()
+        check("清除同时移除两个版本", pipeline.lastOriginalTranscript == nil && pipeline.lastProcessedTranscript == nil && !pipeline.selectOriginalTranscript(true))
         pipeline.textRefiner = LLMRefineFixtures.FakeRefiner(result: nil, note: "服务响应太慢。")
         pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
         recorders.last?.onFinal?("呃润色失败的文字")
         settle { pipeline.session == nil }
         check("润色失败插入未润色的文字并说明原因", inserted.last == "润色失败的文字" && pipeline.lastResult.contains("服务响应太慢。") && !pipeline.refining)
+        check("润色失败仍可核对引擎原文", pipeline.lastOriginalTranscript == "呃润色失败的文字" && pipeline.lastProcessedTranscript == "润色失败的文字")
+        let numericOriginal = "00123 /tmp/invoice-0032.txt 1.50"
+        pipeline.textRefiner = LLMRefineFixtures.FakeRefiner(result: "Processed fixture", note: nil)
+        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        recorders.last?.onFinal?(numericOriginal); settle { pipeline.session == nil }
+        check("数字路径和前导零按识别原文逐字保留", pipeline.selectOriginalTranscript(true) && pipeline.lastTranscript == numericOriginal)
         let before = inserted.count
         pipeline.textRefiner = LLMRefineFixtures.FakeRefiner(result: "不应出现的文字", note: nil)
         pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
         recorders.last?.onFinal?("取消前的文字")
         pump()
+        check("识别期间不能切换结果", !pipeline.selectOriginalTranscript(true) && !pipeline.canCompareTranscript)
         pipeline.forceEnd(reason: "test")
         settle { false }
         check("润色期间取消会话后不再插入", inserted.count == before && pipeline.session == nil && !pipeline.refining)
+        check("取消丢弃原文与处理后版本", pipeline.lastOriginalTranscript == nil && pipeline.lastProcessedTranscript == nil)
         store.mutate { var c = $0.refine; c.enabled = false; $0.refine = c }
         pipeline.textRefiner = LLMRefineFixtures.FakeRefiner(result: "不应被调用", note: nil)
         pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()

@@ -115,6 +115,24 @@ final class VoicePipeline {
     private(set) var resultAction: ResultAction = .retry
     /// 最近一次识别文本：仅内存保留，显示在设置窗口"最近识别结果"，用户可复制/清空
     private(set) var lastTranscript: String?
+    /// Both versions stay in memory only. Switching the recent result never edits another app or the clipboard.
+    private(set) var lastOriginalTranscript: String?
+    private(set) var lastProcessedTranscript: String?
+    private(set) var showingOriginalTranscript = false
+    private var pendingOriginalTranscript: String?
+    var canCompareTranscript: Bool {
+        !hasActiveSession && lastOriginalTranscript != nil && lastProcessedTranscript != nil && lastOriginalTranscript != lastProcessedTranscript
+    }
+    @discardableResult func selectOriginalTranscript(_ original: Bool) -> Bool {
+        guard canCompareTranscript else { return false }
+        showingOriginalTranscript = original
+        lastTranscript = original ? lastOriginalTranscript : lastProcessedTranscript
+        notifyUI()
+        return true
+    }
+    private func clearTranscriptVersions() {
+        lastOriginalTranscript = nil; lastProcessedTranscript = nil; pendingOriginalTranscript = nil; showingOriginalTranscript = false
+    }
     private var lastPartial = ""   // 识别中途的部分文本（超时兜底提交用）
     private var recognizingSince: Date?
     var hasActiveSession: Bool { session != nil }
@@ -126,7 +144,7 @@ final class VoicePipeline {
     func note(_ text: String, isError: Bool = false) { lastResult = text; lastIsError = isError; lastInputAccepted = false }
 
     /// 用户主动清空最近识别结果
-    func clearTranscript() { lastTranscript = nil;diagnosticTarget=nil;lastResult="—";lastIsError=false;lastInputAccepted=false;resultAction = .retry;notifyUI() }
+    func clearTranscript() { lastTranscript = nil;clearTranscriptVersions();diagnosticTarget=nil;lastResult="—";lastIsError=false;lastInputAccepted=false;resultAction = .retry;notifyUI() }
 
     private var recorder: HoldRecordingSession?
     private var pollTimer: Timer?
@@ -260,6 +278,7 @@ final class VoicePipeline {
         let sid = s.id
         lastPartial = ""
         lastTranscript = nil
+        clearTranscriptVersions()
         recognizingSince = nil
         recordingAccessibility=pendingAccessibility;pendingAccessibility=nil
         session = s
@@ -289,6 +308,7 @@ final class VoicePipeline {
                     _ = self.coordinatedCancel?();self.note(L10n.tr("ui.cc54a5947876"),isError:true);self.onStateChange?();return
                 }
                 let coordinated=self.coordinatedSession
+                self.pendingOriginalTranscript = text?.trimmingCharacters(in: .whitespacesAndNewlines)
                 let corrected=text.map{self.tidyAndCorrect($0)}
                 let finish:(String?)->Void={[weak self] final in self?.holdFinalized(text:final);if coordinated {self?.coordinatedFinal?(self?.lastTranscript)}}
                 // Voice translation: the translation is what gets inserted; any failure inserts the untranslated text and says why.
@@ -372,6 +392,7 @@ final class VoicePipeline {
         recorder?.abort()
         lastResult = L10n.tr("ui.2f7355427150");lastIsError=false;lastInputAccepted=false
         lastTranscript=nil
+        clearTranscriptVersions()
         finishSession()
     }
 
@@ -392,11 +413,16 @@ final class VoicePipeline {
         if text == nil && !lastPartial.isEmpty {s.retentionReason=L10n.tr("ui.4d9d889ebd78")}
         let transcript = (silent ? "" : (text ?? lastPartial)).trimmingCharacters(in: .whitespacesAndNewlines)
         lastTranscript = transcript.isEmpty ? nil : transcript
+        lastProcessedTranscript = lastTranscript
+        let original = (pendingOriginalTranscript ?? transcript).trimmingCharacters(in: .whitespacesAndNewlines)
+        lastOriginalTranscript = transcript.isEmpty || original.isEmpty ? nil : original
+        showingOriginalTranscript = false
         lastIsError=false;lastInputAccepted=false
         // 静音防幻觉：整段录音能量极低（仅环境噪声）→ 丢弃，防止云端把噪声误识成句子
         if !(recorder is LocalASRRecorder || (recorder as? FallbackRecordingSession)?.usedFallback == true), !transcript.isEmpty, s.levelSamples > 0, !SpeechPresence.looksLikeSpeech(peak: s.peakLevel, levels: s.levels),
            now().timeIntervalSince(s.startedAt) >= 0.35 {
             lastTranscript = nil
+            clearTranscriptVersions()
             lastResult = L10n.tr("ui.e0f1304f638a");lastIsError=true
             Log.write("HOLD-DROP silence peak=\(s.peakLevel) samples=\(s.levelSamples) len=\(transcript.count)")
             finishSession()
@@ -491,6 +517,7 @@ final class VoicePipeline {
     }
 
     private func finishSession() {
+        pendingOriginalTranscript = nil
         refining = false;refineNote = nil
         session = nil // Invalidate callbacks before cancelling the underlying request.
         recorder?.onFinal = nil
@@ -539,6 +566,7 @@ final class VoicePipeline {
         recorder?.abort()
         Log.write("HOLD-FORCE-END \(reason)")
         lastResult=L10n.tr("ui.2f7355427150");lastIsError=false;lastInputAccepted=false;lastTranscript=nil;diagnosticTarget=nil;resultAction = .retry
+        clearTranscriptVersions()
         finishSession()
     }
 

@@ -26,6 +26,29 @@ enum SettingsUIFixtures {
         let pipeline = VoicePipeline(configStore: store, input: InputSourceController())
         pipeline.selfTestMode = true
         let settings = SettingsModel(store: store, pipeline: pipeline)
+        var cloudPolish = TextRefineSettings()
+        cloudPolish.baseURL = "https://example.invalid/v1"; cloudPolish.model = "fixture"
+        _ = store.mutate { $0.llmProfiles = []; $0.refine = cloudPolish }; settings.sync()
+        settings.setPolishEnabled(true)
+        check("cloud polish first enable waits for explanation confirmation", settings.showingCloudPolishNotice && !store.config.refine.enabled)
+        settings.cancelCloudPolishNotice()
+        check("cancelling cloud explanation leaves polishing off", !settings.showingCloudPolishNotice && !store.config.refine.enabled && !store.config.refine.cloudNoticeAcknowledged)
+        settings.setPolishEnabled(true); settings.confirmCloudPolishNotice()
+        check("cloud explanation does not grant provider upload consent", store.config.refine.enabled && store.config.refine.cloudNoticeAcknowledged && !store.config.refine.consent)
+        let acknowledged = ConfigStore(fileURL: url)
+        check("cloud explanation acknowledgement survives reload", acknowledged.config.refine.cloudNoticeAcknowledged)
+        settings.setPolishEnabled(false); settings.setPolishEnabled(true)
+        check("acknowledged cloud explanation is not repeated", !settings.showingCloudPolishNotice && store.config.refine.enabled)
+        var localPolish = TextRefineSettings(); localPolish.baseURL = "http://localhost:11434/v1"; localPolish.model = "fixture"
+        _ = store.mutate { $0.refine = localPolish }; settings.sync(); settings.setPolishEnabled(true)
+        check("local polish enables without cloud notice", store.config.refine.enabled && !settings.showingCloudPolishNotice && settings.polishPrivacyHint == L10n.tr("refine.privacy.local"))
+        let cloudProfile = LLMProfile(id: "cloud", name: "fixture", preset: "custom", baseURL: "https://example.invalid/v1", model: "fixture")
+        _ = store.mutate { $0.llmProfiles = [cloudProfile] }; settings.sync(); settings.selectPolishProfile("cloud")
+        check("switching enabled local polish to cloud also waits", settings.showingCloudPolishNotice && store.config.refine.profileID.isEmpty)
+        settings.cancelCloudPolishNotice(); settings.selectPolishProfile("cloud"); settings.confirmCloudPolishNotice()
+        check("confirmed cloud selection keeps independent consent", store.config.refine.profileID == "cloud" && !store.config.llmService(.polish).consent && settings.polishPrivacyHint == L10n.tr("refine.privacy.cloud"))
+        check("old polishing configuration defaults to no acknowledgement", (try? JSONDecoder().decode(TextRefineSettings.self, from: Data("{}".utf8)))?.cloudNoticeAcknowledged == false)
+        _ = store.mutate { $0.refine = TextRefineSettings(); $0.llmProfiles = [] }; settings.sync()
         let entries = LocalModelCatalog.builtin.filter { LocalModelCatalog.usable($0) }
         if LocalTranscriberLoader.supported, entries.count >= 2 {
             _ = store.mutate { $0.engine = ASREngine.iflytek.rawValue; $0.localModel.modelID = entries[1].id }

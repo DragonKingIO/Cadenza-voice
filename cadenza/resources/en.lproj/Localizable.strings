@@ -1545,3 +1545,21 @@
 "local.rank.en.none" = "English: not supported";
 "engine.rank.zh" = "Chinese speech test: about %d%% errors";
 "local.profile.footnote.speech" = "Speed, memory and punctuation were measured on one Mac, yours will differ. Ranking: Chinese was measured on a real person talking, English only on synthesized speech, so treat it as a rough guide.";
+
+/* Polishing privacy and in-memory original results */
+"refine.privacy.unconfigured" = "Cloud AI polishing sends recognized text to the selected service, even when speech recognition is local. It does not send the recording.";
+"refine.privacy.local" = "The selected polishing service runs on this Mac. Cadenza sends the text to its local address.";
+"refine.privacy.cloud" = "Recognized text is sent to the selected cloud service for polishing, even after local speech recognition. The recording is not sent.";
+"refine.privacy.title" = "Use cloud AI polishing?";
+"refine.privacy.explanation" = "Local speech recognition keeps audio on this Mac, but cloud polishing sends the recognized text to your selected service. That service can read the text. Turning polishing off cannot recall text already sent. You must also allow text uploads for that service in My AI models.";
+"refine.privacy.confirm" = "Continue";
+"refine.privacy.cancel" = "Cancel";
+"result.more" = "More result actions";
+"result.original.view" = "View original recognition";
+"result.original.title" = "Compare recognition results";
+"result.original.label" = "Original recognition";
+"result.processed.label" = "Processed result";
+"result.original.scope" = "The original is the engine output before tidying, vocabulary replacements, AI polishing or translation. Switching changes only the recent result shown here, not text already entered in another app or your clipboard. Both versions stay in memory until cleared or replaced.";
+"result.original.use" = "Use original here";
+"result.processed.use" = "Use processed result here";
+"result.original.close" = "Close";

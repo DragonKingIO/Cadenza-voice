@@ -15,7 +15,8 @@ private struct ProfilePicker: View {
             Button { model.tab = .aiModels } label: { Label(L10n.tr("llm.none"), systemImage: "arrow.down.circle") }.buttonStyle(.link)
         } else {
             Picker(L10n.tr(use == .polish ? "llm.useForPolish" : "llm.useForTranslate"), selection: Binding(get: { selected }, set: { id in
-                model.persist { if use == .polish { $0.refine.profileID = id } else { $0.translate.profileID = id } }
+                if use == .polish { model.selectPolishProfile(id) }
+                else { model.persist { $0.translate.profileID = id } }
             })) {
                 if model.llmProfiles.first(where: { $0.id == selected }) == nil { Text(L10n.tr("llm.choose")).tag(selected) }
                 ForEach(model.llmProfiles) { p in Text(p.name + " · " + p.model).tag(p.id) }
@@ -29,7 +30,8 @@ struct TextRefineSection: View {
     @Bindable var model: SettingsModel
     var body: some View {
         Section {
-            Toggle(L10n.tr("refine.enable"), isOn: Binding(get: { model.refine.enabled }, set: { value in model.persist { $0.refine.enabled = value } }))
+            Toggle(L10n.tr("refine.enable"), isOn: Binding(get: { model.refine.enabled }, set: { model.setPolishEnabled($0) }))
+            Text(model.polishPrivacyHint).font(.callout).foregroundStyle(.primary)
             if model.refine.enabled {
                 ProfilePicker(model: model, use: .polish)
                 Picker(L10n.tr("refine.style"), selection: Binding(get: { model.refine.style }, set: { v in model.persist { $0.refine.style = v } })) {
@@ -40,6 +42,11 @@ struct TextRefineSection: View {
         } header: { Text(L10n.tr("refine.header")) } footer: {
             Text(L10n.tr("refine.hint")).font(.callout).foregroundStyle(.primary)
         }
+        .disabled(model.listening || model.recognizing)
+        .alert(L10n.tr("refine.privacy.title"), isPresented: $model.showingCloudPolishNotice) {
+            Button(L10n.tr("refine.privacy.confirm")) { model.confirmCloudPolishNotice() }
+            Button(L10n.tr("refine.privacy.cancel"), role: .cancel) { model.cancelCloudPolishNotice() }
+        } message: { Text(L10n.tr("refine.privacy.explanation")) }
     }
 }
 

@@ -588,6 +588,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         s.shortcut=c.holdShortcutEnabled ? HotkeySpecDisplay.string(c.trigger):""
         s.toggleShortcut=c.toggleActive ? c.toggleTrigger.map(HotkeySpecDisplay.string) ?? "":""
         s.hasResult=pipeline.lastTranscript?.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty == false
+        s.hasOriginalResult = pipeline.canCompareTranscript
         s.busy=pipeline.hasActiveSession || pipeline.inputSuspendedForDiagnostic
         s.screenshotShortcut=c.screenshot.trigger.map(HotkeySpecDisplay.string) ?? ""
         s.ocrShortcut=c.screenshot.ocrTrigger.map(HotkeySpecDisplay.string) ?? ""
@@ -622,6 +623,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     @objc private func copyLastRecognition() {
         guard !pipeline.hasActiveSession,let text=pipeline.lastTranscript,!text.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty else{return}
         NSPasteboard.general.clearContents();NSPasteboard.general.setString(text,forType:.string)
+    }
+    @objc private func showOriginalRecognition() {
+        guard pipeline.canCompareTranscript else { return }
+        showSettings(); showSwiftMain(.input)
+        settingsWindow?.settingsModel?.showingOriginalResult = true
     }
     @objc private func resolveMenuIssue() {
         let s=menuSnapshot()

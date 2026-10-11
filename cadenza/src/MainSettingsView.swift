@@ -99,6 +99,11 @@ final class SettingsModel {
     var appearanceMode="system"
     var polish=TextPolishSettings()
     var refine=TextRefineSettings()
+    var showingCloudPolishNotice = false
+    var showingOriginalResult = false
+    var originalResultSelected = false
+    private var pendingPolishProfile: String?
+    private var pendingPolishEnable = false
     var vocabulary=VocabularySettings()
     var translate=TranslateSettings()
     var llmProfiles:[LLMProfile]=[]
@@ -148,6 +153,7 @@ final class SettingsModel {
         toggleBinding = cfg.toggleTrigger.map { HotkeySpecDisplay.string($0) } ?? L10n.tr("ui.2f5f1d6fbfb0")
         let t = pipeline?.lastTranscript ?? ""
         resultText = t
+        originalResultSelected = pipeline?.showingOriginalTranscript == true
         hasResult = !t.isEmpty
         lastMessage = pipeline?.lastResult ?? ""
         lastIsError = pipeline?.lastIsError ?? false
@@ -186,6 +192,38 @@ final class SettingsModel {
         let original=store.config
         guard store.mutate(change),store.save() else{_=store.mutate{$0=original};lastMessage=L10n.tr("ui.bcd8e5694934");lastIsError=true;return}
         onSettingsChanged?();sync()
+    }
+    var polishPrivacyHint: String {
+        guard let service = store?.config.llmService(.polish), service.configured else { return L10n.tr("refine.privacy.unconfigured") }
+        return L10n.tr(service.isLocal ? "refine.privacy.local" : "refine.privacy.cloud")
+    }
+    func setPolishEnabled(_ enabled: Bool) {
+        guard !previewReadOnly, !listening, !recognizing else { return }
+        if enabled, let service = store?.config.llmService(.polish), service.configured, !service.isLocal, !refine.cloudNoticeAcknowledged {
+            pendingPolishEnable = true; pendingPolishProfile = nil; showingCloudPolishNotice = true
+        } else { persist { $0.refine.enabled = enabled } }
+    }
+    func selectPolishProfile(_ id: String) {
+        guard !previewReadOnly, !listening, !recognizing else { return }
+        if refine.enabled, !refine.cloudNoticeAcknowledged, let profile = store?.config.llmProfile(id), profile.usable, !profile.isLocal {
+            pendingPolishEnable = false; pendingPolishProfile = id; showingCloudPolishNotice = true
+        } else { persist { $0.refine.profileID = id } }
+    }
+    func confirmCloudPolishNotice() {
+        let enable = pendingPolishEnable, profile = pendingPolishProfile
+        persist { c in
+            c.refine.cloudNoticeAcknowledged = true
+            if enable { c.refine.enabled = true }
+            if let profile { c.refine.profileID = profile }
+        }
+        cancelCloudPolishNotice()
+    }
+    func cancelCloudPolishNotice() {
+        pendingPolishEnable = false; pendingPolishProfile = nil; showingCloudPolishNotice = false
+    }
+    func selectOriginalResult(_ original: Bool) {
+        guard !previewReadOnly, pipeline?.selectOriginalTranscript(original) == true else { return }
+        copied = false; sync()
     }
     /// The lock for people who never want audio to leave this Mac.
     func setLocalOnly(_ on: Bool) {
@@ -443,6 +481,9 @@ struct MainSettingsView: View {
         .sheet(isPresented: $model.showingCompare, onDismiss: { model.compare?.clear(); model.compare = nil }) {
             if let compare = model.compare { VoiceCompareView(compare: compare, model: model, close: { model.showingCompare = false }) }
         }
+        .sheet(isPresented: $model.showingOriginalResult) {
+            OriginalRecognitionSheet(model: model)
+        }
         .sheet(item: $model.configuring) { engine in
             if let draft=model.providerDraft(engine) {
                 ProviderConfigSheet(draft:draft,availableHeight:ProviderSheetLayout.height(parentHeight:parentHeight,screenHeight:NSScreen.main?.visibleFrame.height ?? 900))
@@ -574,6 +615,15 @@ struct TryCard: View {
                 Spacer()
                 Text("\(model.primaryModelName) · \(modeName)").font(.caption).foregroundStyle(.secondary)
                 if model.hasResult {
+                    if model.pipeline?.canCompareTranscript == true {
+                        Menu {
+                            Button(L10n.tr("result.original.view")) { model.showingOriginalResult = true }
+                            Button(L10n.tr(model.originalResultSelected ? "result.processed.use" : "result.original.use")) {
+                                model.selectOriginalResult(!model.originalResultSelected)
+                            }
+                        } label: { Label(L10n.tr("result.more"), systemImage: "ellipsis") }
+                        .labelStyle(.iconOnly).menuStyle(.borderlessButton).fixedSize().help(L10n.tr("result.more"))
+                    }
                     Button { model.copy() } label: { Label(L10n.tr("ui.63d90d977348"), systemImage: model.copied ? "checkmark" : "doc.on.doc") }
                         .labelStyle(.iconOnly).buttonStyle(.borderless).help(model.copied ? L10n.tr("ui.8f6f8d979c98") : L10n.tr("ui.b93a1c638ab1"))
                     Button { confirmingClear=true } label: { Label(L10n.tr("ui.1ef3de06b32e"), systemImage: "trash") }

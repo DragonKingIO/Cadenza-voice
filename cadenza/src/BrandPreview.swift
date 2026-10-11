@@ -106,6 +106,22 @@ enum BrandPreview {
             compare.analyze()
             model.compare=compare;model.showingCompare=true
         }
+        if CommandLine.arguments.contains("--preview-original-result"), let model = controller.settingsModel {
+            // Synthetic recognizer and refiner only: no microphone, network, credentials or user text.
+            _ = store.mutate { c in
+                c.llmProfiles = []; c.refine = TextRefineSettings()
+                c.refine.enabled = true; c.refine.baseURL = "http://localhost:11434/v1"; c.refine.model = "fixture"
+            }
+            let recorder = TriggerStage2Fixtures.Recorder()
+            pipeline.recorderFactory = { recorder }; pipeline.snapshotFocus = { nil }
+            let original = L10n.language == "en" ? "um invoice 00123 costs 1.50 save it at /tmp/invoice-0032.txt" : "嗯单号00123金额1.50保存到/tmp/invoice-0032.txt"
+            let processed = L10n.language == "en" ? "Invoice 00123 costs 1.50. Save it at /tmp/invoice-0032.txt." : "单号00123，金额1.50。保存到/tmp/invoice-0032.txt。"
+            pipeline.textRefiner = LLMRefineFixtures.FakeRefiner(result: processed, note: nil)
+            pipeline.holdStarted(source: .button, localOnly: true); pipeline.holdEnded(); recorder.onFinal?(original)
+            let deadline = Date().addingTimeInterval(3)
+            while pipeline.hasActiveSession && Date() < deadline { RunLoop.main.run(until: Date().addingTimeInterval(0.02)) }
+            model.sync(); model.showingOriginalResult = true
+        }
         if page == "shortcut-editor" {
             controller.editShortcut(mode:"hold")
             controller.inspectActiveShortcutCandidate(HotkeySpec(keyCode:106,modifiers:0))
