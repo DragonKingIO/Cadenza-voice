@@ -21,6 +21,9 @@ struct TextRefineSettings: Codable, Equatable {
     var style = RefineStyle.clean
     /// Permission to send the recognized text to a service that is not on this Mac.
     var consent = false
+    /// The separate explanation that cloud polishing sends text even after local speech recognition.
+    /// This is not provider consent and never bypasses the network permission checks.
+    var cloudNoticeAcknowledged = false
     var timeoutSec = 8.0
     /// The "my AI models" profile this use runs on; empty = the address, model and consent above (older configurations).
     var profileID = ""
@@ -28,7 +31,7 @@ struct TextRefineSettings: Codable, Equatable {
     var keyAccount = ""
 
     init() {}
-    enum CodingKeys: String, CodingKey { case enabled, preset, baseURL, model, style, consent, timeoutSec, profileID }
+    enum CodingKeys: String, CodingKey { case enabled, preset, baseURL, model, style, consent, cloudNoticeAcknowledged, timeoutSec, profileID }
     init(from decoder: Decoder) throws {
         let d = try decoder.container(keyedBy: CodingKeys.self)
         enabled = (try? d.decodeIfPresent(Bool.self, forKey: .enabled)) ?? false
@@ -37,6 +40,7 @@ struct TextRefineSettings: Codable, Equatable {
         model = (try? d.decodeIfPresent(String.self, forKey: .model)) ?? ""
         style = (try? d.decodeIfPresent(RefineStyle.self, forKey: .style)) ?? .clean
         consent = (try? d.decodeIfPresent(Bool.self, forKey: .consent)) ?? false
+        cloudNoticeAcknowledged = (try? d.decodeIfPresent(Bool.self, forKey: .cloudNoticeAcknowledged)) ?? false
         let t = (try? d.decodeIfPresent(Double.self, forKey: .timeoutSec)) ?? 8
         timeoutSec = t.isFinite ? min(30, max(2, t)) : 8
         let pid = (try? d.decodeIfPresent(String.self, forKey: .profileID)) ?? ""

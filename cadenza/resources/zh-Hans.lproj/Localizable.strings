@@ -1545,3 +1545,23 @@
 "local.rank.en.none" = "英文：不支持";
 "engine.rank.zh" = "中文口语实测：错误约 %d%%";
 "local.profile.footnote.speech" = "速度、内存和标点是开发者在一台 Mac 上测的，你的机器会有差别。排名：中文用真人说话的录音测，英文只测过合成语音，仅供参考。";
+
+/* Polishing privacy and in-memory original results */
+"refine.privacy.unconfigured" = "使用云端 AI 润色时，即使语音在本机识别，文字仍会发送给所选服务；不发送录音。";
+"refine.privacy.local" = "所选润色服务运行在这台 Mac 上，随言将文字交给它的本机地址。";
+"refine.privacy.cloud" = "识别文字会发送给所选云端服务润色，即使语音使用本地识别。润色不会发送录音。";
+"refine.privacy.title" = "使用云端 AI 润色？";
+"refine.privacy.explanation" = "本地语音识别让录音留在本机，但云端润色会把识别文字发送给你选择的服务，对方能看到这些文字。关闭润色无法撤回已发送的文字。你还需要在“我的 AI 模型”里允许向该服务发送文字。";
+"refine.privacy.confirm" = "继续";
+"refine.privacy.cancel" = "取消";
+"result.more" = "更多结果操作";
+"result.original.view" = "查看识别原文";
+"result.original.title" = "对照识别结果";
+"result.original.label" = "识别原文";
+"result.processed.label" = "处理后的结果";
+"result.original.scope" = "原文是整理、词库替换、AI 润色或翻译前的识别结果。切换只改变这里的最近结果，不替换其他应用中已输入的文字，也不改剪贴板。两个版本仅在内存中保留，清除或下次识别后移除。";
+"result.original.use" = "在此使用原文";
+"result.processed.use" = "在此使用处理后结果";
+"result.original.close" = "关闭";
+
+"result.original.identical" = "识别原文与处理后的结果一致。";

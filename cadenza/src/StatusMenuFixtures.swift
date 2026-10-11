@@ -47,6 +47,13 @@ enum StatusMenuFixtures {
         }
         check("menu tests leave new coordinator disabled",!store.config.triggerCoordinatorEnabled)
         var s=snapshot("idle");s.toggleAvailable=false;s.hasResult=false
+        s.hasOriginalResult = false; StatusMenuController.rebuild(menu,s:s,target:target)
+        check("no original action without a retained original", entry("result.original") == nil)
+        s.hasOriginalResult = true; s.hasResult = true; StatusMenuController.rebuild(menu,s:s,target:target)
+        check("original result is an explicit menu action", entry("result.original")?.action == NSSelectorFromString("showOriginalRecognition") && entry("result.original")?.isEnabled == true)
+        s.busy = true; StatusMenuController.rebuild(menu,s:s,target:target)
+        check("busy original action disabled", entry("result.original")?.isEnabled == false)
+        s.hasOriginalResult = false; s.hasResult = false; s.busy = false
         StatusMenuController.rebuild(menu,s:s,target:target)
         check("the menu no longer has a trigger-mode picker that could silently fall back",entry("mode")==nil)
         var h=StatusMenuSnapshot();h.phase = .idle

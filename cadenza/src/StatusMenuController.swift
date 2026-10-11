@@ -16,6 +16,7 @@ struct StatusMenuSnapshot {
     /// The language dictation is translated into; empty = translation is off.
     var translateTarget = ""
     var toggleAvailable=false,hasResult=false,busy=false
+    var hasOriginalResult = false
     /// The display text of the tap shortcut when it is on; `shortcut` is the hold shortcut when it is on.
     var toggleShortcut=""
     /// 截图快捷键的显示文字；空 = 未设置
@@ -96,6 +97,7 @@ enum StatusMenuController {
         }
         menu.addItem(.separator())
         menu.addItem(item("copy",L10n.tr("menu.copyLast"),"copyLastRecognition",enabled:s.hasResult && !s.busy))
+        if s.hasOriginalResult { menu.addItem(item("result.original",L10n.tr("result.original.view"),"showOriginalRecognition",enabled:!s.busy)) }
         let shot=item("screenshot",L10n.tr("menu.screenshot"),"startScreenshot",enabled:!s.busy)
         if !s.screenshotShortcut.isEmpty {shot.setSubtitle(s.screenshotShortcut)}
         menu.addItem(shot)
