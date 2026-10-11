@@ -120,8 +120,11 @@ final class VoicePipeline {
     private(set) var lastProcessedTranscript: String?
     private(set) var showingOriginalTranscript = false
     private var pendingOriginalTranscript: String?
+    var canViewOriginalTranscript: Bool {
+        !hasActiveSession && lastOriginalTranscript != nil && lastProcessedTranscript != nil
+    }
     var canCompareTranscript: Bool {
-        !hasActiveSession && lastOriginalTranscript != nil && lastProcessedTranscript != nil && lastOriginalTranscript != lastProcessedTranscript
+        canViewOriginalTranscript && lastOriginalTranscript != lastProcessedTranscript
     }
     @discardableResult func selectOriginalTranscript(_ original: Bool) -> Bool {
         guard canCompareTranscript else { return false }

@@ -1563,3 +1563,5 @@
 "result.original.use" = "在此使用原文";
 "result.processed.use" = "在此使用处理后结果";
 "result.original.close" = "关闭";
+
+"result.original.identical" = "识别原文与处理后的结果一致。";

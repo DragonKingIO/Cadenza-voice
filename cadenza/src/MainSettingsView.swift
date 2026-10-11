@@ -615,15 +615,6 @@ struct TryCard: View {
                 Spacer()
                 Text("\(model.primaryModelName) · \(modeName)").font(.caption).foregroundStyle(.secondary)
                 if model.hasResult {
-                    if model.pipeline?.canCompareTranscript == true {
-                        Menu {
-                            Button(L10n.tr("result.original.view")) { model.showingOriginalResult = true }
-                            Button(L10n.tr(model.originalResultSelected ? "result.processed.use" : "result.original.use")) {
-                                model.selectOriginalResult(!model.originalResultSelected)
-                            }
-                        } label: { Label(L10n.tr("result.more"), systemImage: "ellipsis") }
-                        .labelStyle(.iconOnly).menuStyle(.borderlessButton).fixedSize().help(L10n.tr("result.more"))
-                    }
                     Button { model.copy() } label: { Label(L10n.tr("ui.63d90d977348"), systemImage: model.copied ? "checkmark" : "doc.on.doc") }
                         .labelStyle(.iconOnly).buttonStyle(.borderless).help(model.copied ? L10n.tr("ui.8f6f8d979c98") : L10n.tr("ui.b93a1c638ab1"))
                     Button { confirmingClear=true } label: { Label(L10n.tr("ui.1ef3de06b32e"), systemImage: "trash") }
@@ -633,6 +624,13 @@ struct TryCard: View {
             Group { resultArea }
                 .frame(height: model.hasResult ? 96 : 64).frame(maxWidth: .infinity)
                 .background(.quaternary.opacity(0.4), in: .rect(cornerRadius: 10))
+            if model.hasResult && model.pipeline?.canViewOriginalTranscript == true {
+                HStack {
+                    Spacer()
+                    Button(L10n.tr("result.original.view")) { model.showingOriginalResult = true }
+                        .buttonStyle(.borderless)
+                }
+            }
             if model.hasResult && model.lastIsError {
                 Text(model.lastMessage).font(.caption).foregroundStyle(.orange)
                     .frame(maxWidth: .infinity, alignment: .leading)

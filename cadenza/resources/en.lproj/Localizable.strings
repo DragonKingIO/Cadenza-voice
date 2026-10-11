@@ -1563,3 +1563,5 @@
 "result.original.use" = "Use original here";
 "result.processed.use" = "Use processed result here";
 "result.original.close" = "Close";
+
+"result.original.identical" = "The original and processed results are identical.";

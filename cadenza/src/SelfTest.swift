@@ -563,12 +563,17 @@ enum SelfTest {
         pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
         recorders.last?.onFinal?(numericOriginal); settle { pipeline.session == nil }
         check("数字路径和前导零按识别原文逐字保留", pipeline.selectOriginalTranscript(true) && pipeline.lastTranscript == numericOriginal)
+        pipeline.textRefiner = LLMRefineFixtures.FakeRefiner(result: numericOriginal, note: nil)
+        pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
+        recorders.last?.onFinal?(numericOriginal); settle { pipeline.session == nil }
+        check("原文与结果一致时仍可查看", pipeline.lastOriginalTranscript == numericOriginal && pipeline.lastProcessedTranscript == numericOriginal && pipeline.canViewOriginalTranscript)
+        check("相同版本无需切换且不会重复插入", !pipeline.canCompareTranscript && !pipeline.selectOriginalTranscript(true) && inserted.last == numericOriginal)
         let before = inserted.count
         pipeline.textRefiner = LLMRefineFixtures.FakeRefiner(result: "不应出现的文字", note: nil)
         pipeline.holdStarted(source: .menu, target: focus); pipeline.holdEnded()
         recorders.last?.onFinal?("取消前的文字")
         pump()
-        check("识别期间不能切换结果", !pipeline.selectOriginalTranscript(true) && !pipeline.canCompareTranscript)
+        check("识别期间不能查看或切换结果", !pipeline.selectOriginalTranscript(true) && !pipeline.canCompareTranscript && !pipeline.canViewOriginalTranscript)
         pipeline.forceEnd(reason: "test")
         settle { false }
         check("润色期间取消会话后不再插入", inserted.count == before && pipeline.session == nil && !pipeline.refining)

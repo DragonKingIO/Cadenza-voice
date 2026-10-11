@@ -48,7 +48,7 @@ enum StatusMenuFixtures {
         check("menu tests leave new coordinator disabled",!store.config.triggerCoordinatorEnabled)
         var s=snapshot("idle");s.toggleAvailable=false;s.hasResult=false
         s.hasOriginalResult = false; StatusMenuController.rebuild(menu,s:s,target:target)
-        check("no redundant original action when versions match", entry("result.original") == nil)
+        check("no original action without a retained original", entry("result.original") == nil)
         s.hasOriginalResult = true; s.hasResult = true; StatusMenuController.rebuild(menu,s:s,target:target)
         check("original result is an explicit menu action", entry("result.original")?.action == NSSelectorFromString("showOriginalRecognition") && entry("result.original")?.isEnabled == true)
         s.busy = true; StatusMenuController.rebuild(menu,s:s,target:target)
