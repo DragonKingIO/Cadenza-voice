@@ -165,6 +165,7 @@ enum AccuracyBenchmark {
 
     static func localEngines() -> [Engine] {
         guard LocalTranscriberLoader.supported else { return [] }
+        let processing: LocalDecoder.AudioProcessing = value("--bench-audio") == "legacy" ? .legacyBenchmark : .preserveSpeech
         var engines: [Engine] = []
         var candidates: [(entry: LocalModelEntry, dir: URL)] = LocalModelCenter.shared.installedEntries.compactMap { e in LocalModelCenter.shared.modelDir(e.id).map { (e, $0) } }
         // Models that are not installed in the app can be compared too: `--bench-model=<kind>:<folder>` (repeatable), e.g.
@@ -185,7 +186,7 @@ enum AccuracyBenchmark {
                 let base = entry.id + (suffix.isEmpty ? "" : "/" + suffix)
                 engines.append(Engine(name: base, parallel: true, make: {
                     let t = try? LocalTranscriberLoader.load(dir: dir, entry: entry, options: options)
-                    return { samples in t.map { LocalDecoder.transcribe(samples, with: $0) } ?? "" }
+                    return { samples in t.map { LocalDecoder.transcribe(samples, with: $0, processing: processing) } ?? "" }
                 }))
             }
         }

@@ -5,8 +5,9 @@ enum LocalModelRobustnessFixtures {
         var vadAvailable=true
         var ranges:[Range<Int>]=[]
         var seen:[Int]=[]
+        var decoded:[[Float]]=[]
         func speechSegments(_ s:[Float])->[Range<Int>] {ranges}
-        func transcribe(_ s:[Float])->String {seen.append(s.count);return "hello"}
+        func transcribe(_ s:[Float])->String {seen.append(s.count);decoded.append(s);return "hello"}
     }
     final class Blocking:LocalTranscriber {
         let entered=DispatchSemaphore(value:0),release=DispatchSemaphore(value:0)
@@ -30,16 +31,31 @@ enum LocalModelRobustnessFixtures {
         let vad=VAD(),samples=[Float](repeating:0.1,count:32000)
         c("short noise rejected by VAD before decoding",LocalDecoder.transcribe(samples,with:vad).isEmpty && vad.seen.isEmpty)
         vad.ranges=[8000..<16000]
-        c("VAD keeps 0.8s on both speech edges",LocalDecoder.transcribe(samples,with:vad)=="hello" && vad.seen==[28800])
+        c("short speech keeps the complete recording after VAD confirmation",LocalDecoder.transcribe(samples,with:vad)=="hello" && vad.seen==[32000] && vad.decoded.last==samples)
         vad.seen=[];vad.ranges=[20000..<21000,21500..<22500]
-        c("neighbouring padded segments never overlap",{_=LocalDecoder.transcribe(samples,with:vad);return vad.seen.reduce(0,+)<=samples.count}())
+        c("pauses in a short sentence do not split model context",LocalDecoder.transcribe(samples,with:vad)=="hello" && vad.seen==[32000])
+        vad.seen=[];vad.ranges=[8000..<16000]
+        c("legacy benchmark still reproduces short VAD cropping",LocalDecoder.transcribe(samples,with:vad,processing:.legacyBenchmark)=="hello" && vad.seen==[28800])
+        vad.seen=[];vad.ranges=[120000..<200000,205000..<310000]
+        _=LocalDecoder.transcribe([Float](repeating:0.1,count:480000),with:vad)
+        c("long overlapping context margins merge without duplicate audio",vad.seen==[215600])
         vad.seen=[];vad.ranges=[-1..<100,0..<640000]
         c("invalid VAD ranges never index audio",LocalDecoder.transcribe(samples,with:vad).isEmpty && vad.seen.isEmpty)
         c("nonfinite samples rejected",LocalDecoder.transcribe([Float](repeating:.nan,count:16000),with:vad).isEmpty)
+        c("infinite samples rejected before audio processing",LocalDecoder.transcribe([Float](repeating:.infinity,count:16000),with:vad).isEmpty)
         c("zero waveform rejected before inference",LocalDecoder.transcribe([Float](repeating:0,count:16000),with:vad).isEmpty)
+        vad.seen=[]
+        c("under half a second never reaches inference",LocalDecoder.transcribe([Float](repeating:0.1,count:7999),with:vad).isEmpty && vad.seen.isEmpty)
+        c("normal speech bypasses noise subtraction and gain",LocalDecoder.recognitionSamples(samples)==samples)
+        let faint=(0..<16000).map {Float(sin(Double($0)/20))*0.002}
+        let raised=LocalDecoder.recognitionSamples(faint)
+        c("faint speech gets bounded gain without losing samples",raised.count==faint.count && raised.allSatisfy{$0.isFinite} && (raised.map(abs).max() ?? 0)>0.015 && (raised.map(abs).max() ?? 1)<=0.021)
         vad.ranges=[0..<800000];vad.seen=[]
         _=LocalDecoder.transcribe([Float](repeating:0.1,count:800000),with:vad)
         c("every long inference call bounded",vad.seen==[400000,400000])
+        vad.ranges=[200000..<201000];vad.seen=[]
+        _=LocalDecoder.transcribe([Float](repeating:0.1,count:LocalDecoder.directLimit),with:vad)
+        c("direct limit keeps the full sentence instead of a VAD fragment",vad.seen==[LocalDecoder.directLimit])
         c("word error metric counts substitutions",LocalModelHealthCheck.errorRate("hello world","hello word",characters:false)==0.5)
         c("character error metric ignores punctuation",LocalModelHealthCheck.errorRate("今天天气很好。","今天天气很好",characters:true)==0)
         let temp=LocalModelFixtures.tempDir("robustness");defer{try? FileManager.default.removeItem(at:temp)}
@@ -61,5 +77,6 @@ enum LocalModelRobustnessFixtures {
             let limitCap=LocalModelFixtures.FakeCapture();let bounded=LocalASRRecorder(modelID:entry.id,center:center,cache:cache,capture:limitCap);bounded.sampleLimit=16000;bounded.onFinal={result=$0};_=bounded.begin();limitCap.feed(17000)
             c("recording limit auto-finishes instead of dropping tail silently",LocalModelFixtures.wait{result != nil} && result=="bounded" && limitCap.stops>0)
         }
+        LocalLatencyFixtures.run(check)
     }
 }

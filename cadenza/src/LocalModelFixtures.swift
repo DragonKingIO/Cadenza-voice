@@ -598,7 +598,7 @@ enum LocalModelFixtures {
         c("很短的片段不处理", LocalDecoder.levelled([0.01, 0.02]) == [0.01, 0.02])
         let seenLoud = FakeTranscriber("x")
         _ = LocalDecoder.transcribe(quietClip, with: seenLoud)
-        c("识别前先归一化音量", seenLoud.seen.count == 1)
+        c("轻声处理后整段送入识别器", seenLoud.seen == [quietClip.count])
 
         // 用我的声音比较模型：录音、识别、打分、清除，全部在内存里
         final class FakeCompareCapture: CloudPCMCapturing {
