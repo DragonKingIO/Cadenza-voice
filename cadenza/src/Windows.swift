@@ -167,6 +167,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     var onConfigurationChanged: (() -> Void)?
     var onBeginShortcutRecording: (() -> Void)?
     var onEndShortcutRecording: (() -> Void)?
+    // Isolated UI fixtures inject key states; production checks the real keyboard.
+    var shortcutDownKeys:(()->Set<UInt32>)?
     var onSaveShortcut: ((HotkeySpec) -> String?)?
     var onSaveModeShortcut: ((String,HotkeySpec?,Bool?) -> String?)?
     private var editingMode=0
@@ -707,7 +709,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     @objc private func cancelShortcut() { endShortcut(); shortcutError = nil; refresh() }
     @objc private func saveShortcut() {
         guard let spec = candidate, shortcutError == nil, pipeline?.hasActiveSession != true else { return }
-        guard !ListenTrigger.downKeys().contains(spec.keyCode), !ListenTrigger.downKeys().contains(where:{ (ListenTrigger.modifierKeyFlags[$0] ?? 0) & spec.modifiers != 0 }) else { shortcutError = L10n.tr("ui.0817f92e1983"); refresh(); return }
+        let down=shortcutDownKeys?() ?? ListenTrigger.downKeys()
+        guard !down.contains(spec.keyCode), !down.contains(where:{ (ListenTrigger.modifierKeyFlags[$0] ?? 0) & spec.modifiers != 0 }) else { shortcutError = L10n.tr("ui.0817f92e1983"); refresh(); return }
         endShortcut(resume: false)
         shortcutError = onSaveModeShortcut?(modeName(editingMode),spec,nil) ?? (onSaveModeShortcut == nil ? onSaveShortcut?(spec):nil)
         onEndShortcutRecording?(); refresh()

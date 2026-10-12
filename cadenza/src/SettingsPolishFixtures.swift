@@ -16,6 +16,8 @@ enum SettingsPolishFixtures {
         let pipeline=VoicePipeline(configStore:store,input:InputSourceController());pipeline.selfTestMode=true
         _=NSApplication.shared
         let controller=SettingsWindowController();controller.configStore=store;controller.pipeline=pipeline
+        var physicalDown:Set<UInt32>=[]
+        controller.shortcutDownKeys={physicalDown}
         var begins=0,ends=0,saves=0
         controller.onBeginShortcutRecording={begins+=1};controller.onEndShortcutRecording={ends+=1}
         controller.onSaveModeShortcut={mode,spec,_ in
@@ -41,6 +43,10 @@ enum SettingsPolishFixtures {
         let key=HotkeySpec(keyCode:106,modifiers:0)
         controller.inspectActiveShortcutCandidate(key)
         check("valid independent toggle binding enables Save",!controller.shortcutEditorHasError && controller.shortcutEditorCanSave)
+        physicalDown=[key.keyCode];controller.inspectSaveActiveShortcut()
+        check("a still-held shortcut refuses saving without closing or persisting",saves==0 && controller.shortcutEditorHasError && controller.window?.attachedSheet != nil)
+        physicalDown=[];controller.inspectActiveShortcutCandidate(key)
+        check("release and a refreshed candidate restore Save",controller.shortcutEditorCanSave && !controller.shortcutEditorHasError)
         controller.inspectSaveActiveShortcut()
         check("save uses existing transaction callback and refreshes SwiftUI",saves==1 && ends==2 && store.config.toggleTrigger==key && controller.settingsModel?.toggleAvailable==true && controller.window?.attachedSheet == nil)
         check("UI shortcut changes do not enable the new trigger path",!store.config.triggerCoordinatorEnabled && !pipeline.hasActiveSession)
@@ -88,6 +94,11 @@ enum SettingsPolishFixtures {
             let expected=HotkeySpec(keyCode:UInt32(code),modifiers:ShortcutPolicy.carbon(flags))
             let event=NSEvent.keyEvent(with:.keyDown,location:.zero,modifierFlags:flags,timestamp:0,windowNumber:controller.window?.windowNumber ?? 0,context:nil,characters:"",charactersIgnoringModifiers:"",isARepeat:false,keyCode:code)!
             controller.inspectShortcutEvent(event)
+            if code == 17 {
+                physicalDown=[61];controller.inspectSaveActiveShortcut()
+                check("a held opposite-side Option still refuses translation Save",controller.shortcutEditorHasError && controller.window?.attachedSheet != nil && store.config.translate.trigger != expected)
+                physicalDown=[];controller.inspectShortcutEvent(event)
+            }
             check("translation recorder accepts \(HotkeySpecDisplay.string(expected)) without physical-side metadata",controller.shortcutEditorCanSave && !controller.shortcutEditorHasError && controller.shortcutEditorText==HotkeySpecDisplay.string(expected))
             let repeated=NSEvent.keyEvent(with:.keyDown,location:.zero,modifierFlags:[.command],timestamp:0,windowNumber:0,context:nil,characters:"c",charactersIgnoringModifiers:"c",isARepeat:true,keyCode:8)!
             controller.inspectShortcutEvent(repeated)

@@ -15,7 +15,7 @@ Each release is also published, with its package and checksum, on
 - Ordinary Chrome single-line inputs can be verified when Chrome explicitly reports no optional accessibility subrole. Password fields, failed security queries and changed focus remain protected.
 
 ### Validation and limitations
-- Added regression coverage for shortcut recording, translation routing, repeated keys, audio buffering, modifier release and Chrome field classification. Real-device short dictation was also observed reaching a selected input without changing the clipboard.
+- Added regression coverage for shortcut recording, translation routing, repeated keys, audio buffering, modifier release and Chrome field classification. UI fixtures inject keyboard states to avoid interference from physical keys during unattended tests, while production still checks that keys have been released. Real-device short dictation was also observed reaching a selected input without changing the clipboard.
 - This does not claim improved model accuracy or compatibility with every app. One intermittent retention report remains uncorrelated; an empty recognition result is never inserted. The experimental mixed trigger path remains disabled.
 
 ## [Unreleased]
