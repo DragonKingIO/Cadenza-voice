@@ -1072,7 +1072,7 @@ extension SettingsWindowController {
             model.onSettingsChanged = { [weak self] in self?.onConfigurationChanged?() }
             model.onEditShortcut = { [weak self] mode in self?.editShortcut(mode:mode) }
             model.onStartScreenshot = { (NSApp.delegate as? AppDelegate)?.startScreenshot() }
-            model.onScreenshotRecording = { (NSApp.delegate as? AppDelegate)?.setScreenshotHotkeyPaused($0) }
+            model.onScreenshotRecording = { (NSApp.delegate as? AppDelegate)?.setShortcutRecordingPaused($0) }
             model.localAPI = (NSApp.delegate as? AppDelegate)?.localAPI
             settingsModel = model
             // NSHostingController（非裸 NSHostingView）：自动处理标题栏安全区，内容不被工具栏遮挡

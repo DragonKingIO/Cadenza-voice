@@ -231,7 +231,7 @@
 "ui.13ca07042aa2" = "Download model (not available yet)";
 "ui.148d195e21b0" = "Configure";
 "ui.16f89c29238b" = "Hold: ";
-"ui.17026fde4d84" = "Use at least two modifiers, including Control or Command.";
+"ui.17026fde4d84" = "Use Control, Option or Command with a key.";
 "ui.17223dc1cc51" = "Registration failed (status %@)";
 "ui.182aca24c5ce" = "Right ⌘";
 "ui.18445402bdfc" = "Alibaba Cloud NLS streaming recognition, with optional filler removal.";
@@ -603,7 +603,7 @@
 "ui.c5952c54fde6" = "Could not connect. Check your account, enabled services, and network.";
 "ui.c63fea59e07d" = "Credentials saved. Try a recording to check recognition.";
 "ui.c67ce92c6e74" = "Check local corrections for duplicates, length, and protected content.";
-"ui.c692ca69d9f4" = "Use different shortcuts for hold and tap. Typing, navigation, and essential system shortcuts are protected. Fn is not supported; F1–F12 require standard function-key mode. Esc cancels a recording. Conflicts with every third-party app cannot be detected.";
+"ui.c692ca69d9f4" = "Use distinct shortcuts. Combine a key with Control, Option or Command. Standard Command actions and known system conflicts are protected. Fn is not supported; bare F1–F12 require standard function-key mode. Esc cancels a recording. Conflicts in other apps may still occur.";
 "ui.c6ca814dc1e4" = "Not required";
 "ui.c715b6030690" = "To check the input field and enter text";
 "ui.c771248e511f" = "Open";
@@ -1509,8 +1509,9 @@
 "translate.header" = "Voice translation";
 "translate.title" = "Translation";
 "translate.shortcut" = "Translate shortcut";
+"shortcut.capture.unavailable" = "Enable Accessibility in System Settings, then try the shortcut again. Keyboard input is unchanged.";
 "translate.shortcut.header" = "Shortcut";
-"translate.shortcut.hint" = "Hold this key and speak: what you say is recognized, translated into the chosen language, and the translation is typed. The ordinary dictation shortcuts never translate. Right Option is a good key for it if Left Option is used for dictation.";
+"translate.shortcut.hint" = "Hold the translation shortcut, speak, then release to type the translation. With Left Option for dictation and Option + F for translation, hold Option and press F to translate. When Option is shared, holding it alone waits about 0.3 seconds before dictation starts; speak after the recording indicator appears. You can also use Right Option as a separate translation key.";
 "translate.shortcut.none" = "Set a key to dictate and translate.";
 "translate.shortcut.needTarget" = "Choose the language to translate into first.";
 "translate.shortcut.conflict" = "The translation shortcut cannot be exactly the same as another shortcut that is on. Pick another combination, or switch the other shortcut off.";

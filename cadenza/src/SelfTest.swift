@@ -65,11 +65,15 @@ enum SelfTest {
         testHotkeyRegister()
         testSessionFlow()
         testRapidSessions()
+        testHotkeyReleaseInsertion()
         testSilenceAndOwnTargets()
         testRemainingLifecycle()
         testIllustrationSignal()
         testAppearanceConfiguration()
         testDualShortcuts()
+        testVoiceShortcutPrefixes()
+        testShortcutKeyConsumption()
+        ShortcutPrefixFixtures.run(check)
         print("[selftest] done checks=\(checks) failures=\(failures)")
         return failures == 0 ? 0 : 1
     }
@@ -272,18 +276,19 @@ enum SelfTest {
             check("常用输入导航及未知键拒绝 code=\(code)",ShortcutPolicy.reason(HotkeySpec(keyCode:code,modifiers:0),assignments:[],menuAssignments:[]) != nil)
         }
         for key:UInt32 in [0,6,7,8,9,1,13,12] {
-            check("编辑与应用操作受保护 code=\(key)", ShortcutPolicy.reason(HotkeySpec(keyCode:key,modifiers:cmd|opt),assignments:[],menuAssignments:[]) != nil)
+            check("Command 编辑操作本身受保护 code=\(key)", ShortcutPolicy.reason(HotkeySpec(keyCode:key,modifiers:cmd),assignments:[],menuAssignments:[]) != nil)
+            check("加入 Option 后不再按原 Command 操作拒绝 code=\(key)", ShortcutPolicy.reason(HotkeySpec(keyCode:key,modifiers:cmd|opt),assignments:[],menuAssignments:[]) == nil)
         }
         for spec in [HotkeySpec(keyCode:49,modifiers:cmd),HotkeySpec(keyCode:49,modifiers:ctrl),HotkeySpec(keyCode:48,modifiers:cmd),HotkeySpec(keyCode:53,modifiers:cmd|opt),HotkeySpec(keyCode:20,modifiers:cmd|shift),HotkeySpec(keyCode:12,modifiers:ctrl|cmd)] {
             check("Spotlight输入源切换应用截图锁屏强退受保护",ShortcutPolicy.reason(spec,assignments:[],menuAssignments:[]) != nil)
         }
         check("当前系统重分配拒绝候选",ShortcutPolicy.reason(combo,assignments:[HotkeySpec(keyCode:5,modifiers:ctrl|shift)]) != nil)
-        check("系统分配不可读时拒绝保存自定义",ShortcutPolicy.reason(combo,assignments:nil) != nil)
+        check("系统分配不可读时不封锁所有组合",ShortcutPolicy.reason(combo,assignments:nil,menuAssignments:[]) == nil)
         check("媒体模式F6拒绝",ShortcutPolicy.reason(HotkeySpec(keyCode:97,modifiers:0),assignments:[],standardFunctionKeys:false,menuAssignments:[]) != nil)
         check("标准模式且无系统分配F6可校验",ShortcutPolicy.reason(HotkeySpec(keyCode:97,modifiers:0),assignments:[],standardFunctionKeys:true,menuAssignments:[]) == nil)
         check("全局菜单快捷键解析", ShortcutPolicy.parseMenuEquivalent("^$g")?.keyCode == 5 && ShortcutPolicy.parseMenuEquivalent("^$g")?.modifiers == ctrl|shift)
         check("全局菜单重分配拒绝", ShortcutPolicy.reason(combo, assignments: [], menuAssignments: [HotkeySpec(keyCode:5,modifiers:ctrl|shift)]) != nil)
-        check("无法解析系统菜单分配时保守拒绝", ShortcutPolicy.reason(combo,assignments:[],menuAssignments:nil) != nil)
+        check("无法解析菜单分配时不封锁所有组合", ShortcutPolicy.reason(combo,assignments:[],menuAssignments:nil) == nil)
         check("本机系统分配API可读取",ShortcutPolicy.systemAssignments() != nil)
         check("专用键短暂注册探测后释放", ShortcutPolicy.registrationReason(dedicated) == nil)
         let occupied = HotkeyCenter()
@@ -441,6 +446,46 @@ enum SelfTest {
         func begin() -> Bool { beginSucceeds }
         func end() { ends += 1 }
         func abort() { aborts += 1 }
+    }
+
+    private static func testHotkeyReleaseInsertion() {
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try? FileManager.default.createDirectory(at:root,withIntermediateDirectories:true)
+        defer {try? FileManager.default.removeItem(at:root)}
+        let store=ConfigStore(fileURL:root.appendingPathComponent("config.json"))
+        store.mutate {$0.enabled=true;$0.mode="hold";$0.refine.enabled=false}
+        let pipeline=VoicePipeline(configStore:store,input:InputSourceController())
+        let element=AXUIElementCreateApplication(12345)
+        let focus=FocusIdentity(pid:12345,appName:"Test",element:element,window:element,role:"AXTextArea",readable:true,selectedTextWritable:true,value:"")
+        pipeline.snapshotFocus={focus}
+        var inserted:[String]=[],copies=0
+        pipeline.insertText={text,target in inserted.append(text);return target.pid == focus.pid}
+        pipeline.copyToClipboard={_ in copies+=1}
+        let opt=UInt32(optionKey)
+        for shared in [false,true] {
+            let recorder=StubRecorder()
+            pipeline.recorderFactory={recorder}
+            var cycle=VoiceShortcutCycle(hold:HotkeySpec(keyCode:58,modifiers:opt),toggle:nil,translation:shared ? HotkeySpec(keyCode:3,modifiers:opt):nil)
+            func deliver(_ actions:[DualShortcutCycle.Action]) {
+                for action in actions {
+                    switch action {
+                    case .holdStart:pipeline.holdStarted(source:.hotkey,target:focus)
+                    case .holdEnd:pipeline.holdEnded()
+                    case .cancel:pipeline.forceEnd(reason:"test-cancel")
+                    default:break
+                    }
+                }
+            }
+            deliver(cycle.event(type:.flagsChanged,code:58,modifiers:opt,down:[58],time:10))
+            deliver(cycle.poll([58],time:10.31))
+            let down=ListenTrigger.eventDownKeys(type:.flagsChanged,code:58,mods:0,down:[58])
+            deliver(cycle.event(type:.flagsChanged,code:58,modifiers:0,down:down,time:11))
+            deliver(cycle.poll([],time:11.02))
+            check("快捷键松开进入识别而非取消 shared=\(shared)",recorder.ends == 1 && recorder.aborts == 0 && pipeline.session?.state == .awaitingConfirm)
+            let result=shared ? "Shared shortcut result":"Hold shortcut result"
+            recorder.onFinal?(result);pump()
+            check("快捷键识别结果只写原目标一次且不改剪贴板 shared=\(shared)",inserted.last == result && inserted.count == (shared ? 2:1) && copies == 0 && pipeline.lastInputAccepted && pipeline.session == nil)
+        }
     }
 
     private static func pump() {
@@ -761,6 +806,13 @@ enum SelfTest {
         pipeline.snapshotFocus={focus};pipeline.holdStarted(source:.hotkey);pipeline.snapshotFocus={secured};pipeline.tick()
         check("录音中进入安全输入取消且不插入", pipeline.session == nil && inserted.count == 2)
         check("安全子角色识别", FocusProbe.protectedTarget(role:"AXTextField",subrole:"AXSecureTextField",secureInput:false))
+        check("Chrome普通单行框无可选子角色仍可确认",FocusProbe.securityConfirmed(role:"AXTextField",subrole:nil,subroleStatus:AXError.noValue.rawValue,bundleID:"com.google.Chrome"))
+        check("Chrome子角色读取超时不当成普通框",!FocusProbe.securityConfirmed(role:"AXTextField",subrole:nil,subroleStatus:AXError.cannotComplete.rawValue,bundleID:"com.google.Chrome"))
+        check("其他应用缺少子角色仍保留原保护",!FocusProbe.securityConfirmed(role:"AXTextField",subrole:nil,subroleStatus:AXError.noValue.rawValue,bundleID:"unknown.app"))
+        check("Chrome未支持子角色不冒充明确空值",!FocusProbe.securityConfirmed(role:"AXTextField",subrole:nil,subroleStatus:AXError.attributeUnsupported.rawValue,bundleID:"com.google.Chrome"))
+        check("Chrome成功但无有效子角色不当成明确空值",!FocusProbe.securityConfirmed(role:"AXTextField",subrole:nil,subroleStatus:AXError.success.rawValue,bundleID:"com.google.Chrome"))
+        check("Chrome密码框仍阻止写入",FocusProbe.protectedTarget(role:"AXTextField",subrole:"AXSecureTextField",secureInput:false))
+        check("Chrome安全输入仍阻止写入",FocusProbe.protectedTarget(role:"AXTextField",subrole:nil,secureInput:true))
         check("系统安全输入识别", FocusProbe.protectedTarget(role:nil,subrole:nil,secureInput:true))
         pipeline.snapshotFocus={focus};pipeline.holdStarted(source:.hotkey);recorders.last?.onPartial?("错误部分结果");pump();pipeline.holdEnded();recorders.last?.lastError="测试服务错误";recorders.last?.onFinal?(nil);pump()
         check("服务失败部分结果保留但不盲写",inserted.count==2 && pipeline.lastTranscript=="错误部分结果" && pipeline.resultAction == .result)
@@ -872,6 +924,156 @@ enum SelfTest {
         check("旧配置无外观字段继续跟随系统",old.appearanceMode == "system")
         for name in ["system","light","dark"] {var c=BridgeConfig.default();c.appearanceMode=name;let decoded=try! JSONDecoder().decode(BridgeConfig.self,from:JSONEncoder().encode(c));check("外观选择保存与解码 "+name,decoded.appearanceMode==name && BridgeConfig.validate(decoded).isEmpty)}
         var bad=BridgeConfig.default();bad.appearanceMode="unknown";check("未知外观配置拒绝",!BridgeConfig.validate(bad).isEmpty)
+    }
+
+    static func testShortcutKeyConsumption() {
+        let hardware=ListenTrigger.rawDownKeys {state,key in state == .hidSystemState && key==3}
+        check("吞掉的 F 在硬件表仍按住，不误判松开",hardware==[3])
+        let combined=ListenTrigger.rawDownKeys {state,key in state == .combinedSessionState && key==58}
+        check("会话来源 Option 仍能参与按键判定",combined==[58])
+        check("硬件表不引入未观察的虚拟普通键",ListenTrigger.visibleDown(raw:[0,3,58],observed:[3])==[3,58])
+        let opt=UInt32(optionKey), shift=UInt32(shiftKey)
+        var captured=CapturedShortcutKeys(bindings:[HotkeySpec(keyCode:3,modifiers:opt)])
+        captured.event(type:.keyDown,code:3,modifiers:opt,consumed:true)
+        check("吞掉 keyDown 后会话表为空仍视为按住",captured.augment([])==[3])
+        captured.event(type:.keyDown,code:3,modifiers:opt,consumed:true)
+        check("捕获重复按键不增加其他键",captured.augment([58])==[58,3])
+        captured.event(type:.keyUp,code:3,modifiers:opt,consumed:true)
+        check("吞掉的 keyUp 仍清除按住状态",captured.augment([]).isEmpty)
+        captured.event(type:.keyDown,code:3,modifiers:opt,consumed:true)
+        captured.event(type:.flagsChanged,code:58,modifiers:0,consumed:false)
+        check("修饰键松开可以清理丢失主键释放",captured.augment([]).isEmpty)
+        captured.event(type:.keyDown,code:3,modifiers:opt,consumed:true)
+        captured.event(type:.keyDown,code:3,modifiers:0,consumed:false)
+        check("普通 F 新周期清理陈旧捕获",captured.augment([]).isEmpty)
+        var filter=ShortcutKeyConsumption(bindings:[HotkeySpec(keyCode:3,modifiers:opt)])
+        var cycle=VoiceShortcutCycle(hold:HotkeySpec(keyCode:58,modifiers:opt),toggle:nil,translation:HotkeySpec(keyCode:3,modifiers:opt))
+        check("组合前缀 Option 本身不吞",!filter.consumes(type:.flagsChanged,code:58,modifiers:opt,down:[58]))
+        _=cycle.event(type:.flagsChanged,code:58,modifiers:opt,down:[58],time:1)
+        check("首次 Option+F 吞掉原始字符",filter.consumes(type:.keyDown,code:3,modifiers:opt,down:[58,3]))
+        check("吞掉字符仍路由翻译开始",cycle.event(type:.keyDown,code:3,modifiers:opt,down:[58,3],time:1.1)==[.translateStart])
+        for i in 0..<50 {
+            check("Option+F 长按重复字符被吞 \(i)",filter.consumes(type:.keyDown,code:3,modifiers:opt,down:[58,3]))
+            check("重复字符不重复开始翻译 \(i)",cycle.event(type:.keyDown,code:3,modifiers:opt,down:[58,3],repeatKey:true,time:1.2+Double(i)*0.01).isEmpty)
+        }
+        check("先松 Option 后 F 仍按一次结束",cycle.event(type:.flagsChanged,code:58,modifiers:0,down:[3],time:2)==[.translateEnd])
+        check("松 Option 后的 f 重复仍被吞",filter.consumes(type:.keyDown,code:3,modifiers:0,down:[3],repeated:true))
+        check("配对的 F 松开被吞",filter.consumes(type:.keyUp,code:3,modifiers:0,down:[]))
+        _=cycle.event(type:.keyUp,code:3,modifiers:0,down:[],time:2.1)
+        check("普通 f 正常输入",!filter.consumes(type:.keyDown,code:3,modifiers:0,down:[3]))
+        check("普通 f 松开正常传递",!filter.consumes(type:.keyUp,code:3,modifiers:0,down:[]))
+        check("不同 Option 字母正常传递",!filter.consumes(type:.keyDown,code:8,modifiers:opt,down:[58,8]))
+        check("多一个 Shift 不误吞其他组合",!filter.consumes(type:.keyDown,code:3,modifiers:opt|shift,down:[58,56,3]))
+        check("Esc 不由常驻快捷键监听吞掉",!filter.consumes(type:.keyDown,code:53,modifiers:0,down:[53]))
+        check("右 Option 的翻译字符同样被吞",filter.consumes(type:.keyDown,code:3,modifiers:opt,down:[61,3]))
+        check("右 Option 的翻译释放被吞",filter.consumes(type:.keyUp,code:3,modifiers:opt,down:[61]))
+        _=filter.consumes(type:.keyDown,code:3,modifiers:opt,down:[58,3])
+        check("上次 keyUp 丢失不吞下一次普通 F",!filter.consumes(type:.keyDown,code:3,modifiers:0,down:[3]))
+        var sides=ShortcutKeyConsumption(bindings:[HotkeySpec(keyCode:3,modifiers:opt,modifierKeyCodes:[58])])
+        check("显式限定左侧时不吞右侧",!sides.consumes(type:.keyDown,code:3,modifiers:opt,down:[61,3]))
+        check("显式左侧正确吞键",sides.consumes(type:.keyDown,code:3,modifiers:opt,down:[58,3]))
+        var reset=ShortcutKeyConsumption(bindings:[])
+        check("停止及修改绑定后不留下键拦截",!reset.consumes(type:.keyDown,code:3,modifiers:opt,down:[58,3]))
+    }
+
+    static func testVoiceShortcutPrefixes() {
+        let opt = UInt32(optionKey), ctrl = UInt32(controlKey)
+        let hold = HotkeySpec(keyCode: 58, modifiers: opt)
+        let translate = HotkeySpec(keyCode: 3, modifiers: opt) // F
+        func fresh() -> VoiceShortcutCycle { VoiceShortcutCycle(hold: hold, toggle: nil, translation: translate) }
+        var r = fresh()
+        check("共享 Option 前缀不提前启动听写", r.event(type:.flagsChanged,code:58,modifiers:opt,down:[58],time:1).isEmpty)
+        check("判定点前无录音动作", r.poll([58],time:1.299).isEmpty)
+        check("Option+F 直接启动翻译一次", r.event(type:.keyDown,code:3,modifiers:opt,down:[58,3],time:1.1) == [.translateStart])
+        check("翻译重复 keyDown 不再启动", r.event(type:.keyDown,code:3,modifiers:opt,down:[58,3],repeatKey:true,time:1.2).isEmpty)
+        check("翻译期间没有迟到听写", r.poll([58,3],time:2).isEmpty)
+        check("松开 F 结束翻译", r.event(type:.keyUp,code:3,modifiers:opt,down:[58],time:2.1) == [.translateEnd])
+        check("松开 Option 不结束另一会话", r.event(type:.flagsChanged,code:58,modifiers:0,down:[],time:2.2).isEmpty)
+        check("重复释放不产生动作", r.event(type:.keyUp,code:3,modifiers:0,down:[],time:2.3).isEmpty)
+        _ = r.event(type:.flagsChanged,code:58,modifiers:opt,down:[58],time:2.4)
+        check("翻译完成后下一次 Option 听写正常恢复", r.poll([58],time:2.71) == [.holdStart])
+        _ = r.event(type:.flagsChanged,code:58,modifiers:0,down:[],time:2.8)
+        check("右 Option 不是左 Option 听写", r.event(type:.flagsChanged,code:61,modifiers:opt,down:[61],time:3).isEmpty)
+        check("右 Option+F 同样能翻译", r.event(type:.keyDown,code:3,modifiers:opt,down:[61,3],time:3.1) == [.translateStart])
+        check("先释放修饰键结束翻译一次", r.event(type:.flagsChanged,code:61,modifiers:0,down:[3],time:3.2) == [.translateEnd])
+        check("迟到 F 释放不会开始听写", r.event(type:.keyUp,code:3,modifiers:0,down:[],time:3.3).isEmpty)
+        r = fresh(); _ = r.event(type:.flagsChanged,code:58,modifiers:opt,down:[58],time:4)
+        check("单独按住 Option 等待后开始", r.poll([58],time:4.31) == [.holdStart])
+        check("等待计时器只启动一次", r.poll([58],time:4.5).isEmpty)
+        check("听写开始后 F 取消听写并启动翻译", r.event(type:.keyDown,code:3,modifiers:opt,down:[58,3],time:4.6) == [.cancel,.translateStart])
+        check("翻译 Esc 取消一次", r.event(type:.keyDown,code:53,modifiers:opt,down:[58,3,53],time:4.7) == [.cancel])
+        check("取消后无延迟启动", r.poll([],time:5).isEmpty)
+        r = fresh(); _ = r.event(type:.flagsChanged,code:58,modifiers:opt,down:[58],time:6)
+        check("前缀轻点不启动录音", r.event(type:.flagsChanged,code:58,modifiers:0,down:[],time:6.1).isEmpty && r.poll([],time:7).isEmpty)
+        _ = r.event(type:.flagsChanged,code:58,modifiers:opt,down:[58],time:8)
+        check("等待期间其他字母取消候选", r.event(type:.keyDown,code:8,modifiers:opt,down:[58,8],time:8.1).isEmpty && r.poll([58,8],time:9).isEmpty)
+        _ = r.event(type:.flagsChanged,code:58,modifiers:0,down:[],time:9.1)
+        _ = r.event(type:.flagsChanged,code:58,modifiers:opt,down:[58],time:10)
+        check("等待期间 Esc 没有伪造取消录音", r.event(type:.keyDown,code:53,modifiers:opt,down:[58,53],time:10.1).isEmpty && r.poll([58],time:11).isEmpty)
+        r = fresh(); _ = r.event(type:.flagsChanged,code:58,modifiers:opt,down:[58],time:12)
+        check("漏掉释放不能由计时器启动", r.poll([],time:13).isEmpty)
+        _ = r.event(type:.flagsChanged,code:58,modifiers:opt,down:[58],time:14)
+        check("监听停止取消待判定前缀", r.cancel().isEmpty && r.poll([58],time:15).isEmpty)
+        r = fresh(); _ = r.event(type:.flagsChanged,code:58,modifiers:opt,down:[58],time:16)
+        _ = r.poll([58],time:16.31)
+        check("单独按住正常松开结束", r.event(type:.flagsChanged,code:58,modifiers:0,down:[],time:17) == [.holdEnd])
+        var plain = VoiceShortcutCycle(hold:hold,toggle:nil,translation:nil)
+        check("无共用前缀的听写仍立即开始", plain.event(type:.flagsChanged,code:58,modifiers:opt,down:[58],time:18) == [.holdStart])
+        var combo = VoiceShortcutCycle(hold:HotkeySpec(keyCode:5,modifiers:ctrl),toggle:nil,translation:translate)
+        check("普通组合听写仍立即开始", combo.event(type:.keyDown,code:5,modifiers:ctrl,down:[59,5],time:19) == [.holdStart])
+        var multi = VoiceShortcutCycle(hold:hold,toggle:nil,translation:HotkeySpec(keyCode:3,modifiers:opt|ctrl))
+        _ = multi.event(type:.flagsChanged,code:58,modifiers:opt,down:[58],time:20)
+        _ = multi.event(type:.flagsChanged,code:59,modifiers:opt|ctrl,down:[58,59],time:20.1)
+        check("多修饰前缀等待不启动听写", multi.poll([58,59],time:21).isEmpty)
+        check("多修饰翻译组合完成即启动", multi.event(type:.keyDown,code:3,modifiers:opt|ctrl,down:[58,59,3],time:21.1) == [.translateStart])
+        var toggled = VoiceShortcutCycle(hold:hold,toggle:translate,translation:nil)
+        _ = toggled.event(type:.flagsChanged,code:58,modifiers:opt,down:[58],time:22)
+        _ = toggled.event(type:.keyDown,code:3,modifiers:opt,down:[58,3],time:22.1)
+        check("独立点按组合前缀无迟到听写", toggled.poll([58,3],time:23).isEmpty)
+        _ = toggled.event(type:.keyUp,code:3,modifiers:opt,down:[58],time:23.1)
+        check("共用前缀点按释放仍触发切换", toggled.event(type:.flagsChanged,code:58,modifiers:0,down:[],time:23.2) == [.toggle])
+
+        // Exercise real AppDelegate entry points with a fake recorder, without mic,
+        // credentials, network, focus changes, or clipboard writes.
+        let store = ConfigStore(), saved = store.config
+        defer { _ = store.mutate { $0 = saved } }
+        _ = store.mutate { $0.enabled=true; $0.mode="hold"; $0.engine="apple"; $0.translate.target="English" }
+        let input = InputSourceController(), listener = ListenTrigger()
+        let pipeline = VoicePipeline(configStore:store,input:input)
+        pipeline.snapshotFocus = { nil }
+        var recorders:[StubRecorder]=[]
+        pipeline.recorderFactory = { let recorder=StubRecorder();recorders.append(recorder);return recorder }
+        let delegate = AppDelegate(configStore:store,input:input,hotkey:HotkeyCenter(),listenTrigger:listener,pipeline:pipeline)
+        func deliver(_ actions:[VoiceShortcutCycle.Action]) {
+            for action in actions {
+                switch action {
+                case .holdStart:delegate.handleHoldStart()
+                case .holdEnd:delegate.handleHoldEnd()
+                case .translateStart:delegate.handleTranslateStart()
+                case .translateEnd:delegate.handleTranslateEnd()
+                case .cancel:pipeline.forceEnd(reason:"prefix fixture")
+                default:break
+                }
+            }
+        }
+        r = fresh();deliver(r.event(type:.flagsChanged,code:58,modifiers:opt,down:[58],time:30))
+        check("真实入口前缀不创建任何录音器", recorders.isEmpty && pipeline.session == nil)
+        deliver(r.event(type:.keyDown,code:3,modifiers:opt,down:[58,3],time:30.1))
+        check("真实入口翻译首按直接录音而非只停止听写", recorders.count==1 && pipeline.session?.translate == true && pipeline.session?.state == .voiceStarted)
+        pipeline.forceEnd(reason:"fixture reset"); _ = r.cancel()
+        deliver(r.event(type:.flagsChanged,code:58,modifiers:0,down:[],time:31))
+        deliver(r.event(type:.flagsChanged,code:58,modifiers:opt,down:[58],time:32));deliver(r.poll([58],time:32.31))
+        let late = recorders.last?.onFinal
+        check("真实入口独立 Option 听写不翻译", recorders.count==2 && pipeline.session?.translate == false)
+        deliver(r.event(type:.keyDown,code:3,modifiers:opt,down:[58,3],time:33))
+        check("真实入口较慢翻译按压中止旧录音再启动", recorders.count==3 && recorders[1].aborts>0 && recorders[1].ends==0 && pipeline.session?.translate == true)
+        late?("discarded fixture");pump()
+        check("被替换听写迟到结果不能进入翻译会话", pipeline.session?.translate == true && pipeline.lastTranscript == nil)
+        deliver(r.event(type:.keyUp,code:3,modifiers:opt,down:[58],time:34))
+        check("真实入口松开 F 结束翻译一次", recorders[2].ends==1 && pipeline.session?.state == .awaitingConfirm)
+        deliver(r.event(type:.flagsChanged,code:58,modifiers:0,down:[],time:34.1))
+        check("真实入口剩余 Option 释放不会结束两次", recorders[2].ends==1)
+        pipeline.forceEnd(reason:"fixture cleanup")
     }
 
     static func testDualShortcuts() {

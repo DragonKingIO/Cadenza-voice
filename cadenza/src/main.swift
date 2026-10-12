@@ -8,6 +8,8 @@ QuietWindows.installIfNeeded() // self-tests and previews never show windows on 
 
 fputs("[cadenza] main-enter\n", stderr)
 
+if CommandLine.arguments.contains("--diagnose-shortcut-input") { exit(ShortcutInputProbe.run()) }
+
 if CommandLine.arguments.contains("--selftest-settings-polish") {
     var count=0,failed=0
     SettingsPolishFixtures.run{name,ok in count+=1;if !ok{failed+=1};print("[settings-polish] \(ok ? "PASS":"FAIL") \(name)")}
@@ -156,7 +158,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     let input: InputSourceController
     let hotkey: HotkeyCenter
     let listenTrigger: ListenTrigger
-    /// The key that dictates and translates; a second, separate listener so the two ordinary shortcuts stay as they are.
+    /// Separate listener used only by the disabled experimental coordinator.
     let translateTrigger = ListenTrigger()
     let pipeline: VoicePipeline
     /// Local developer API (loopback only, off unless the user turns it on).
@@ -285,6 +287,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             let alert=NSAlert();alert.messageText=L10n.tr("ui.01dec732402b");alert.informativeText=self.pipeline.lastResult;alert.addButton(withTitle:L10n.tr("ui.de32e20193ad"));alert.runModal()
         }
         capsule.onRetry = { [weak self] in self?.pipeline.holdStarted(source: .menu, target: FocusProbe.snapshot()) }
+        listenTrigger.onTranslateStart = { [weak self] in self?.handleTranslateStart() }
+        listenTrigger.onTranslateEnd = { [weak self] in self?.handleTranslateEnd() }
+        listenTrigger.onPrefixCaptureStart = { [weak self] time in self?.pipeline.prepareShortcutPrefix(at:time) }
+        listenTrigger.onPrefixCaptureDiscard = { [weak self] in self?.pipeline.discardShortcutPrefix() }
         translateTrigger.onHoldStart = { [weak self] in self?.handleTranslateStart() }
         translateTrigger.onHoldEnd = { [weak self] in self?.handleTranslateEnd() }
         translateTrigger.onHoldChord = { [weak self] in self?.pipeline.forceEnd(reason: L10n.tr("ui.4460c389c8a2")) }
@@ -466,9 +472,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     @objc func togglePinsHidden() { PinManager.shared.setHidden(!PinManager.shared.hidden); refreshStatus() }
     @objc func restorePinInteraction() { PinManager.shared.restoreInteraction(); refreshStatus() }
 
-    /// 录制新快捷键期间暂停截图热键，避免按下旧组合时直接开始截图
-    func setScreenshotHotkeyPaused(_ paused: Bool) {
-        if paused { screenshotHotkey.unregister(); ocrHotkey.unregister() } else { applyScreenshotHotkey() }
+    /// An editor owns keyboard input until save or cancel. Suspend every shortcut, including translation.
+    func setShortcutRecordingPaused(_ paused: Bool) {
+        if paused {hotkey.unregister();listenTrigger.stop();translateTrigger.stop();screenshotHotkey.unregister();ocrHotkey.unregister()}
+        else {applyHotkey()}
     }
 
     func applyScreenshotHotkey() {
@@ -476,7 +483,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         func apply(_ hotkey: ScreenshotHotkey, _ spec: HotkeySpec?, other: HotkeySpec?) {
             guard let spec else { hotkey.unregister(); return }
             if hotkey.registered == spec { return }
-            if spec == c.trigger || spec == c.toggleTrigger || spec == other { hotkey.unregister(); Log.write("screenshot-hotkey-skipped duplicate"); return }
+            if [c.holdShortcutEnabled ? c.trigger:nil,c.toggleActive ? c.toggleTrigger:nil,c.translate.trigger,other].compactMap({$0}).contains(where:{ShortcutPolicy.overlaps(spec,$0)}) { hotkey.unregister(); Log.write("screenshot-hotkey-skipped duplicate"); return }
             if !hotkey.register(spec) { pipeline.note(L10n.tr("screenshot.hotkey.failed") + hotkey.status, isError: true) }
         }
         apply(screenshotHotkey, c.screenshot.trigger, other: nil)
@@ -699,11 +706,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         if onboardingWindow?.ownsInputFocus == true {onboardingWindow?.captureTrialSession()}
     }
     private func activateBindings(_ c:BridgeConfig)->Bool {
+        guard c.enabled else{listenTrigger.stop();translateTrigger.stop();return true}
         guard !pipeline.inputSuspendedForDiagnostic else{listenTrigger.stop();translateTrigger.stop();return false}
-        let main=listenTrigger.startBindings(hold:c.holdShortcutEnabled ? c.trigger : nil,toggle:c.toggleShortcutEnabled ? c.toggleTrigger : nil,coordinated:c.triggerCoordinatorEnabled)
-        return activateTranslate(c) && main
+        let translation = c.enabled ? c.translate.trigger.flatMap { ShortcutPolicy.reason($0) == nil ? $0 : nil } : nil
+        let main=listenTrigger.startBindings(hold:c.holdShortcutEnabled ? c.trigger : nil,toggle:c.toggleShortcutEnabled ? c.toggleTrigger : nil,coordinated:c.triggerCoordinatorEnabled,translation:c.triggerCoordinatorEnabled ? nil : translation)
+        if c.triggerCoordinatorEnabled { return activateTranslate(c) && main }
+        translateTrigger.stop()
+        return main
     }
-    /// The translation key listens on its own, whenever it is set and shortcuts are on.
+    /// Retained only for the disabled experimental coordinator. Legacy bindings share one listener.
     private func activateTranslate(_ c:BridgeConfig)->Bool {
         guard c.enabled,let key=c.translate.trigger,ShortcutPolicy.reason(key) == nil else{translateTrigger.stop();return true}
         return translateTrigger.startBindings(hold:key,toggle:nil)
@@ -769,8 +780,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             controller.onConfigurationChanged = { [weak self] in self?.applyHotkey();self?.refreshStatus() }
             controller.onWechatDiagnostic = { [weak self] in self?.openWechatDiagnostic() }
             controller.onShowOnboarding = { [weak self] in self?.showOnboarding() }
-            controller.onBeginShortcutRecording = { [weak self] in self?.hotkey.unregister(); self?.listenTrigger.stop() }
-            controller.onEndShortcutRecording = { [weak self] in self?.applyHotkey() }
+            controller.onBeginShortcutRecording = { [weak self] in self?.setShortcutRecordingPaused(true) }
+            controller.onEndShortcutRecording = { [weak self] in self?.setShortcutRecordingPaused(false) }
             controller.onSaveModeShortcut = { [weak self] mode,candidate,enabled in guard let self=self else{return L10n.tr("ui.b0b8f1b0d9b3")};return self.configureShortcut(mode:mode,candidate:candidate,enabled:enabled) }
             controller.onSaveShortcut = { [weak self] candidate in guard let self = self else { return L10n.tr("ui.b0b8f1b0d9b3") }; return self.saveShortcut(candidate) }
             settingsWindow = controller

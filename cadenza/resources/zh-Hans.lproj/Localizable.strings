@@ -231,7 +231,7 @@
 "ui.13ca07042aa2" = "下载模型（尚未支持）";
 "ui.148d195e21b0" = "配置";
 "ui.16f89c29238b" = "按住：";
-"ui.17026fde4d84" = "普通键需至少两个修饰键，且包含 Control 或 Command";
+"ui.17026fde4d84" = "普通键请搭配 Control、Option 或 Command。";
 "ui.17223dc1cc51" = "注册失败 status=%@";
 "ui.182aca24c5ce" = "右 ⌘";
 "ui.18445402bdfc" = "NLS SpeechTranscriber；不是百炼。等待Started再发送音频；去语气词为可选disfluency。";
@@ -603,7 +603,7 @@
 "ui.c5952c54fde6" = "暂时无法连接识别服务，请检查账号设置、服务是否开通和网络。";
 "ui.c63fea59e07d" = "新凭据已保存；连接和识别尚未验收。";
 "ui.c67ce92c6e74" = "本地映射重复、过长或包含受保护内容";
-"ui.c692ca69d9f4" = "两种快捷键不能相同。普通输入、导航和系统重要操作不可设置。Fn 暂不支持；F1–F12 需标准功能键模式。Esc 取消录音；另一模式的有效按压结束当前录音。系统冲突检测不能覆盖所有第三方应用。";
+"ui.c692ca69d9f4" = "各功能请使用不同快捷键。普通键可搭配 Control、Option 或 Command。常用 Command 操作和已知系统冲突不能设置。Fn 暂不支持；单独 F1–F12 需标准功能键模式。Esc 取消录音；其他应用仍可能占用相同组合。";
 "ui.c6ca814dc1e4" = "不需要";
 "ui.c715b6030690" = "确认输入位置和写入文字";
 "ui.c771248e511f" = "打开";
@@ -1509,8 +1509,9 @@
 "translate.header" = "语音翻译";
 "translate.title" = "翻译";
 "translate.shortcut" = "翻译快捷键";
+"shortcut.capture.unavailable" = "请在系统设置中允许辅助功能，再试一次快捷键。键盘仍可正常使用。";
 "translate.shortcut.header" = "快捷键";
-"translate.shortcut.hint" = "按住这个键说话：说的话先被识别，再翻译成所选语言，输入的是译文。普通听写的快捷键从不翻译。如果左 Option 已用于听写，右 Option 很适合用来做翻译键。";
+"translate.shortcut.hint" = "按住翻译快捷键说话，松开后输入译文。如果听写使用左 Option、翻译使用 Option + F，先按住 Option 再按 F 即可翻译。共用 Option 时，单独按住它会等待约 0.3 秒才开始听写；看到录音提示后再说话。也可以使用右 Option 作为独立翻译键。";
 "translate.shortcut.none" = "设置一个按键，就能边听写边翻译。";
 "translate.shortcut.needTarget" = "请先选择要翻译成的语言。";
 "translate.shortcut.conflict" = "翻译快捷键不能和另一个已开启的快捷键完全相同。可以换一个组合，或先关掉那个快捷键。";
