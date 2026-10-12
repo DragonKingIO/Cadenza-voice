@@ -16,12 +16,14 @@ enum SettingsPolishFixtures {
         let pipeline=VoicePipeline(configStore:store,input:InputSourceController());pipeline.selfTestMode=true
         _=NSApplication.shared
         let controller=SettingsWindowController();controller.configStore=store;controller.pipeline=pipeline
+        var physicalDown:Set<UInt32>=[]
+        controller.shortcutDownKeys={physicalDown}
         var begins=0,ends=0,saves=0
         controller.onBeginShortcutRecording={begins+=1};controller.onEndShortcutRecording={ends+=1}
         controller.onSaveModeShortcut={mode,spec,_ in
             saves+=1
             guard let spec else{return "fixture missing"}
-            _=store.mutate{if mode == "toggle" {$0.toggleTrigger=spec}else{$0.trigger=spec}}
+            _=store.mutate{$0=$0.settingShortcut(mode:mode,candidate:spec,enabled:nil)}
             return store.save() ? nil:"fixture disk failure"
         }
         controller.showSwift(.shortcuts)
@@ -41,6 +43,10 @@ enum SettingsPolishFixtures {
         let key=HotkeySpec(keyCode:106,modifiers:0)
         controller.inspectActiveShortcutCandidate(key)
         check("valid independent toggle binding enables Save",!controller.shortcutEditorHasError && controller.shortcutEditorCanSave)
+        physicalDown=[key.keyCode];controller.inspectSaveActiveShortcut()
+        check("a still-held shortcut refuses saving without closing or persisting",saves==0 && controller.shortcutEditorHasError && controller.window?.attachedSheet != nil)
+        physicalDown=[];controller.inspectActiveShortcutCandidate(key)
+        check("release and a refreshed candidate restore Save",controller.shortcutEditorCanSave && !controller.shortcutEditorHasError)
         controller.inspectSaveActiveShortcut()
         check("save uses existing transaction callback and refreshes SwiftUI",saves==1 && ends==2 && store.config.toggleTrigger==key && controller.settingsModel?.toggleAvailable==true && controller.window?.attachedSheet == nil)
         check("UI shortcut changes do not enable the new trigger path",!store.config.triggerCoordinatorEnabled && !pipeline.hasActiveSession)
@@ -76,10 +82,52 @@ enum SettingsPolishFixtures {
         check("translation shortcut: the very same key as a hold-to-talk that is switched off is fine, as one that is on is not", BridgeConfig.validate(holdSwitchedOff.settingShortcut(mode: "translate", candidate: leftOption, enabled: nil)).isEmpty && !BridgeConfig.validate(translateSame).isEmpty)
         let ctrlOpt = HotkeySpec(keyCode: 17, modifiers: UInt32(controlKey) | UInt32(optionKey)), cmdShiftL = HotkeySpec(keyCode: 37, modifiers: UInt32(cmdKey) | UInt32(shiftKey))
         check("shortcut rules: Control+Option is refused only while VoiceOver is on", ShortcutPolicy.basicReason(ctrlOpt, voiceOver: false) == nil && ShortcutPolicy.basicReason(ctrlOpt, voiceOver: true) != nil)
-        check("shortcut rules: Command+Shift with a non-editing key is allowed, a bare Command key and the protected commands are not",
+        check("shortcut rules: Command variants are independent, bare Command editing stays protected",
               ShortcutPolicy.basicReason(cmdShiftL, voiceOver: false) == nil && ShortcutPolicy.basicReason(HotkeySpec(keyCode: 37, modifiers: UInt32(cmdKey)), voiceOver: false) != nil
-              && ShortcutPolicy.basicReason(HotkeySpec(keyCode: 17, modifiers: UInt32(cmdKey) | UInt32(shiftKey)), voiceOver: false) != nil && ShortcutPolicy.basicReason(HotkeySpec(keyCode: 8, modifiers: UInt32(cmdKey) | UInt32(shiftKey)), voiceOver: false) != nil)
-        check("shortcut rules: a lone letter or Option+letter is still refused, since it would type", ShortcutPolicy.basicReason(HotkeySpec(keyCode: 17, modifiers: UInt32(optionKey)), voiceOver: false) != nil && ShortcutPolicy.basicReason(HotkeySpec(keyCode: 17, modifiers: UInt32(controlKey)), voiceOver: false) != nil)
+              && ShortcutPolicy.basicReason(HotkeySpec(keyCode: 17, modifiers: UInt32(cmdKey) | UInt32(shiftKey)), voiceOver: false) == nil && ShortcutPolicy.basicReason(HotkeySpec(keyCode: 8, modifiers: UInt32(cmdKey) | UInt32(shiftKey)), voiceOver: false) == nil)
+        check("shortcut rules: Control or Option with a letter works; lone letters and Shift letters remain typing",
+              ShortcutPolicy.basicReason(HotkeySpec(keyCode:17,modifiers:UInt32(optionKey)),voiceOver:false) == nil && ShortcutPolicy.basicReason(HotkeySpec(keyCode:17,modifiers:UInt32(controlKey)),voiceOver:false) == nil
+              && ShortcutPolicy.basicReason(HotkeySpec(keyCode:17,modifiers:0),voiceOver:false) != nil && ShortcutPolicy.basicReason(HotkeySpec(keyCode:17,modifiers:UInt32(shiftKey)),voiceOver:false) != nil)
+        // Reproduce recording -> enabled Save -> persistence with actual NSEvent objects on the production handler.
+        for (code,flags) in [(UInt16(17),NSEvent.ModifierFlags.option),(5,.control),(8,[.command,.shift]),(9,[.command,.option])] {
+            controller.settingsModel?.onEditShortcut?("translate")
+            let expected=HotkeySpec(keyCode:UInt32(code),modifiers:ShortcutPolicy.carbon(flags))
+            let event=NSEvent.keyEvent(with:.keyDown,location:.zero,modifierFlags:flags,timestamp:0,windowNumber:controller.window?.windowNumber ?? 0,context:nil,characters:"",charactersIgnoringModifiers:"",isARepeat:false,keyCode:code)!
+            controller.inspectShortcutEvent(event)
+            if code == 17 {
+                physicalDown=[61];controller.inspectSaveActiveShortcut()
+                check("a held opposite-side Option still refuses translation Save",controller.shortcutEditorHasError && controller.window?.attachedSheet != nil && store.config.translate.trigger != expected)
+                physicalDown=[];controller.inspectShortcutEvent(event)
+            }
+            check("translation recorder accepts \(HotkeySpecDisplay.string(expected)) without physical-side metadata",controller.shortcutEditorCanSave && !controller.shortcutEditorHasError && controller.shortcutEditorText==HotkeySpecDisplay.string(expected))
+            let repeated=NSEvent.keyEvent(with:.keyDown,location:.zero,modifierFlags:[.command],timestamp:0,windowNumber:0,context:nil,characters:"c",charactersIgnoringModifiers:"c",isARepeat:true,keyCode:8)!
+            controller.inspectShortcutEvent(repeated)
+            check("translation recorder ignores repeat events",controller.shortcutEditorCanSave && controller.shortcutEditorText==HotkeySpecDisplay.string(expected))
+            controller.inspectSaveActiveShortcut()
+            check("translation recorder saves and reloads \(HotkeySpecDisplay.string(expected))",store.config.translate.trigger==expected && ConfigStore(fileURL:root.appendingPathComponent("config.json")).config.translate.trigger==expected && controller.window?.attachedSheet == nil)
+            for sides:Set<UInt32> in [Set(flags.contains(.option) ? [58]:flags.contains(.control) ? [59]:[55,56]),Set(flags.contains(.option) ? [61]:flags.contains(.control) ? [62]:[54,60])] {
+                var down=sides
+                // Command+Option needs both modifiers, on either side.
+                if flags.contains(.command) && flags.contains(.option) {down.insert(sides.contains(58) ? 55:54)}
+                down.insert(UInt32(code))
+                var cycle=DualShortcutCycle(hold:expected,toggle:nil)
+                check("recorded combination starts from either modifier side",cycle.event(type:.keyDown,code:UInt32(code),modifiers:expected.modifiers,down:down)==[.holdStart])
+                check("recorded combination repeat does not start twice",cycle.event(type:.keyDown,code:UInt32(code),modifiers:expected.modifiers,down:down,repeatKey:true).isEmpty)
+                down.remove(UInt32(code))
+                check("recorded combination releases once",cycle.event(type:.keyUp,code:UInt32(code),modifiers:expected.modifiers,down:down)==[.holdEnd])
+            }
+        }
+        controller.settingsModel?.onEditShortcut?("translate")
+        controller.inspectActiveShortcutCandidate(store.config.trigger)
+        check("translation recorder still refuses a duplicate dictation binding",controller.shortcutEditorHasError && !controller.shortcutEditorCanSave)
+        controller.inspectShortcutCancellation()
+        let screenshotKey=HotkeySpec(keyCode:17,modifiers:UInt32(optionKey))
+        _=store.mutate{$0.screenshot.trigger=screenshotKey};_=store.save()
+        controller.settingsModel?.onEditShortcut?("translate")
+        controller.inspectActiveShortcutCandidate(screenshotKey)
+        check("translation recorder refuses a screenshot binding before saving",controller.shortcutEditorHasError && !controller.shortcutEditorCanSave)
+        controller.inspectShortcutCancellation()
+        check("screenshot recorder refuses a translation binding regardless of recorded sides",ScreenshotShortcutValidation.problem(for:HotkeySpec(keyCode:9,modifiers:UInt32(cmdKey|optionKey),modifierKeyCodes:[55,58]),config:store.config,policy:{_ in nil}) != nil)
         check("shortcut rules: there are always suggestions to offer", ShortcutPolicy.suggestions(limit: 3) { ShortcutPolicy.basicReason($0, standardFunctionKeys: true, voiceOver: false) == nil }.count == 3)
         controller.window?.close()
     }

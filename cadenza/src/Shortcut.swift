@@ -1,7 +1,7 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// Conservative protection plus the current system's assignments. App-specific conflicts remain unknown.
+/// Protect exact reserved shortcuts, rather than entire families of modified keys.
 enum ShortcutPolicy {
     static let functionKeys: Set<UInt32> = [122,120,99,118,96,97,98,100,101,109,103,111,105,107,113,106,64,79,80,90]
     /// Modifier keys that may be the whole shortcut: Left and Right Option. Command, Shift and Control are excluded because
@@ -13,8 +13,8 @@ enum ShortcutPolicy {
         if s.keyCode == 63 { return L10n.tr("ui.be1ca2ee706d") }
         if standaloneModifiers.contains(s.keyCode), HotkeySpecDisplay.isLoneModifierSpec(s), s.modifierKeyCodes == nil || s.modifierKeyCodes == [s.keyCode] { return nil }
         if ListenTrigger.modifierKeyFlags[s.keyCode] != nil { return L10n.tr("shortcut.loneModifier.unsupported") }
-        if navigational.contains(s.keyCode) { return L10n.tr("ui.8a35987401bf") }
-        if s.keyCode > 126 || !functionKeys.contains(s.keyCode) && !HotkeySpecDisplay.printableKeys.keys.contains(s.keyCode) { return L10n.tr("ui.1e86164926a6") }
+        if s.keyCode == 53 || navigational.contains(s.keyCode) && s.modifiers == 0 { return L10n.tr("ui.8a35987401bf") }
+        if s.keyCode > 126 || !functionKeys.contains(s.keyCode) && !navigational.contains(s.keyCode) && !HotkeySpecDisplay.printableKeys.keys.contains(s.keyCode) { return L10n.tr("ui.1e86164926a6") }
         let c=UInt32(controlKey),o=UInt32(optionKey),m=UInt32(cmdKey),h=UInt32(shiftKey)
         if s.modifiers & ~(c|o|m|h) != 0 { return L10n.tr("ui.b21dfa61556d") }
         if let sides=s.modifierKeyCodes {
@@ -23,16 +23,16 @@ enum ShortcutPolicy {
         }
         // ⌃⌥ is VoiceOver's own modifier pair: it only matters while VoiceOver is running.
         if voiceOver && s.modifiers & c != 0 && s.modifiers & o != 0 { return L10n.tr("ui.52fb99b1743b") }
-        // Protect command editing/lifecycle categories including their modifier variants.
+        // Only the exact Command command is reserved. Adding another modifier is a different shortcut.
         let essential: [UInt32:String] = [0:L10n.tr("ui.3a5040b68abf"),6:L10n.tr("ui.9fcf5d3b8e12"),7:L10n.tr("ui.410a8e8a6bf2"),8:L10n.tr("ui.63d90d977348"),9:L10n.tr("ui.335179267471"),1:L10n.tr("ui.a3030bf8f16d"),13:L10n.tr("ui.1ae6b0a0f826"),12:L10n.tr("ui.e4446e2ae00c"),3:L10n.tr("ui.7987058c656b"),4:L10n.tr("ui.b2f83ba5aafe"),46:L10n.tr("ui.ac29e57a46f4"),31:L10n.tr("ui.c771248e511f"),35:L10n.tr("ui.d7bfe7b5055c"),17:L10n.tr("ui.a626aad412b7"),43:L10n.tr("ui.df3d58c7d84b"),50:L10n.tr("ui.84d503a9b473"),18:L10n.tr("ui.4e4c695dc2eb"),19:L10n.tr("ui.4e4c695dc2eb"),20:L10n.tr("ui.c95dc99afe57"),21:L10n.tr("ui.c95dc99afe57"),23:L10n.tr("ui.c95dc99afe57")]
-        if s.modifiers & m != 0, let reason=essential[s.keyCode] { return L10n.format("ui.e62285193079", String(describing: reason)) }
+        if s.modifiers == m, let reason=essential[s.keyCode] { return L10n.format("ui.e62285193079", String(describing: reason)) }
         // ⌘ with one ordinary key is every app's own command. ⌘ with another modifier is allowed unless it is one of the protected commands above.
         if s.modifiers == m { return L10n.tr("ui.0c7684de9de0") }
         if !functionKeys.contains(s.keyCode) {
-            guard s.modifiers & (c|m) != 0, s.modifiers.nonzeroBitCount >= 2 else { return L10n.tr("ui.17026fde4d84") }
+            guard s.modifiers & (c|o|m) != 0 else { return L10n.tr("ui.17026fde4d84") }
         } else {
             if [107,113].contains(s.keyCode) { return L10n.tr("ui.238abdb9666a") }
-            if [122,120,99,118,96,97,98,100,101,109,103,111].contains(s.keyCode), !standardFunctionKeys { return L10n.tr("ui.a281f8a305c6") }
+            if [122,120,99,118,96,97,98,100,101,109,103,111].contains(s.keyCode), s.modifiers == 0, !standardFunctionKeys { return L10n.tr("ui.a281f8a305c6") }
         }
         return nil
     }
@@ -87,17 +87,17 @@ enum ShortcutPolicy {
     static func reason(_ s: HotkeySpec, assignments: [HotkeySpec]? = systemAssignments(), standardFunctionKeys: Bool = UserDefaults.standard.bool(forKey:"com.apple.keyboard.fnState"), menuAssignments: [HotkeySpec]? = globalMenuAssignments()) -> String? {
         // Name the most important categories before the broad navigation-key guard.
         if s.keyCode == 49 {
-            if s.modifiers & UInt32(controlKey) != 0 { return L10n.tr("ui.1bbbcf9ac556") }
-            if s.modifiers & UInt32(cmdKey) != 0 { return L10n.tr("ui.5af955d94f23") }
+            if [UInt32(controlKey), UInt32(controlKey|optionKey)].contains(s.modifiers) { return L10n.tr("ui.1bbbcf9ac556") }
+            if [UInt32(cmdKey), UInt32(cmdKey|optionKey)].contains(s.modifiers) { return L10n.tr("ui.5af955d94f23") }
         }
-        if s.keyCode == 48 && s.modifiers & UInt32(cmdKey) != 0 { return L10n.tr("ui.abf03802462a") }
+        if s.keyCode == 48 && [UInt32(cmdKey), UInt32(cmdKey|shiftKey)].contains(s.modifiers) { return L10n.tr("ui.abf03802462a") }
         if s.keyCode == 53 && s.modifiers & UInt32(cmdKey|optionKey) == UInt32(cmdKey|optionKey) { return L10n.tr("ui.74c4fe926f03") }
+        if [20,21,23].contains(s.keyCode), [UInt32(cmdKey|shiftKey), UInt32(cmdKey|shiftKey|controlKey)].contains(s.modifiers) { return L10n.tr("ui.c95dc99afe57") }
+        if s.keyCode == 12 && s.modifiers == UInt32(controlKey|cmdKey) { return L10n.tr("ui.e4446e2ae00c") }
         if let reason=basicReason(s, standardFunctionKeys:standardFunctionKeys) { return reason }
         if s == BridgeConfig.default().trigger { return nil }
-        guard let assignments=assignments else { return L10n.tr("ui.644c282f79e2") }
-        guard let menuAssignments = menuAssignments else { return L10n.tr("ui.9fe35a4b0109") }
-        if menuAssignments.contains(where: { $0.keyCode == s.keyCode && $0.modifiers == s.modifiers }) { return L10n.tr("ui.2cbbbc5906ec") }
-        if assignments.contains(where: {$0.keyCode == s.keyCode && $0.modifiers == s.modifiers}) { return L10n.tr("ui.992a958d0bbe") }
+        if menuAssignments?.contains(where: { overlaps($0, s) }) == true { return L10n.tr("ui.2cbbbc5906ec") }
+        if assignments?.contains(where: { overlaps($0, s) }) == true { return L10n.tr("ui.992a958d0bbe") }
         return nil
     }
     static func registrationReason(_ s: HotkeySpec) -> String? {
@@ -206,7 +206,7 @@ struct ToggleShortcutCycle {
 
 /// Shared routing preserves hold chord protection while treating a clean other-mode press as a stop.
 struct DualShortcutCycle {
-    enum Action:Equatable {case holdStart,holdEnd,cancel,toggle,crossStop}
+    enum Action:Equatable {case holdStart,holdEnd,cancel,toggle,crossStop,translateStart,translateEnd}
     private var hold:ShortcutCycle?,toggle:ToggleShortcutCycle?
     private let holdSpec:HotkeySpec?,toggleSpec:HotkeySpec?
     private var deferred=false,crossHold=false,suppressToggle=false
@@ -254,6 +254,115 @@ struct DualShortcutCycle {
         let active=hold?.cancel() == .cancel || deferred
         toggle?.cancel();deferred=false;crossHold=false;suppressToggle=false
         return active ? [.cancel]:[]
+    }
+}
+
+/// One event owner for dictation and translation. A lone modifier that prefixes a
+/// configured chord waits briefly; no recognition or service starts during that wait.
+/// Times are supplied by the listener so prefix arbitration is deterministic in tests.
+struct VoiceShortcutCycle {
+    typealias Action = DualShortcutCycle.Action
+    static let prefixGrace: Double = 0.3
+    private var main: DualShortcutCycle
+    private var translation: ShortcutCycle?
+    private let waitsForChord: Bool
+    private let holdSpec: HotkeySpec?
+    var needsPrefixWait: Bool { waitsForChord }
+    private var pendingAt: Double?
+    var pendingPrefixAt: Double? { pendingAt }
+    private var mainStarted = false
+    private var suppressedHold = false
+    private var translating = false
+    private var drainingTranslation = false
+
+    init(hold: HotkeySpec?, toggle: HotkeySpec?, translation: HotkeySpec?) {
+        main = DualShortcutCycle(hold: hold, toggle: toggle)
+        holdSpec = hold
+        self.translation = translation.map { ShortcutCycle(spec: $0) }
+        waitsForChord = hold.map { h in
+            ListenTrigger.classify(h) == .loneModifierTap && [toggle, translation].compactMap { $0 }.contains {
+                ListenTrigger.classify($0) == .keyDownCombo && $0.modifiers & h.modifiers == h.modifiers
+            }
+        } ?? false
+    }
+
+    mutating func event(type: NSEvent.EventType, code: UInt32, modifiers: UInt32,
+                        down: Set<UInt32>, repeatKey: Bool = false,
+                        toggleRecording: Bool = false, time: Double) -> [Action] {
+        let translated = translation?.event(type: type, code: code, modifiers: modifiers,
+                                            downKeys: down, repeatKey: repeatKey) ?? .none
+        switch translated {
+        case .start:
+            let cancelMain = mainStarted
+            _ = main.cancel(); pendingAt = nil; mainStarted = false; suppressedHold = false
+            translating = true; drainingTranslation = true
+            return (cancelMain ? [.cancel] : []) + [.translateStart]
+        case .end where translating:
+            translating = false
+            return [.translateEnd]
+        case .cancel where translating:
+            translating = false
+            return [.cancel]
+        default: break
+        }
+        // Releases from the consumed translation chord cannot start/end dictation.
+        if drainingTranslation {
+            if down.isEmpty { drainingTranslation = false; _ = main.cancel(); _ = main.poll(down, time: time) }
+            return []
+        }
+        if pendingAt != nil, !cleanPrefix(down) { pendingAt = nil }
+        return route(main.event(type: type, code: code, modifiers: modifiers, down: down,
+                                repeatKey: repeatKey, toggleRecording: toggleRecording, time: time), time: time)
+    }
+
+    mutating func poll(_ down: Set<UInt32>, time: Double) -> [Action] {
+        if translation?.poll(down) == .cancel, translating {
+            translating = false
+            return [.cancel]
+        }
+        if drainingTranslation {
+            if down.isEmpty { drainingTranslation = false; _ = main.cancel(); _ = main.poll(down, time: time) }
+            return []
+        }
+        if pendingAt != nil, !cleanPrefix(down) { pendingAt = nil }
+        let actions = route(main.poll(down, time: time), time: time)
+        if let at = pendingAt, time - at >= Self.prefixGrace {
+            pendingAt = nil; mainStarted = true; suppressedHold = false
+            return actions + [.holdStart]
+        }
+        return actions
+    }
+
+    private func cleanPrefix(_ down: Set<UInt32>) -> Bool {
+        guard let holdSpec else { return false }
+        return down.contains(holdSpec.keyCode) && down.allSatisfy { $0 == holdSpec.keyCode || $0 == 57 }
+    }
+
+    private mutating func route(_ actions: [Action], time: Double) -> [Action] {
+        var result: [Action] = []
+        for action in actions {
+            switch action {
+            case .holdStart:
+                if waitsForChord { pendingAt = time; suppressedHold = true }
+                else { mainStarted = true; result.append(action) }
+            case .holdEnd, .cancel:
+                if suppressedHold { pendingAt = nil }
+                else { result.append(action) }
+                mainStarted = false; suppressedHold = false
+            case .crossStop:
+                result.append(suppressedHold ? .toggle : .crossStop)
+                suppressedHold = false; pendingAt = nil; mainStarted = false
+            default: result.append(action)
+            }
+        }
+        return result
+    }
+
+    mutating func cancel() -> [Action] {
+        _ = main.cancel(); _ = translation?.cancel()
+        let active = mainStarted || translating
+        pendingAt = nil; mainStarted = false; suppressedHold = false; translating = false; drainingTranslation = false
+        return active ? [.cancel] : []
     }
 }
 

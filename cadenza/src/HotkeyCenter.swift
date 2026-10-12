@@ -149,7 +149,8 @@ final class HotkeyCenter {
     }
 }
 
-/// Observes key events without consuming the original action. No Carbon fallback for hold semantics.
+/// Modifier-only bindings observe events; combo bindings consume their original
+/// key presses/repeats/releases through one tap, without duplicate NSEvent routing.
 final class ListenTrigger {
     enum Kind { case loneModifierTap, keyDownCombo }
     static let modifierKeyFlags: [UInt32: UInt32] = [58: UInt32(optionKey),61:UInt32(optionKey),56:UInt32(shiftKey),60:UInt32(shiftKey),55:UInt32(cmdKey),54:UInt32(cmdKey),59:UInt32(controlKey),62:UInt32(controlKey)]
@@ -160,14 +161,21 @@ final class ListenTrigger {
     var onHoldStart:(()->Void)?
     var onHoldEnd:(()->Void)?
     var onHoldChord:(()->Void)?
+    var onTranslateStart:(()->Void)?
+    var onTranslateEnd:(()->Void)?
+    var onPrefixCaptureStart:((Double)->Void)?
+    var onPrefixCaptureDiscard:(()->Void)?
     var onTogglePress:(()->Void)?
     var onSleep:(()->Void)?
     var onCrossModeStop:(()->Void)?
     var isToggleRecording:(()->Bool)?
     private var globalMon:Any?, localMon:Any?
+    private var keyTap:ShortcutEventTap?
+    private var capturedKeys:CapturedShortcutKeys?
+    private var pollGrace=ShortcutPollGrace()
     private var retryTimer:Timer?, watchdog:Timer?
     private var sleepObserver:NSObjectProtocol?
-    private var cycle:DualShortcutCycle?
+    private var cycle:VoiceShortcutCycle?
     private var router:CoordinatedShortcutRouter?
     private var generation=0
     private(set) var spec:HotkeySpec?
@@ -181,27 +189,70 @@ final class ListenTrigger {
     static func visibleDown(raw:Set<UInt32>,observed:Set<UInt32>)->Set<UInt32> {
         raw.filter { modifierKeyFlags[$0] != nil || $0 == 57 || observed.contains($0) }
     }
+    /// Consumed events need the hardware table: the delivered-session table can
+    /// omit a key whose keyDown was removed by an active tap.
+    static func rawDownKeys(read:(CGEventSourceStateID,CGKeyCode)->Bool = {CGEventSource.keyState($0,key:$1)})->Set<UInt32> {
+        Set((0...126).compactMap {read(.hidSystemState,CGKeyCode($0)) || read(.combinedSessionState,CGKeyCode($0)) ? UInt32($0):nil})
+    }
     static func downKeys()->Set<UInt32> {
-        let raw=Set((0...126).compactMap { CGEventSource.keyState(.combinedSessionState,key:CGKeyCode($0)) ? UInt32($0) : nil })
+        let raw=rawDownKeys()
         observedDown.formIntersection(raw)
         return visibleDown(raw:raw,observed:observedDown)
+    }
+    /// HID/session tables can still contain a modifier when its release event
+    /// arrives. The event's flags are authoritative for that event: otherwise
+    /// release is missed and the next watchdog tick cancels the recording.
+    static func eventDownKeys(type:NSEvent.EventType,code:UInt32,mods:UInt32,down:Set<UInt32>)->Set<UInt32> {
+        var result=down.filter { key in
+            guard let flag=modifierKeyFlags[key] else{return true}
+            return mods & flag != 0
+        }
+        if type == .keyUp {result.remove(code)}
+        if type == .keyDown {result.insert(code)}
+        return result
     }
     @discardableResult
     func start(_ spec:HotkeySpec, retry:Bool=true)->Bool { startBindings(hold:spec,toggle:nil,retry:retry) }
     @discardableResult
-    func startBindings(hold:HotkeySpec?,toggle:HotkeySpec?,retry:Bool=false,coordinated:Bool=false)->Bool {
+    func startBindings(hold:HotkeySpec?,toggle:HotkeySpec?,retry:Bool=false,coordinated:Bool=false,translation:HotkeySpec?=nil)->Bool {
         stop()
-        guard hold != nil || toggle != nil else {status=L10n.tr("ui.b80d8b6934e5");return true}
+        guard hold != nil || toggle != nil || translation != nil else {status=L10n.tr("ui.b80d8b6934e5");return true}
         guard TCC.listenAllowed() else {status=L10n.tr("ui.4a4068c85293");return false}
-        self.spec=hold;if let hold=hold {kind=Self.classify(hold)};if coordinated {router=CoordinatedShortcutRouter(primary:hold,secondary:toggle)}else{cycle=DualShortcutCycle(hold:hold,toggle:toggle)}
+        self.spec=hold;if let hold=hold {kind=Self.classify(hold)};if coordinated {router=CoordinatedShortcutRouter(primary:hold,secondary:toggle)}else{cycle=VoiceShortcutCycle(hold:hold,toggle:toggle,translation:translation)}
         let currentGeneration=generation
         let mask:NSEvent.EventTypeMask=[.keyDown,.keyUp,.flagsChanged]
-        globalMon=NSEvent.addGlobalMonitorForEvents(matching:mask) { [weak self] e in guard let self=self, self.generation == currentGeneration else { return }; self.handle(e) }
-        localMon=NSEvent.addLocalMonitorForEvents(matching:mask) { [weak self] e in if let self=self, self.generation == currentGeneration { self.handle(e) }; return e }
-        guard globalMon != nil,localMon != nil else { stop();status=L10n.tr("ui.dee94e2b4b44");return false }
-        watchdog=Timer.scheduledTimer(withTimeInterval:coordinated ? 0.02:0.2,repeats:true) { [weak self] _ in
+        let combos=[hold,toggle,translation].compactMap{$0}.filter{Self.classify($0) == .keyDownCombo}
+        if !combos.isEmpty {
+            capturedKeys=CapturedShortcutKeys(bindings:combos)
+            let tap=ShortcutEventTap(bindings:combos,event:{ [weak self] type,code,mods,down,repeated,time,consumed in
+                guard let self,self.generation == currentGeneration else{return}
+                self.capturedKeys?.event(type:type,code:code,modifiers:mods,consumed:consumed)
+                self.route(type:type,code:code,mods:mods,down:down,repeated:repeated,time:time)
+            },failed:{ [weak self] in
+                guard let self,self.generation == currentGeneration else{return}
+                self.stop();self.status=L10n.tr("shortcut.capture.unavailable");self.onSleep?()
+                Log.write("voice-shortcut tap-disabled listening-stopped=true keyboard-passthrough=true")
+            })
+            guard tap.start() else {stop();status=L10n.tr("shortcut.capture.unavailable");return false}
+            keyTap=tap
+        } else {
+            globalMon=NSEvent.addGlobalMonitorForEvents(matching:mask) { [weak self] e in guard let self=self, self.generation == currentGeneration else { return }; self.handle(e) }
+            localMon=NSEvent.addLocalMonitorForEvents(matching:mask) { [weak self] e in if let self=self, self.generation == currentGeneration { self.handle(e) }; return e }
+            guard globalMon != nil,localMon != nil else { stop();status=L10n.tr("ui.dee94e2b4b44");return false }
+        }
+        watchdog=Timer.scheduledTimer(withTimeInterval:coordinated || cycle?.needsPrefixWait == true ? 0.02:0.2,repeats:true) { [weak self] _ in
             guard let self=self,self.generation == currentGeneration else{return}
-            let down=Self.downKeys();if let events=self.router?.poll(down){events.forEach{self.onCoordinatedEvent?($0)}};if let actions=self.cycle?.poll(down,time:ProcessInfo.processInfo.systemUptime){actions.forEach(self.deliver)}
+            let physical=Self.downKeys(),captured=self.capturedKeys?.augment(physical) ?? physical
+            let time=ProcessInfo.processInfo.systemUptime
+            let confirmed=self.pollGrace.confirmedPhysical(captured,flags:CGEventSource.flagsState(.combinedSessionState))
+            // A pending prefix must still be physically held to confirm. The
+            // release grace only protects a recording that already started.
+            let down=self.cycle == nil ? captured:self.cycle?.pendingPrefixAt != nil ? confirmed:self.pollGrace.poll(confirmed,time:time)
+            if let events=self.router?.poll(down){events.forEach{self.onCoordinatedEvent?($0)}};let before=self.cycle?.pendingPrefixAt;if let actions=self.cycle?.poll(down,time:time){
+                self.prefixTransition(before:before,actions:actions)
+                if CommandLine.arguments.contains("--diagnose-shortcut-input"),!actions.isEmpty {print("[shortcut-input-event] poll actions=\(actions) f=\(down.contains(3)) left-option=\(down.contains(58))")}
+                actions.forEach(self.deliver)
+            }
         }
         RunLoop.main.add(watchdog!,forMode:.common)
         sleepObserver=NSWorkspace.shared.notificationCenter.addObserver(forName:NSWorkspace.willSleepNotification,object:nil,queue:.main) { [weak self] _ in if let self=self, self.generation == currentGeneration { self.cancelCycle();self.onSleep?() } }
@@ -215,11 +266,21 @@ final class ListenTrigger {
         case .cancel:onHoldChord?()
         case .toggle:lastMatchAt=Date();onTogglePress?()
         case .crossStop:onCrossModeStop?()
+        case .translateStart:lastMatchAt=Date();onTranslateStart?()
+        case .translateEnd:onTranslateEnd?()
         }
     }
     private func cancelCycle(){if router != nil{onCoordinatedEvent?(.cancelRequested)};if let actions=cycle?.cancel(){actions.forEach(deliver)}}
+    func prefixTransition(before:Double?,actions:[DualShortcutCycle.Action]) {
+        if before == nil,let at=cycle?.pendingPrefixAt {onPrefixCaptureStart?(at)}
+        if before != nil,cycle?.pendingPrefixAt == nil,!actions.contains(.holdStart) {onPrefixCaptureDiscard?()}
+    }
     func stop() {
         generation += 1
+        onPrefixCaptureDiscard?()
+        keyTap?.stop();keyTap=nil
+        capturedKeys=nil
+        pollGrace=ShortcutPollGrace()
         cancelCycle()
         retryTimer?.invalidate();retryTimer=nil;watchdog?.invalidate();watchdog=nil
         if let o=sleepObserver {NSWorkspace.shared.notificationCenter.removeObserver(o)};sleepObserver=nil
@@ -254,7 +315,16 @@ final class ListenTrigger {
     private func handle(_ e:NSEvent) {
         noteModifierEvent(e)
         if e.type == .keyDown {Self.observedDown.insert(UInt32(e.keyCode))} else if e.type == .keyUp {Self.observedDown.remove(UInt32(e.keyCode))}
-        if let events=router?.event(type:e.type,code:UInt32(e.keyCode),mods:ShortcutPolicy.carbon(e.modifierFlags),down:Self.downKeys(),repeatKey:e.type == .keyDown && e.isARepeat){events.forEach{onCoordinatedEvent?($0)};return}
-        if let actions=cycle?.event(type:e.type,code:UInt32(e.keyCode),modifiers:ShortcutPolicy.carbon(e.modifierFlags),down:Self.downKeys(),repeatKey:e.type == .keyDown && e.isARepeat,toggleRecording:isToggleRecording?() == true,time:ProcessInfo.processInfo.systemUptime){actions.forEach(deliver)}
+        route(type:e.type,code:UInt32(e.keyCode),mods:ShortcutPolicy.carbon(e.modifierFlags),down:Self.downKeys(),repeated:e.type == .keyDown && e.isARepeat,time:ProcessInfo.processInfo.systemUptime)
+    }
+    private func route(type:NSEvent.EventType,code:UInt32,mods:UInt32,down:Set<UInt32>,repeated:Bool,time:Double) {
+        let down=Self.eventDownKeys(type:type,code:code,mods:mods,down:down)
+        if cycle != nil {pollGrace.event(type:type,code:code,modifiers:mods,down:down)}
+        if CommandLine.arguments.contains("--diagnose-shortcut-input"),code==3 || code==58 {
+            print("[shortcut-input-event] type=\(type.rawValue) key=\(code) mods=\(mods) repeated=\(repeated) f=\(down.contains(3)) left-option=\(down.contains(58)) captured-f=\(capturedKeys?.down.contains(3) == true)")
+        }
+        if let events=router?.event(type:type,code:code,mods:mods,down:down,repeatKey:repeated){events.forEach{onCoordinatedEvent?($0)};return}
+        let before=cycle?.pendingPrefixAt
+        if let actions=cycle?.event(type:type,code:code,modifiers:mods,down:down,repeatKey:repeated,toggleRecording:isToggleRecording?() == true,time:time){prefixTransition(before:before,actions:actions);actions.forEach(deliver)}
     }
 }

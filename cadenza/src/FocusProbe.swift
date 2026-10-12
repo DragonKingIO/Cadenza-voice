@@ -137,6 +137,15 @@ enum FocusProbe {
     static func protectedTarget(role: String?, subrole: String?, secureInput: Bool) -> Bool {
         secureInput || role == "AXSecureTextField" || subrole == "AXSecureTextField"
     }
+    /// Chrome deliberately returns no subrole for an ordinary single-line field;
+    /// its protected fields report AXSecureTextField instead. Treat the specific
+    /// noValue response as an absent optional attribute, not a messaging failure.
+    /// Keep the conservative rule for other applications and all failed queries.
+    static func securityConfirmed(role:String?,subrole:String?,subroleStatus:Int32,bundleID:String)->Bool {
+        guard role == "AXTextField" else{return true}
+        if subroleStatus == AXError.success.rawValue,subrole != nil {return true}
+        return bundleID == "com.google.Chrome" && subrole == nil && subroleStatus == AXError.noValue.rawValue
+    }
     static func snapshot() -> FocusIdentity? {
         let trusted=accessibilityTrusted
         let resolution=ForegroundIdentity.resolve()
@@ -167,7 +176,7 @@ enum FocusProbe {
             guard attribute(node,kAXFocusedAttribute).0 as? Bool == true,
                   let role=attribute(node,kAXRoleAttribute).0 as? String,FocusIdentity.textRoles.contains(role),belongs(node) else{return false}
             let sub=attribute(node,kAXSubroleAttribute)
-            guard !protectedTarget(role:role,subrole:sub.0 as? String,secureInput:IsSecureEventInputEnabled()),role != "AXTextField" || (sub.1 == 0 && sub.0 as? String != nil) else{return false}
+            guard !protectedTarget(role:role,subrole:sub.0 as? String,secureInput:IsSecureEventInputEnabled()),securityConfirmed(role:role,subrole:sub.0 as? String,subroleStatus:sub.1,bundleID:identity.bundleID) else{return false}
             return true // Focus/identity discovery is separate from insertion capability.
         }
         if trusted,!IsSecureEventInputEnabled(),let w=w,
@@ -204,7 +213,7 @@ enum FocusProbe {
         if let e=e { AXUIElementSetMessagingTimeout(e,0.05);let r=attribute(e,kAXRoleAttribute);role=r.0 as? String;roleRC=r.1;let sub=attribute(e,kAXSubroleAttribute);subrole=sub.0 as? String;subRC=sub.1 }
         if let w=w { AXUIElementSetMessagingTimeout(w,0.05);let r=attribute(w,kAXRoleAttribute);windowRole=r.0 as? String;windowRoleRC=r.1 }
         let protected=protectedTarget(role:role,subrole:subrole,secureInput:IsSecureEventInputEnabled())
-        let securityKnown=role != "AXTextField" || (subRC == 0 && subrole != nil)
+        let securityKnown=securityConfirmed(role:role,subrole:subrole,subroleStatus:subRC,bundleID:identity.bundleID)
         // Live focus probing never reads text values. Value writability is metadata only.
         if !protected && securityKnown,let e=e,role.map({FocusIdentity.textRoles.contains($0)}) == true {
             var flag:DarwinBoolean=false;writeRC=AXUIElementIsAttributeSettable(e,kAXValueAttribute as CFString,&flag).rawValue;valueWritable=writeRC == 0 && flag.boolValue

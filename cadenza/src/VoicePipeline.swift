@@ -150,6 +150,7 @@ final class VoicePipeline {
     func clearTranscript() { lastTranscript = nil;clearTranscriptVersions();diagnosticTarget=nil;lastResult="—";lastIsError=false;lastInputAccepted=false;resultAction = .retry;notifyUI() }
 
     private var recorder: HoldRecordingSession?
+    var shortcutPrefixCapture: ShortcutPrefixCapture?
     private var pollTimer: Timer?
     private var config: BridgeConfig { configStore.config }
 
@@ -180,6 +181,9 @@ final class VoicePipeline {
 
     /// 左 Option 单独按下（或窗口按钮按下）→ 立即开始录音
     func holdStarted(source: HoldSource = .hotkey, target: FocusIdentity? = nil, localOnly: Bool = false, translate: Bool = false) {
+        let prefix = shortcutPrefixCapture; shortcutPrefixCapture = nil
+        var prefixAccepted = false
+        defer { if !prefixAccepted { prefix?.stop() } }
         Log.write("hold-start-invoked source=\(String(describing:source)) sessionActive=\(session != nil) mode=\(config.mode) enabled=\(config.enabled)")
         guard !inputSuspendedForDiagnostic else{Log.write("hold-refused diagnostic-only=true no-recorder=true");return}
         guard config.enabled, config.mode == SessionMode.hold.rawValue else { return }
@@ -239,7 +243,9 @@ final class VoicePipeline {
             guard LocalTranscriberLoader.supported else{lastResult=L10n.tr("local.err.unsupportedBuild");lastIsError=true;notifyUI();return}
             let ready=LocalModelCenter.shared.installedEntries.filter{LocalModelCatalog.usable($0)}
             guard let model=FallbackPolicy.resolvePrimary(settings:config.localModel,ready:ready,recognitionLocale:config.recognitionLocale) else{lastResult=L10n.tr(ready.isEmpty ? "local.err.notInstalled":"local.err.noLanguageModel");lastIsError=true;notifyUI();return}
-            sessionRecorder=LocalASRRecorder(modelID:model.id,options:config.localModel.recognition.resolved(forLanguages:[config.recognitionLocale]))
+            let capture: CloudPCMCapturing
+            if !translate, let prefix { capture = prefix } else { capture = CloudPCMCapture() }
+            sessionRecorder=LocalASRRecorder(modelID:model.id,capture:capture,options:config.localModel.recognition.resolved(forLanguages:[config.recognitionLocale]))
         } else if let provider=ASREngine(rawValue:config.engine),provider != .apple {
             guard config.options(provider).consent else{lastResult=L10n.tr("ui.eadd4394cde5");lastIsError=true;notifyUI();return}
             guard let credentials=provider.credentials() else{lastResult=L10n.tr("ui.af6ae89316e3");lastIsError=true;notifyUI();return}
@@ -355,6 +361,7 @@ final class VoicePipeline {
             }
         }
         let ok = recorder?.begin() ?? false
+        prefixAccepted = ok && prefix != nil && !translate && recorderFactory == nil && config.engine == "local"
         if !ok {
             let error = recorder?.lastError ?? L10n.tr("ui.13a46616e16f")
             lastResult = L10n.tr("ui.5cc1b714183d") + ASRUserMessage.describe(error);lastIsError=true
@@ -564,6 +571,7 @@ final class VoicePipeline {
 
     /// 菜单停用/退出应用时调用：丢弃当前会话（不提交文字），引擎就地停止
     func forceEnd(reason: String) {
+        discardShortcutPrefix()
         if coordinatedCancel?() == true{return}
         guard session != nil else { return }
         recorder?.abort()

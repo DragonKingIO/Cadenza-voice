@@ -167,6 +167,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     var onConfigurationChanged: (() -> Void)?
     var onBeginShortcutRecording: (() -> Void)?
     var onEndShortcutRecording: (() -> Void)?
+    // Isolated UI fixtures inject key states; production checks the real keyboard.
+    var shortcutDownKeys:(()->Set<UInt32>)?
     var onSaveShortcut: ((HotkeySpec) -> String?)?
     var onSaveModeShortcut: ((String,HotkeySpec?,Bool?) -> String?)?
     private var editingMode=0
@@ -627,6 +629,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         if editingMode != 0,c.holdShortcutEnabled {peers.append(c.trigger)}
         if editingMode != 1,c.toggleActive,let toggle=c.toggleTrigger {peers.append(toggle)}
         if editingMode != 2,let translate=c.translate.trigger {peers.append(translate)}
+        if let capture=c.screenshot.trigger {peers.append(capture)}
+        if let ocr=c.screenshot.ocrTrigger {peers.append(ocr)}
         if peers.contains(where:{$0.keyCode == spec.keyCode && $0.modifiers == spec.modifiers}) {return L10n.tr("ui.2e02adb592a9")}
         if editingMode == 2,peers.contains(where:{ShortcutPolicy.overlaps(spec,$0)}) {return L10n.tr("translate.shortcut.conflict")}
         if editingMode != 2,let translate=c.translate.trigger,ShortcutPolicy.overlaps(spec,translate) {return L10n.tr("translate.shortcut.conflict")}
@@ -666,20 +670,21 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         showShortcutSheet()
         shortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp, .flagsChanged]) { [weak self] e in
             guard let self = self, self.shortcutRecording else { return e }
-            if e.type == .keyDown && e.keyCode == 53 { self.cancelShortcut(); return nil }
-            if e.type == .keyDown && !e.isARepeat || e.type == .flagsChanged && (ListenTrigger.modifierKeyFlags[UInt32(e.keyCode)] != nil || e.keyCode == 63) && CGEventSource.keyState(.combinedSessionState, key: CGKeyCode(e.keyCode)) {
-                let sides = ListenTrigger.downKeys().filter { ListenTrigger.modifierKeyFlags[$0] != nil }.sorted()
-                let mods = ShortcutPolicy.carbon(e.modifierFlags)
-                let alone = ListenTrigger.modifierKeyFlags[UInt32(e.keyCode)] == mods
-                let spec = HotkeySpec(keyCode: UInt32(e.keyCode), modifiers: mods, modifierKeyCodes: alone ? nil : sides)
-                self.candidate = spec
-                self.shortcutError = self.candidateReason(spec)
-                if CGEventSource.keyState(.combinedSessionState, key: 63) { self.shortcutError = L10n.tr("ui.823af38d5dff") }
-                self.refresh()
-            }
+            self.inspectShortcutEvent(e)
             return nil
         }
         shortcutSleepObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in self?.cancelShortcut() }
+        refresh()
+    }
+    /// Event flags define combinations, like the screenshot recorder. Either modifier side works;
+    /// standalone Option still uses its own left/right key code.
+    func inspectShortcutEvent(_ e:NSEvent) {
+        guard shortcutRecording else{return}
+        if e.type == .keyDown && e.keyCode == 53 {cancelShortcut();return}
+        guard e.type == .keyDown && !e.isARepeat || e.type == .flagsChanged && (ListenTrigger.modifierKeyFlags[UInt32(e.keyCode)] != nil || e.keyCode == 63) && CGEventSource.keyState(.combinedSessionState,key:CGKeyCode(e.keyCode)) else{return}
+        let spec=HotkeySpec(keyCode:UInt32(e.keyCode),modifiers:ShortcutPolicy.carbon(e.modifierFlags))
+        candidate=spec;shortcutError=candidateReason(spec)
+        if CGEventSource.keyState(.combinedSessionState,key:63) {shortcutError=L10n.tr("ui.823af38d5dff")}
         refresh()
     }
     func inspectShortcutConflict() {
@@ -704,7 +709,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     @objc private func cancelShortcut() { endShortcut(); shortcutError = nil; refresh() }
     @objc private func saveShortcut() {
         guard let spec = candidate, shortcutError == nil, pipeline?.hasActiveSession != true else { return }
-        guard !ListenTrigger.downKeys().contains(spec.keyCode), ListenTrigger.downKeys().intersection(Set(spec.modifierKeyCodes ?? [])).isEmpty else { shortcutError = L10n.tr("ui.0817f92e1983"); refresh(); return }
+        let down=shortcutDownKeys?() ?? ListenTrigger.downKeys()
+        guard !down.contains(spec.keyCode), !down.contains(where:{ (ListenTrigger.modifierKeyFlags[$0] ?? 0) & spec.modifiers != 0 }) else { shortcutError = L10n.tr("ui.0817f92e1983"); refresh(); return }
         endShortcut(resume: false)
         shortcutError = onSaveModeShortcut?(modeName(editingMode),spec,nil) ?? (onSaveModeShortcut == nil ? onSaveShortcut?(spec):nil)
         onEndShortcutRecording?(); refresh()

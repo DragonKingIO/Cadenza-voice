@@ -41,7 +41,7 @@ struct ScreenshotShortcutSection: View {
     }
 }
 
-/// 截图快捷键专用规则。语音触发键要避开所有会误触的组合，规则很严；截图是一次性的全局组合键，只需要避开：
+/// Screenshot shortcuts are one-shot global combinations. Reject:
 /// 单独的修饰键与 Fn、没有修饰键的普通键、⌘ 单独修饰的标准命令（⌘C、⌘V…）、系统与应用菜单已占用的组合。
 /// 例如 ⌥A、⌘⇧A、⌘⌥A、⌃⇧A 都可以使用。
 enum ScreenshotShortcutPolicy {
@@ -83,8 +83,8 @@ enum ScreenshotShortcutValidation {
     /// 返回 nil 表示可用：先排除与语音快捷键相同，再按截图规则检查，最后做一次真实的系统注册试探
     static func problem(for spec: HotkeySpec, config: BridgeConfig, other: HotkeySpec? = nil,
                         policy: (HotkeySpec) -> String? = { ScreenshotShortcutPolicy.reason($0) ?? ShortcutPolicy.registrationReason($0) }) -> String? {
-        if spec == config.trigger || spec == config.toggleTrigger || spec == config.diagnosticTrigger { return L10n.tr("screenshot.shortcut.duplicate") }
-        if let other, spec == other { return L10n.tr("screenshot.shortcut.duplicateScreenshot") }
+        if [config.holdShortcutEnabled ? config.trigger:nil,config.toggleActive ? config.toggleTrigger:nil,config.translate.trigger,config.diagnosticTrigger].compactMap({$0}).contains(where:{ShortcutPolicy.overlaps(spec,$0)}) { return L10n.tr("screenshot.shortcut.duplicate") }
+        if let other, ShortcutPolicy.overlaps(spec,other) { return L10n.tr("screenshot.shortcut.duplicateScreenshot") }
         return policy(spec)
     }
 }

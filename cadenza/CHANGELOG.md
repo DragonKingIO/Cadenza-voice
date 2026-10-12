@@ -5,6 +5,19 @@ What changed in each version, for people who use Cadenza. The format follows
 Each release is also published, with its package and checksum, on
 [GitHub Releases](https://github.com/DragonKingIO/Cadenza-voice/releases).
 
+## 1.2.2 — 2026-10-12
+
+### Fixed
+- Voice and translation shortcuts now accept Control, Option or Command combinations while preserving reserved system and editing shortcuts. Shortcut editors pause all app bindings until saved or cancelled and check conflicts with screenshot and OCR bindings.
+- When Left Option dictation shares a prefix with Option + F translation, one listener routes the complete key cycle. Translation consumes its key presses, repeats and releases instead of typing repeated special characters, and shared Option waits 300 ms before confirming dictation.
+- Local dictation captures the shared modifier's initial audio in a bounded on-device buffer. Confirmation replays those frames in order; a discarded candidate stops capture without starting recognition. Cloud and Apple recognition keep their existing startup behavior.
+- Modifier release uses the event flags instead of stale key-state tables. Bounded polling grace handles delayed events without leaving recording stuck or cancelling a normal release.
+- Ordinary Chrome single-line inputs can be verified when Chrome explicitly reports no optional accessibility subrole. Password fields, failed security queries and changed focus remain protected.
+
+### Validation and limitations
+- Added regression coverage for shortcut recording, translation routing, repeated keys, audio buffering, modifier release and Chrome field classification. UI fixtures inject keyboard states to avoid interference from physical keys during unattended tests, while production still checks that keys have been released. Real-device short dictation was also observed reaching a selected input without changing the clipboard.
+- This does not claim improved model accuracy or compatibility with every app. One intermittent retention report remains uncorrelated; an empty recognition result is never inserted. The experimental mixed trigger path remains disabled.
+
 ## [Unreleased]
 
 ## [1.2.1] - 2026-10-11
