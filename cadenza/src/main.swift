@@ -296,6 +296,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         translateTrigger.onHoldChord = { [weak self] in self?.pipeline.forceEnd(reason: L10n.tr("ui.4460c389c8a2")) }
         translateTrigger.onSleep = { [weak self] in self?.pipeline.forceEnd(reason: L10n.tr("ui.44a169431a26")) }
         applyHotkey()
+        HardwareRemoteCenter.shared.start(pipeline: pipeline)
         // Permission requests are user actions in privacy/onboarding and depend on the chosen engine.
         Log.write("startup mode=\(configStore.config.mode) trigger=\(HotkeySpecDisplay.string(configStore.config.trigger)) diagnostic=\(HotkeySpecDisplay.string(configStore.config.diagnosticTrigger)) iflytekHotkey=\(HotkeySpecDisplay.string(configStore.config.iflytekVoiceHotkey)) configErrors=\(configStore.validationErrors.count)")
         Log.write("startup-bindings holdEnabled=\(configStore.config.holdShortcutEnabled) hold=\(HotkeySpecDisplay.string(configStore.config.trigger)) toggleEnabled=\(configStore.config.toggleShortcutEnabled) toggle=\(configStore.config.toggleTrigger.map(HotkeySpecDisplay.string) ?? "unset") listener=\(listenTrigger.status)")
@@ -380,7 +381,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         button.setAccessibilityLabel(Brand.name+" · "+snapshot.header)
         button.imagePosition = .imageOnly
         // 悬浮状态条一次只出现一条：录音/识别跟随会话；异常 6 秒后自收；成功即收起
-        if let s = pipeline.session, s.mode == SessionMode.hold.rawValue {
+        if let s = pipeline.session, s.mode == SessionMode.hold.rawValue, !HardwareRemoteCenter.shared.isTrialCardActive {
             switch s.state {
             case .voiceStarted:
                 capsule.showRecord(elapsed: ProcessInfo.processInfo.systemUptime-s.startedUptime, manual: s.source == .menu, shortcut: s.source == .hotkey ? HotkeySpecDisplay.string(configStore.config.trigger) : s.source == .toggle && configStore.config.toggleShortcutEnabled ? configStore.config.toggleTrigger.map(HotkeySpecDisplay.string) : nil, retentionHint:s.retentionReason, toggled:s.source == .toggle)
@@ -592,6 +593,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         var s=StatusMenuSnapshot()
         s.engine=c.engine;s.mode=c.primaryIsToggle ? "toggle":"hold";s.microphone=c.microphoneUID
         s.toggleAvailable=c.toggleTrigger != nil
+        s.hardware=HardwareRemoteCenter.shared.menuSummary
         s.shortcut=c.holdShortcutEnabled ? HotkeySpecDisplay.string(c.trigger):""
         s.toggleShortcut=c.toggleActive ? c.toggleTrigger.map(HotkeySpecDisplay.string) ?? "":""
         s.hasResult=pipeline.lastTranscript?.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty == false
@@ -678,6 +680,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
     @objc private func selectTranslate(_ sender: NSMenuItem) { if let value = sender.representedObject as? String,TranslationLanguages.valid(value) { changeConfig { $0.translate.target = value } } }
     @objc private func showTranslateSettings() { showSwiftMain(.translate) }
+    @objc private func showHardwareSettings() { showSwiftMain(.hardware) }
     @objc private func selectMicrophone(_ sender: NSMenuItem) { if let value = sender.representedObject as? String { changeConfig { $0.microphoneUID = value } } }
     @objc private func showShortcutSettings() { showSettings(); settingsWindow?.show(page: 2) }
     @objc private func showEngineSettings() { showSettings(); settingsWindow?.show(page: 1) }

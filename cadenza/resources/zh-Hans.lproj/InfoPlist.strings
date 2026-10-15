@@ -1,4 +1,5 @@
 "CFBundleName" = "随言";
 "CFBundleDisplayName" = "随言";
+"NSBluetoothAlwaysUsageDescription" = "随言需要使用蓝牙，连接你的语音遥控器，用它的麦克风键输入文字。";
 "NSMicrophoneUsageDescription" = "随言需要使用麦克风，把你的语音转成文字。";
 "NSSpeechRecognitionUsageDescription" = "随言需要使用语音识别，把你的语音转成文字。";

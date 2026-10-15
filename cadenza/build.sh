@@ -100,6 +100,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>
     <key>NSHighResolutionCapable</key><true/>
+    <key>NSBluetoothAlwaysUsageDescription</key><string>Cadenza uses Bluetooth to connect your voice remote so you can dictate with its microphone button.</string>
     <key>NSMicrophoneUsageDescription</key><string>Cadenza uses the microphone to turn your speech into text.</string>
     <key>NSSpeechRecognitionUsageDescription</key><string>Cadenza uses speech recognition to turn your speech into text.</string>
 </dict>

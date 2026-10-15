@@ -18,7 +18,10 @@
     "git hub",
     "吉特哈勃",
     "吉特哈布",
-    "基特哈勃"
+    "基特哈勃",
+    "git up",
+    "get hub",
+    "gethub"
    ]
   },
   {
@@ -341,6 +344,303 @@
    "aliases": [
     "power shell"
    ]
+  },
+  {
+   "term": "Rust"
+  },
+  {
+   "term": "Golang"
+  },
+  {
+   "term": "C++"
+  },
+  {
+   "term": "C#"
+  },
+  {
+   "term": "PHP"
+  },
+  {
+   "term": "Ruby on Rails"
+  },
+  {
+   "term": "Django"
+  },
+  {
+   "term": "FastAPI"
+  },
+  {
+   "term": "Flask"
+  },
+  {
+   "term": "Spring Boot"
+  },
+  {
+   "term": "Express.js"
+  },
+  {
+   "term": "NestJS"
+  },
+  {
+   "term": "Angular"
+  },
+  {
+   "term": "jQuery"
+  },
+  {
+   "term": "Bootstrap"
+  },
+  {
+   "term": "Sass"
+  },
+  {
+   "term": "Prettier"
+  },
+  {
+   "term": "Babel"
+  },
+  {
+   "term": "Rollup"
+  },
+  {
+   "term": "esbuild"
+  },
+  {
+   "term": "Turborepo"
+  },
+  {
+   "term": "Deno"
+  },
+  {
+   "term": "Bun"
+  },
+  {
+   "term": "Cargo"
+  },
+  {
+   "term": "pip"
+  },
+  {
+   "term": "Conda"
+  },
+  {
+   "term": "Poetry"
+  },
+  {
+   "term": "pytest"
+  },
+  {
+   "term": "Jest"
+  },
+  {
+   "term": "Cypress"
+  },
+  {
+   "term": "Playwright"
+  },
+  {
+   "term": "Selenium"
+  },
+  {
+   "term": "Postman"
+  },
+  {
+   "term": "Swagger"
+  },
+  {
+   "term": "OpenAPI"
+  },
+  {
+   "term": "Protobuf"
+  },
+  {
+   "term": "Kafka"
+  },
+  {
+   "term": "ZooKeeper"
+  },
+  {
+   "term": "ClickHouse"
+  },
+  {
+   "term": "DuckDB"
+  },
+  {
+   "term": "Neo4j"
+  },
+  {
+   "term": "Cassandra"
+  },
+  {
+   "term": "MariaDB"
+  },
+  {
+   "term": "Prisma"
+  },
+  {
+   "term": "Drizzle"
+  },
+  {
+   "term": "tRPC"
+  },
+  {
+   "term": "WebRTC"
+  },
+  {
+   "term": "WebGL"
+  },
+  {
+   "term": "WebGPU"
+  },
+  {
+   "term": "PWA"
+  },
+  {
+   "term": "SSR"
+  },
+  {
+   "term": "DevOps"
+  },
+  {
+   "term": "Git LFS"
+  },
+  {
+   "term": "Bitbucket"
+  },
+  {
+   "term": "Gitee"
+  },
+  {
+   "term": "Stack Overflow"
+  },
+  {
+   "term": "Hacker News"
+  },
+  {
+   "term": "Jira"
+  },
+  {
+   "term": "Confluence"
+  },
+  {
+   "term": "Postgres"
+  },
+  {
+   "term": "JetBrains"
+  },
+  {
+   "term": "IntelliJ IDEA"
+  },
+  {
+   "term": "PyCharm"
+  },
+  {
+   "term": "WebStorm"
+  },
+  {
+   "term": "Android Studio"
+  },
+  {
+   "term": "Sublime Text"
+  },
+  {
+   "term": "iTerm2"
+  },
+  {
+   "term": "Ghostty"
+  },
+  {
+   "term": "Alacritty"
+  },
+  {
+   "term": "Warp"
+  },
+  {
+   "term": "Zed"
+  },
+  {
+   "term": "Raycast"
+  },
+  {
+   "term": "Obsidian"
+  },
+  {
+   "term": "LeetCode"
+  },
+  {
+   "term": "CodePen"
+  },
+  {
+   "term": "StackBlitz"
+  },
+  {
+   "term": "Replit"
+  },
+  {
+   "term": "CodeSandbox"
+  },
+  {
+   "term": "Husky"
+  },
+  {
+   "term": "Lerna"
+  },
+  {
+   "term": "Monorepo"
+  },
+  {
+   "term": "SwiftData"
+  },
+  {
+   "term": "Combine"
+  },
+  {
+   "term": "Alamofire"
+  },
+  {
+   "term": "CocoaPods"
+  },
+  {
+   "term": "Carthage"
+  },
+  {
+   "term": "Fastlane"
+  },
+  {
+   "term": "Flutter"
+  },
+  {
+   "term": "React Native"
+  },
+  {
+   "term": "Electron"
+  },
+  {
+   "term": "Tauri"
+  },
+  {
+   "term": "Expo"
+  },
+  {
+   "term": "Unity"
+  },
+  {
+   "term": "Unreal Engine"
+  },
+  {
+   "term": "Godot"
+  },
+  {
+   "term": "Blender"
+  },
+  {
+   "term": "OpenGL"
+  },
+  {
+   "term": "Vulkan"
+  },
+  {
+   "term": "Metal"
   }
  ]
 }

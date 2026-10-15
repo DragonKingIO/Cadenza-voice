@@ -23,7 +23,11 @@
    "aliases": [
     "chat gpt",
     "柴特GPT",
-    "查特GPT"
+    "查特GPT",
+    "菜GPT",
+    "才GPT",
+    "柴GPT",
+    "猜GPT"
    ]
   },
   {
@@ -170,6 +174,186 @@
   },
   {
    "term": "MCP"
+  },
+  {
+   "term": "GPT",
+   "aliases": [
+    "g p t"
+   ]
+  },
+  {
+   "term": "Opus"
+  },
+  {
+   "term": "Sonnet"
+  },
+  {
+   "term": "Haiku"
+  },
+  {
+   "term": "Claude Code",
+   "aliases": [
+    "克劳德code"
+   ]
+  },
+  {
+   "term": "Codex"
+  },
+  {
+   "term": "Copilot"
+  },
+  {
+   "term": "Cursor"
+  },
+  {
+   "term": "Grok"
+  },
+  {
+   "term": "Kimi"
+  },
+  {
+   "term": "GPT-5"
+  },
+  {
+   "term": "Sora"
+  },
+  {
+   "term": "Whisper"
+  },
+  {
+   "term": "Perplexity"
+  },
+  {
+   "term": "Transformer"
+  },
+  {
+   "term": "RAG"
+  },
+  {
+   "term": "llama.cpp"
+  },
+  {
+   "term": "Open WebUI"
+  },
+  {
+   "term": "Dify"
+  },
+  {
+   "term": "Coze"
+  },
+  {
+   "term": "Cline"
+  },
+  {
+   "term": "Windsurf"
+  },
+  {
+   "term": "NotebookLM"
+  },
+  {
+   "term": "Gemma"
+  },
+  {
+   "term": "Mixtral"
+  },
+  {
+   "term": "ChatGLM"
+  },
+  {
+   "term": "GLM-4"
+  },
+  {
+   "term": "MiniMax"
+  },
+  {
+   "term": "InternLM"
+  },
+  {
+   "term": "Baichuan"
+  },
+  {
+   "term": "SiliconFlow"
+  },
+  {
+   "term": "Replicate"
+  },
+  {
+   "term": "Runway"
+  },
+  {
+   "term": "Suno"
+  },
+  {
+   "term": "ElevenLabs"
+  },
+  {
+   "term": "Cohere"
+  },
+  {
+   "term": "xAI"
+  },
+  {
+   "term": "Groq"
+  },
+  {
+   "term": "OpenRouter"
+  },
+  {
+   "term": "AutoGPT"
+  },
+  {
+   "term": "CrewAI"
+  },
+  {
+   "term": "Flowise"
+  },
+  {
+   "term": "n8n"
+  },
+  {
+   "term": "LiteLLM"
+  },
+  {
+   "term": "TensorRT"
+  },
+  {
+   "term": "DeepSpeed"
+  },
+  {
+   "term": "Flash Attention"
+  },
+  {
+   "term": "Diffusers"
+  },
+  {
+   "term": "Gradio"
+  },
+  {
+   "term": "Streamlit"
+  },
+  {
+   "term": "Jupyter"
+  },
+  {
+   "term": "NumPy"
+  },
+  {
+   "term": "pandas"
+  },
+  {
+   "term": "scikit-learn"
+  },
+  {
+   "term": "Kaggle"
+  },
+  {
+   "term": "MoE"
+  },
+  {
+   "term": "RLHF"
+  },
+  {
+   "term": "LangGraph"
   }
  ]
 }

@@ -16,6 +16,22 @@ separate permission.
 | Type the text into the front app | Built, off by default |
 | Reach the Mac from another device on the network | Not built (design notes below) |
 
+## Built-in support: Xiaomi Bluetooth voice remote
+
+One device needs no bridge program: the Xiaomi Bluetooth voice remote (Remote 2, and Remote 2 Pro). Settings → Hardware pairs
+it directly over Bluetooth Low Energy. It speaks the Android TV voice service (ATVV): while the voice key is held, the
+remote streams 16 kHz IMA ADPCM audio, which the app decodes and hands to the same recognizer as a microphone recording.
+Nothing goes through the local API, and nothing new leaves the Mac.
+
+- The device is matched by Xiaomi's USB vendor id `0x2717`. Remote 2 (product id `0x32B8`) was measured; the Pro is
+  recognised by its product name and has **not** been measured on a physical device.
+- The remote also appears to macOS as a keyboard (F5, Return, arrows…). An ordinary process cannot take exclusive ownership
+  of a keyboard-class HID device (the system answers `kIOReturnNotPrivileged`), so the app instead drops, with an event tap,
+  the key events that the remote itself is holding. A keyboard is never touched, and events synthesised by software
+  (including the app's own) are never dropped. This needs the Accessibility permission.
+- Keys other than the voice key can be remapped (arrows, Return, Esc, copy, paste, system volume, screenshot, OCR, a custom
+  shortcut). Only the voice key can start dictation. A *Key test* switch shows which key arrives without running anything.
+
 ## How hardware reaches the app
 
 ```
