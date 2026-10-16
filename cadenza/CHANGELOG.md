@@ -20,6 +20,10 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-16
+
+Still an **early preview**.
+
 ### Added
 - **Xiaomi Bluetooth voice remote (Remote 2 and Remote 2 Pro).** Settings → Hardware connects the remote over Bluetooth: hold its voice key to dictate (or switch the key to press-to-start and press-to-stop), and remap the other keys to arrows, Return, Esc, copy, paste, undo, system volume, screenshot, OCR or your own shortcut. A key test shows which key arrives without running any action. The remote's own keys no longer type into the front window; the menu bar shows its state in a *Hardware* row. This was measured on one Remote 2; the Pro is recognised by name and has not been measured on a physical device. The app now asks for the Bluetooth permission when you set a remote up.
 - **More vocabulary.** The packs grew by about 350 terms, and a new *Apps and software* pack covers common products. Chinese transliterations listed as aliases now also match other characters of the same sound, and a string of letters that is no English word is corrected when it is one easily confused letter away from a single-word term (`gbt` becomes `GPT`). Ordinary English words, addresses and paths are not touched. When AI polish is on and a Chinese sentence contains an English word that is in none of your vocabularies, a short list of pack terms is given to the model as spelling hints only.
