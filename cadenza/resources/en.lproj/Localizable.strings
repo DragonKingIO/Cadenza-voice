@@ -1633,3 +1633,4 @@
 "hardware.keysHeader" = "Keys";
 "hardware.model.pro" = "Xiaomi Bluetooth Remote 2 Pro";
 "hardware.model.2" = "Xiaomi Bluetooth Remote 2";
+"vocab.err.unsafeAlias" = "“%@” is too common: adding it would change correct sentences, so it was not added. Use the exact string the recognizer writes by mistake.";

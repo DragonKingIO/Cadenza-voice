@@ -28,6 +28,9 @@ Each release is also published, with its package and checksum, on
 ### Changed
 - The menu bar menu puts *Pause*, the connected remote and *Settings* together in the last group.
 
+### Fixed
+- **A saved alias could rewrite ordinary sentences.** An alias that is a single Chinese character, a phrase of only the commonest characters, a one- or two-letter string, or a single everyday English word is now ignored when matching and refused when you add it in Vocabulary (an alias "他" had turned every "他" into a term).
+
 ## [1.2.1] - 2026-10-11
 
 Still an **early preview**.

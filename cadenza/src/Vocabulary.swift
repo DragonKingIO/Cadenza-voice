@@ -84,6 +84,10 @@ enum VocabularyRules {
         guard Set(lowered).count == lowered.count, !lowered.contains(e.term.lowercased()) else { return "duplicate-alias" }
         return nil
     }
+    /// The first alias of an entry the person is adding that would rewrite ordinary sentences, or nil.
+    static func unsafeAlias(_ e: VocabEntry) -> String? {
+        e.aliases.first { !VocabularyMatcher.usableAlias($0, fromUser: true) }
+    }
     static func problem(_ p: VocabPack) -> String? {
         guard p.schema == 1 else { return "schema" }
         guard p.id.range(of: "^[a-z0-9]+(-[a-z0-9]+)*$", options: .regularExpression) != nil, p.id.count <= 40 else { return "id" }
@@ -208,6 +212,43 @@ enum VocabularyMatcher {
         return b.count >= 5 && a.count == b.count + 2 && a.last == b.last && isSubsequence(b, of: a)
     }
 
+    // MARK: Aliases that would rewrite ordinary sentences
+
+    /// The most frequent Han characters. An alias made only of them is an everyday phrase ("你那个", "家还"), not a mishearing.
+    private static let commonHan: Set<Character> = Set("的一是不了人我在有他这中大来上国个到说们为子和你地出道也时年得就那要下以生会自着去之过家学对可她里后小么心多天而能好都然没日于起还发成事只作当想看文无开手十用主行方又如前所本见经头面公同三已老从动两长知民样现分很种实"
+        + "给什么吗呢吧啊嗯哦呃但是因为所以如果还是已经可以不是没有就是这样那样一个一下一些自己他们她们我们你们什么时候怎么这些那些")
+    /// Everyday English words. A single one of them as an alias would rewrite every sentence that really says it.
+    private static let commonEnglish: Set<String> = ["the", "and", "for", "are", "but", "not", "you", "all", "any", "can", "had", "her", "was", "one", "our", "out", "day", "get", "has",
+        "him", "his", "how", "man", "new", "now", "old", "see", "two", "way", "who", "boy", "did", "its", "let", "put", "say", "she", "too", "use", "open", "up", "go", "on", "in", "it",
+        "is", "to", "of", "at", "be", "do", "so", "we", "me", "my", "or", "an", "as", "by", "if", "no", "up", "us", "this", "that", "with", "from", "have", "they", "will", "your", "what",
+        "when", "make", "like", "time", "just", "know", "take", "people", "into", "year", "good", "some", "could", "them", "other", "than", "then", "look", "only", "come", "over", "think",
+        "also", "back", "after", "work", "first", "well", "even", "want", "because", "give", "most", "need", "should", "very", "much", "more", "here", "there", "where", "which", "about",
+        "would", "their", "been", "were", "said", "each", "many", "these", "those", "play", "run", "set", "show", "start", "stop", "close", "close", "read", "write", "call", "find",
+        "keep", "turn", "move", "live", "help", "ask", "tell", "try", "feel", "leave", "mean", "high", "long", "great", "little", "own", "same", "big", "small", "large", "next", "last"]
+
+    /// Whether a saved alias may rewrite text. A mishearing is never a single Han character, a one- or two-letter string, an
+    /// everyday English word (from the person's own list) or a Han phrase of only the commonest characters; such an alias
+    /// would change correct sentences, so it is ignored, whoever added it.
+    static func usableAlias(_ alias: String, fromUser: Bool) -> Bool {
+        let trimmed = alias.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        let hasLatin = trimmed.unicodeScalars.contains { $0.isASCII && CharacterSet.alphanumerics.contains($0) }
+        let hanCount = trimmed.filter { pinyin($0) != nil }.count
+        if hanCount > 0 && !hasLatin {
+            if trimmed.count < 2 { return false }
+            if fromUser && trimmed.allSatisfy({ commonHan.contains($0) }) { return false }
+            return true
+        }
+        let letters = trimmed.filter { $0.isLetter || $0.isNumber }
+        if hanCount == 0 {
+            if letters.count < 3 { return false }
+            let words = trimmed.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+            if fromUser, words.count == 1, commonEnglish.contains(words[0]) { return false }
+            if fromUser, words.count > 1, words.allSatisfy({ commonEnglish.contains($0) }) { return false }
+        }
+        return true
+    }
+
     // MARK: Matching
 
     /// Replaces mis-recognized terms. Links, e-mail addresses and `code` are left alone.
@@ -222,7 +263,7 @@ enum VocabularyMatcher {
 
         // 1. Aliases
         for t in terms {
-            for alias in t.aliases where alias.lowercased() != t.term.lowercased() {
+            for alias in t.aliases where alias.lowercased() != t.term.lowercased() && usableAlias(alias, fromUser: t.fromUser) {
                 let escaped = NSRegularExpression.escapedPattern(for: alias).replacingOccurrences(of: " ", with: "[ \\t]+")
                 let ascii = alias.unicodeScalars.allSatisfy { $0.isASCII }
                 let pattern = ascii ? "(?<![A-Za-z0-9])" + escaped + "(?![A-Za-z0-9])" : escaped
@@ -297,7 +338,7 @@ enum VocabularyMatcher {
             if isAllHan(t.term), t.term.count >= (t.fromUser ? 2 : 3), t.term.count <= 8, let key = pinyinKey(t.term) {
                 han.append(HanKey(length: t.term.count, key: key, fuzzy: false, term: t))
             }
-            for alias in t.aliases where isAllHan(alias) && alias != t.term && alias.count >= (t.fromUser ? 2 : 3) && alias.count <= 8 {
+            for alias in t.aliases where isAllHan(alias) && alias != t.term && alias.count >= (t.fromUser ? 2 : 3) && alias.count <= 8 && usableAlias(alias, fromUser: t.fromUser) {
                 if let key = fuzzyPinyinKey(alias) { han.append(HanKey(length: alias.count, key: key, fuzzy: true, term: t)) }
             }
         }

@@ -1633,3 +1633,4 @@
 "hardware.keysHeader" = "按键";
 "hardware.model.pro" = "小米蓝牙语音遥控器 2 Pro";
 "hardware.model.2" = "小米蓝牙语音遥控器 2";
+"vocab.err.unsafeAlias" = "“%@”太常见，加入后会改动正常句子，没有加入。请写成识别器真正会写错的那一串字。";
