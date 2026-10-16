@@ -129,6 +129,7 @@ struct VocabularyView: View {
         let list = aliases.split(whereSeparator: { ",，、;；".contains($0) }).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
         let entry = VocabularyImport.clean(VocabEntry(term: term, aliases: list))
         guard VocabularyRules.problem(entry) == nil else { message = L10n.tr("vocab.err.invalid"); return }
+        if let unsafe = VocabularyRules.unsafeAlias(entry) { message = L10n.format("vocab.err.unsafeAlias", unsafe); return }
         if save(VocabularyImport.merge(user, [entry])) { term = ""; aliases = ""; message = nil }
     }
 

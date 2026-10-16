@@ -32,6 +32,15 @@ enum VocabularyFixtures {
         c("homophone: different sound is not replaced", fix("糖尿饼和高血压", pack([VocabEntry(term: "糖尿病")])) == "糖尿病和高血压" && fix("糖尿的", pack([VocabEntry(term: "糖尿病")])) == "糖尿的")
         c("pinyin reads tones off", VocabularyMatcher.pinyinKey("糖尿病") == "tang niao bing" && VocabularyMatcher.pinyinKey("岁言") == "sui yan" && VocabularyMatcher.pinyinKey("ab") == nil)
 
+        // Aliases that would rewrite correct sentences are ignored, whoever saved them
+        let risky = user([VocabEntry(term: "GitHub", aliases: ["他", "你那个", "open", "get up", "SU", "ge他"])])
+        c("unsafe alias: a single character, an everyday phrase or word is never replaced",
+          fix("他学习他的风格，你那个open的get up，SU", risky) == "他学习他的风格，你那个open的get up，SU")
+        c("unsafe alias: a real mishearing in the same entry still works", fix("推到ge他上", risky) == "推到GitHub上")
+        c("unsafe alias: the shipped packs keep every alias", VocabularyStore.shared.packs.flatMap(\.entries).allSatisfy { e in e.aliases.allSatisfy { VocabularyMatcher.usableAlias($0, fromUser: false) } })
+        c("unsafe alias: adding one is refused with the offending alias", VocabularyRules.unsafeAlias(VocabEntry(term: "GitHub", aliases: ["ge他", "他"])) == "他" && VocabularyRules.unsafeAlias(VocabEntry(term: "token", aliases: ["拖肯"])) == nil)
+        c("unsafe alias: a pack alias of two ordinary characters is the pack's call", fix("装一个多克", pack([VocabEntry(term: "Docker", aliases: ["多克"])])) == "装一个Docker")
+
         // Alias homophones: a transliteration heard as other characters of the same sound
         let tokenTerm = VocabEntry(term: "token", aliases: ["拖肯"])
         c("alias homophone: the person's own two-character alias matches the same sound, front/back nasal merged",
