@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 // A vocabulary of terms (product names, code names, jargon) that speech recognizers often get wrong. It works on the text
@@ -6,7 +7,9 @@ import Foundation
 // Three kinds of fixes, all exact enough to be safe:
 //  - an alias the person (or a pack) listed for a term ("吉特哈勃" -> GitHub);
 //  - an English term written apart or in the wrong case ("git hub", "github" -> GitHub, "node js" -> Node.js);
-//  - a Chinese term written with other characters that sound the same (same pinyin, tones ignored).
+//  - a Chinese term written with other characters that sound the same (same pinyin, tones ignored);
+//  - a Chinese alias of a term (a transliteration such as "拖肯" for token) heard as other characters that sound the same;
+//  - an English term misheard as a non-word that is one sound-alike slip away ("gbt" -> GPT, "opvs" -> Opus).
 
 struct VocabEntry: Codable, Equatable, Hashable {
     var term: String
@@ -131,6 +134,80 @@ enum VocabularyMatcher {
     }
     private static func isAllHan(_ s: String) -> Bool { !s.isEmpty && s.allSatisfy { pinyin($0) != nil } }
 
+    /// The pinyin key with the front/back nasal finals merged (en/eng, in/ing). Recognizers write "拖坑" for "拖肯"; a
+    /// transliteration of a foreign word is the one place where that slip is common enough to be worth matching.
+    static func fuzzyPinyinKey(_ s: String) -> String? {
+        guard let key = pinyinKey(s) else { return nil }
+        return key.split(separator: " ").map { syllable -> String in
+            let t = String(syllable)
+            return t.hasSuffix("eng") || t.hasSuffix("ing") ? String(t.dropLast()) : t
+        }.joined(separator: " ")
+    }
+
+    // MARK: Sound-alike Latin tokens
+
+    /// Letter pairs a recognizer or a listener mixes up: voiced/unvoiced consonants and a few look- or sound-alikes.
+    private static let confusable: Set<String> = ["bp", "dt", "gk", "fv", "sz", "uv", "vw", "ck", "cs", "mn", "lr", "iy"]
+    private static func confusable(_ a: Character, _ b: Character) -> Bool {
+        confusable.contains(String([a, b])) || confusable.contains(String([b, a]))
+    }
+
+    /// True when `token` is an English word the system dictionary knows. Only answered on the main thread (the spell
+    /// checker is an AppKit object); elsewhere the answer is "yes", which keeps the rule from firing.
+    static var isKnownEnglishWord: (String) -> Bool = { token in
+        guard Thread.isMainThread else { return true }
+        let range = NSSpellChecker.shared.checkSpelling(of: token, startingAt: 0, language: "en", wrap: false, inSpellDocumentWithTag: 0, wordCount: nil)
+        return range.location == NSNotFound
+    }
+
+    /// Damerau-Levenshtein distance (adjacent swaps count once).
+    static func slipDistance(_ a: [Character], _ b: [Character]) -> Int {
+        if a.isEmpty { return b.count }
+        if b.isEmpty { return a.count }
+        var d = Array(repeating: Array(repeating: 0, count: b.count + 1), count: a.count + 1)
+        for i in 0...a.count { d[i][0] = i }
+        for j in 0...b.count { d[0][j] = j }
+        for i in 1...a.count {
+            for j in 1...b.count {
+                let cost = a[i - 1] == b[j - 1] ? 0 : 1
+                d[i][j] = min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost)
+                if i > 1, j > 1, a[i - 1] == b[j - 2], a[i - 2] == b[j - 1] { d[i][j] = min(d[i][j], d[i - 2][j - 2] + 1) }
+            }
+        }
+        return d[a.count][b.count]
+    }
+
+    private static func isSubsequence(_ small: [Character], of big: [Character]) -> Bool {
+        var i = 0
+        for ch in big where i < small.count && ch == small[i] { i += 1 }
+        return i == small.count
+    }
+
+    /// Whether `token` (lower-case letters) is a plausible mis-hearing of `key` (lower-case letters, one word).
+    /// A short name one letter away from an ordinary name or word is not evidence of a slip, so four-letter terms accept
+    /// only a swap of two letters that are easily mixed up.
+    static func soundsLike(_ token: String, _ key: String) -> Bool {
+        let a = Array(token), b = Array(key)
+        guard a.count >= 3, b.count >= 3, a.first == b.first, a != b else { return false }
+        if b.count == 3 {
+            // An acronym: only one confusable consonant ("gbt" for GPT), and no vowel to make it a word.
+            guard a.count == 3, !a.contains(where: { "aeiou".contains($0) }) else { return false }
+            let diff = (0..<3).filter { a[$0] != b[$0] }
+            return diff.count == 1 && confusable(a[diff[0]], b[diff[0]])
+        }
+        let distance = slipDistance(a, b)
+        if distance == 1 {
+            if a.count == b.count {
+                let diff = (0..<a.count).filter { a[$0] != b[$0] }
+                if diff.count == 1 { return confusable(a[diff[0]], b[diff[0]]) }
+                return b.count >= 5   // two neighbours swapped
+            }
+            return b.count >= 5       // one letter dropped or added
+        }
+        // Two extra letters inside a name of five or more ("lininux" for Linux): the term is still all there, in order.
+        return b.count >= 5 && a.count == b.count + 2 && a.last == b.last && isSubsequence(b, of: a)
+    }
+
     // MARK: Matching
 
     /// Replaces mis-recognized terms. Links, e-mail addresses and `code` are left alone.
@@ -191,10 +268,38 @@ enum VocabularyMatcher {
             }
         }
 
-        // 3. Chinese terms written with other characters that sound the same
-        let han = terms.compactMap { t -> (Int, String, VocabTerm)? in
-            guard isAllHan(t.term), t.term.count >= (t.fromUser ? 2 : 3), t.term.count <= 8, let key = pinyinKey(t.term) else { return nil }
-            return (t.term.count, key, t)
+        // 2b. A Latin token that is no English word, one sound-alike slip away from exactly one single-word term
+        let singles = terms.compactMap { t -> (String, VocabTerm)? in
+            guard t.term.unicodeScalars.allSatisfy({ $0.isASCII }), !t.term.contains(where: { $0 == " " || $0 == "-" || $0 == "." }) else { return nil }
+            let key = squash(t.term)
+            return key.count >= 3 && key.count <= 12 && key.allSatisfy({ $0.isLetter }) ? (key, t) : nil
+        }
+        if !singles.isEmpty, let wordRE = try? NSRegularExpression(pattern: "(?<![A-Za-z0-9])[A-Za-z]{3,14}(?![A-Za-z0-9])") {
+            for m in wordRE.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
+                let spoken = ns.substring(with: m.range)
+                let token = spoken.lowercased()
+                if singles.contains(where: { $0.0 == token }) { continue }
+                let after = m.range.location + m.range.length
+                if after < ns.length, ["/", "."].contains(ns.substring(with: NSRange(location: after, length: 1))) { continue }
+                if m.range.location > 0, ["@", "/", "."].contains(ns.substring(with: NSRange(location: m.range.location - 1, length: 1))) { continue }
+                let near = singles.filter { soundsLike(token, $0.0) }
+                guard near.count == 1, let target = near.first?.1, !isKnownEnglishWord(token) else { continue }
+                hits.append(Hit(range: m.range, replacement: target.term))
+            }
+        }
+
+        // 3. Chinese terms written with other characters that sound the same. A canonical Han term matches by its pinyin;
+        // a Han alias of any term (the person's own from two characters, a pack's from three) also matches when the
+        // recognizer wrote other characters of the same sound, with the nasal finals en/eng and in/ing merged.
+        struct HanKey { var length: Int; var key: String; var fuzzy: Bool; var term: VocabTerm }
+        var han: [HanKey] = []
+        for t in terms {
+            if isAllHan(t.term), t.term.count >= (t.fromUser ? 2 : 3), t.term.count <= 8, let key = pinyinKey(t.term) {
+                han.append(HanKey(length: t.term.count, key: key, fuzzy: false, term: t))
+            }
+            for alias in t.aliases where isAllHan(alias) && alias != t.term && alias.count >= (t.fromUser ? 2 : 3) && alias.count <= 8 {
+                if let key = fuzzyPinyinKey(alias) { han.append(HanKey(length: alias.count, key: key, fuzzy: true, term: t)) }
+            }
         }
         if !han.isEmpty {
             let chars = Array(text.utf16)
@@ -206,12 +311,12 @@ enum VocabularyMatcher {
                 if end > index {
                     let runString = String(utf16CodeUnits: Array(chars[index..<end]), count: end - index)
                     let runChars = Array(runString)
-                    for (length, key, t) in han where runChars.count >= length {
-                        for start in 0...(runChars.count - length) {
-                            let window = String(runChars[start..<(start + length)])
-                            guard window != t.term, pinyinKey(window) == key else { continue }
+                    for h in han where runChars.count >= h.length {
+                        for start in 0...(runChars.count - h.length) {
+                            let window = String(runChars[start..<(start + h.length)])
+                            guard window != h.term.term, (h.fuzzy ? fuzzyPinyinKey(window) : pinyinKey(window)) == h.key else { continue }
                             let prefix = String(runChars[0..<start]).utf16.count
-                            hits.append(Hit(range: NSRange(location: index + prefix, length: window.utf16.count), replacement: t.term))
+                            hits.append(Hit(range: NSRange(location: index + prefix, length: window.utf16.count), replacement: h.term.term))
                         }
                     }
                     index = end
@@ -330,11 +435,40 @@ final class VocabularyStore {
 
     /// Terms worth telling a language model about: all of the person's own, and the pack terms that occur in this text.
     func glossary(for text: String, _ settings: VocabularySettings, limit: Int = 60) -> [String] {
+        guard limit > 0 else { return [] }
         let all = terms(settings)
         let lowered = text.lowercased()
         var out: [String] = []
         for t in all where t.fromUser { out.append(t.term) }
         for t in all where !t.fromUser && lowered.contains(t.term.lowercased()) && !out.contains(t.term) { out.append(t.term) }
+        // A misspelled English name in mixed speech cannot select its own correct
+        // spelling by exact substring. Supply a bounded, balanced set of enabled
+        // pack names as hints to polish; never turn these hints into replacements.
+        // Ordinary English prose, protected code/URLs, and disabled packs don't
+        // trigger this expansion. User entries and actual mentions keep priority.
+        var editable = ""
+        _ = TextPolish.mapUnprotected(text) { part in editable += part; return part }
+        let known = Set(all.map { VocabularyMatcher.squash($0.term) })
+        let ns = editable as NSString
+        let words = try! NSRegularExpression(pattern: "[A-Za-z][A-Za-z0-9]{2,}")
+        let uncertain = words.matches(in: editable, range: NSRange(location: 0, length: ns.length)).contains {
+            !known.contains(VocabularyMatcher.squash(ns.substring(with: $0.range)))
+        }
+        if editable.unicodeScalars.contains(where: { (0x4E00...0x9FFF).contains($0.value) }), uncertain {
+            let lists = packs.filter { settings.enabled && settings.isOn($0) }.map { pack in
+                pack.entries.filter { $0.term.unicodeScalars.allSatisfy(\.isASCII) }.map(\.term)
+            }
+            let count = lists.map(\.count).max() ?? 0
+            if count > 0 {
+                for index in 0..<count {
+                    for list in lists where index < list.count && out.count < limit {
+                        let term = list[index]
+                        if !out.contains(where: { $0.caseInsensitiveCompare(term) == .orderedSame }) { out.append(term) }
+                    }
+                    if out.count >= limit { break }
+                }
+            }
+        }
         return Array(out.prefix(limit))
     }
 }

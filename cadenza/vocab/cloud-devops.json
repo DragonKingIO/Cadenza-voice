@@ -152,6 +152,213 @@
   },
   {
    "term": "VPN"
+  },
+  {
+   "term": "GCP"
+  },
+  {
+   "term": "Google Cloud"
+  },
+  {
+   "term": "OpenShift"
+  },
+  {
+   "term": "Helm"
+  },
+  {
+   "term": "Argo CD"
+  },
+  {
+   "term": "Datadog"
+  },
+  {
+   "term": "Sentry"
+  },
+  {
+   "term": "Loki"
+  },
+  {
+   "term": "Kibana"
+  },
+  {
+   "term": "Logstash"
+  },
+  {
+   "term": "Consul"
+  },
+  {
+   "term": "Vault"
+  },
+  {
+   "term": "Pulumi"
+  },
+  {
+   "term": "Cloud Run"
+  },
+  {
+   "term": "Serverless"
+  },
+  {
+   "term": "R2"
+  },
+  {
+   "term": "Route 53"
+  },
+  {
+   "term": "CloudFront"
+  },
+  {
+   "term": "RDS"
+  },
+  {
+   "term": "VPC"
+  },
+  {
+   "term": "IAM"
+  },
+  {
+   "term": "KMS"
+  },
+  {
+   "term": "SRE"
+  },
+  {
+   "term": "SLA"
+  },
+  {
+   "term": "SLO"
+  },
+  {
+   "term": "Proxmox"
+  },
+  {
+   "term": "TrueNAS"
+  },
+  {
+   "term": "WireGuard"
+  },
+  {
+   "term": "Tailscale"
+  },
+  {
+   "term": "Caddy"
+  },
+  {
+   "term": "Traefik"
+  },
+  {
+   "term": "HAProxy"
+  },
+  {
+   "term": "Docker Compose"
+  },
+  {
+   "term": "Podman"
+  },
+  {
+   "term": "OrbStack"
+  },
+  {
+   "term": "systemd"
+  },
+  {
+   "term": "Nginx Proxy Manager"
+  },
+  {
+   "term": "Portainer"
+  },
+  {
+   "term": "Harbor"
+  },
+  {
+   "term": "Gitea"
+  },
+  {
+   "term": "Drone"
+  },
+  {
+   "term": "Tekton"
+  },
+  {
+   "term": "Flux"
+  },
+  {
+   "term": "Crossplane"
+  },
+  {
+   "term": "Envoy"
+  },
+  {
+   "term": "Cilium"
+  },
+  {
+   "term": "Calico"
+  },
+  {
+   "term": "CoreDNS"
+  },
+  {
+   "term": "MinIO"
+  },
+  {
+   "term": "Ceph"
+  },
+  {
+   "term": "GlusterFS"
+  },
+  {
+   "term": "NFS"
+  },
+  {
+   "term": "SMB"
+  },
+  {
+   "term": "iSCSI"
+  },
+  {
+   "term": "RAID"
+  },
+  {
+   "term": "LVM"
+  },
+  {
+   "term": "ZFS"
+  },
+  {
+   "term": "Btrfs"
+  },
+  {
+   "term": "OpenWrt"
+  },
+  {
+   "term": "pfSense"
+  },
+  {
+   "term": "Cloudflare Workers"
+  },
+  {
+   "term": "Cloudflare Pages"
+  },
+  {
+   "term": "DigitalOcean"
+  },
+  {
+   "term": "Linode"
+  },
+  {
+   "term": "Hetzner"
+  },
+  {
+   "term": "Vultr"
+  },
+  {
+   "term": "Fly.io"
+  },
+  {
+   "term": "Render"
+  },
+  {
+   "term": "Railway"
   }
  ]
 }

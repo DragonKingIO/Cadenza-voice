@@ -32,6 +32,37 @@ enum VocabularyFixtures {
         c("homophone: different sound is not replaced", fix("糖尿饼和高血压", pack([VocabEntry(term: "糖尿病")])) == "糖尿病和高血压" && fix("糖尿的", pack([VocabEntry(term: "糖尿病")])) == "糖尿的")
         c("pinyin reads tones off", VocabularyMatcher.pinyinKey("糖尿病") == "tang niao bing" && VocabularyMatcher.pinyinKey("岁言") == "sui yan" && VocabularyMatcher.pinyinKey("ab") == nil)
 
+        // Alias homophones: a transliteration heard as other characters of the same sound
+        let tokenTerm = VocabEntry(term: "token", aliases: ["拖肯"])
+        c("alias homophone: the person's own two-character alias matches the same sound, front/back nasal merged",
+          fix("这个拖啃很贵，那个拖坑也是", user([tokenTerm])) == "这个token很贵，那个token也是" && fix("托肯", user([tokenTerm])) == "token")
+        c("alias homophone: a pack's two-character alias stays exact", fix("这个拖啃很贵", pack([tokenTerm])) == "这个拖啃很贵" && fix("这个拖肯很贵", pack([tokenTerm])) == "这个token很贵")
+        c("alias homophone: a pack's three-character alias matches by sound", fix("装一个酷伯内特思", pack([VocabEntry(term: "Kubernetes", aliases: ["库伯内特斯"])])) == "装一个Kubernetes")
+        c("alias homophone: a different sound is left alone", fix("这个拖拉机很贵", user([tokenTerm])) == "这个拖拉机很贵")
+
+        // Sound-alike Latin tokens: a non-word one slip from a single-word term
+        let known: Set<String> = ["get", "got", "opus", "linux", "gut", "gift", "pot"]
+        let previousSpell = VocabularyMatcher.isKnownEnglishWord
+        VocabularyMatcher.isKnownEnglishWord = { known.contains($0) }
+        defer { VocabularyMatcher.isKnownEnglishWord = previousSpell }
+        let ai = pack([VocabEntry(term: "GPT"), VocabEntry(term: "Opus"), VocabEntry(term: "Linux"), VocabEntry(term: "GitHub"), VocabEntry(term: "Claude Code")])
+        c("sound-alike: a voiced/unvoiced slip of an acronym", fix("我觉得gbt不错", ai) == "我觉得GPT不错")
+        c("sound-alike: one wrong letter of a name", fix("用opvs写代码", ai) == "用Opus写代码")
+        c("sound-alike: extra letters inside a name", fix("装在lininux上", ai) == "装在Linux上")
+        c("sound-alike: real words and exact names stay", fix("we got it, get it", ai) == "we got it, get it" && fix("用opus写", ai) == "用opus写")
+        c("sound-alike: other acronyms and short slips stay", fix("看pdf和gpu", ai) == "看pdf和gpu" && fix("ok gt 和 gx", ai) == "ok gt 和 gx")
+        c("sound-alike: addresses and paths stay", fix("open /usr/bin/gbt and a@example.com gbt@example.com", ai) == "open /usr/bin/gbt and a@example.com gbt@example.com")
+        c("sound-alike: two equally near names stay", fix("用opvs写", pack([VocabEntry(term: "Opus"), VocabEntry(term: "Opws")])) == "用opvs写")
+        c("sound-alike: not off the main thread", {
+            var result = ""
+            let done = DispatchSemaphore(value: 0)
+            VocabularyMatcher.isKnownEnglishWord = previousSpell
+            DispatchQueue.global().async { result = fix("我觉得gbt不错", ai); done.signal() }
+            done.wait()
+            VocabularyMatcher.isKnownEnglishWord = { known.contains($0) }
+            return result == "我觉得gbt不错"
+        }())
+
         // Protected text and overlaps
         c("protected: code and links are not touched", fix("run `git hub` and see https://example.com/吉特哈勃", dev) == "run `git hub` and see https://example.com/吉特哈勃")
         c("overlap: the longer match wins", fix("吉特哈勃 Actions", pack([VocabEntry(term: "GitHub", aliases: ["吉特哈勃"]), VocabEntry(term: "GitHub Actions", aliases: ["吉特哈勃 Actions"])])) == "GitHub Actions")
@@ -95,6 +126,12 @@ enum VocabularyFixtures {
         c("store: invalid or repeated terms are refused and nothing changes", !store.setUser([VocabEntry(term: "a"), VocabEntry(term: "A")]) && !store.setUser([VocabEntry(term: "")]) && store.user.count == 2)
         c("store: the glossary has the person's terms and the pack terms that occur", { let g = store.glossary(for: "we use GitHub and Kubernetes today", VocabularySettings()); return g.contains("随言") && g.contains("GitHub") && g.contains("Kubernetes") }()
           && !store.glossary(for: "nothing here", VocabularySettings()).contains("Kubernetes"))
+        c("glossary: a misspelled English token in mixed speech still gets enabled spelling hints", store.glossary(for: "请检查 githob 的提交", VocabularySettings()).contains("GitHub"))
+        c("glossary: hints don't force a replacement", store.apply("请检查 githob 的提交", VocabularySettings()) == "请检查 githob 的提交")
+        c("glossary: plain English does not receive unrelated hints", !store.glossary(for: "please check githob today", VocabularySettings()).contains("Kubernetes"))
+        c("glossary: a protected URL is not an uncertain spoken word", !store.glossary(for: "访问 https://githob.example/test", VocabularySettings()).contains("Kubernetes"))
+        c("glossary: caps and user priority survive expansion", store.glossary(for: "请检查 githob 的提交", VocabularySettings(), limit: 1) == ["随言"] && store.glossary(for: "请检查 githob", VocabularySettings(), limit: 0).isEmpty)
+        c("glossary: disabled terms and packs stay out", { var off = VocabularySettings(); off.enabled = false; var packOff = VocabularySettings(); packOff.packOverrides["dev"] = false; return store.glossary(for: "检查 githob", off).isEmpty && !store.glossary(for: "检查 githob", packOff).contains("Kubernetes") }())
 
         // Hot words for cloud recognizers
         let hotSettings = VocabularySettings()

@@ -40,6 +40,8 @@ source, anyone can check what leaves your computer.
 - **For developers and AI hardware.** An optional local API on `127.0.0.1` (off by default) lets your own programs, pendants or
   glasses send audio and get text back, with a separate, revocable token per device.
   [Local API](cadenza/docs/LOCAL-API.md) · [Hardware integration](cadenza/docs/HARDWARE-INTEGRATION.md)
+- **Xiaomi Bluetooth voice remote.** Remote 2 and Remote 2 Pro connect directly (Settings → Hardware): hold the voice key to
+  dictate, and remap its other keys. The remote's own keys do not type into the front window.
 - **Private by design.** No account, no server, no analytics, no crash reports. Recordings and transcripts are not written to
   disk or to logs; keys live in the macOS Keychain. A "never go online" switch hides everything that could connect.
 - **Measured.** Changes to recognition are justified with a repeatable benchmark. [Accuracy](cadenza/docs/ACCURACY.md)

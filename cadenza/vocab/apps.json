@@ -1,0 +1,202 @@
+{
+ "schema": 1,
+ "id": "apps",
+ "name": {
+  "en": "Apps and services",
+  "zh-Hans": "常用软件与服务"
+ },
+ "description": {
+  "en": "Names of widely used apps and online services.",
+  "zh-Hans": "常用软件和在线服务的名称。"
+ },
+ "license": "CC0-1.0",
+ "default": true,
+ "entries": [
+  {
+   "term": "Slack"
+  },
+  {
+   "term": "Zoom"
+  },
+  {
+   "term": "Microsoft Teams"
+  },
+  {
+   "term": "Notion"
+  },
+  {
+   "term": "Figma"
+  },
+  {
+   "term": "Lark"
+  },
+  {
+   "term": "DingTalk"
+  },
+  {
+   "term": "WeCom"
+  },
+  {
+   "term": "WeChat"
+  },
+  {
+   "term": "WhatsApp"
+  },
+  {
+   "term": "Telegram"
+  },
+  {
+   "term": "Discord"
+  },
+  {
+   "term": "LinkedIn"
+  },
+  {
+   "term": "YouTube"
+  },
+  {
+   "term": "TikTok"
+  },
+  {
+   "term": "Excel"
+  },
+  {
+   "term": "PowerPoint"
+  },
+  {
+   "term": "Google Docs"
+  },
+  {
+   "term": "Gmail"
+  },
+  {
+   "term": "Google Drive"
+  },
+  {
+   "term": "Google Meet"
+  },
+  {
+   "term": "Chrome"
+  },
+  {
+   "term": "Firefox"
+  },
+  {
+   "term": "Trello"
+  },
+  {
+   "term": "Asana"
+  },
+  {
+   "term": "Airtable"
+  },
+  {
+   "term": "Zapier"
+  },
+  {
+   "term": "Linear"
+  },
+  {
+   "term": "Miro"
+  },
+  {
+   "term": "Canva"
+  },
+  {
+   "term": "Dropbox"
+  },
+  {
+   "term": "OneDrive"
+  },
+  {
+   "term": "Evernote"
+  },
+  {
+   "term": "Bear"
+  },
+  {
+   "term": "Things"
+  },
+  {
+   "term": "Todoist"
+  },
+  {
+   "term": "1Password"
+  },
+  {
+   "term": "Bitwarden"
+  },
+  {
+   "term": "Clash"
+  },
+  {
+   "term": "Surge"
+  },
+  {
+   "term": "Shadowrocket"
+  },
+  {
+   "term": "Quantumult X"
+  },
+  {
+   "term": "Typora"
+  },
+  {
+   "term": "Xmind"
+  },
+  {
+   "term": "Alfred"
+  },
+  {
+   "term": "Bartender"
+  },
+  {
+   "term": "CleanMyMac"
+  },
+  {
+   "term": "PDF Expert"
+  },
+  {
+   "term": "Photoshop"
+  },
+  {
+   "term": "Illustrator"
+  },
+  {
+   "term": "Premiere Pro"
+  },
+  {
+   "term": "After Effects"
+  },
+  {
+   "term": "DaVinci Resolve"
+  },
+  {
+   "term": "Lightroom"
+  },
+  {
+   "term": "CapCut"
+  },
+  {
+   "term": "OBS Studio"
+  },
+  {
+   "term": "VLC"
+  },
+  {
+   "term": "Steam"
+  },
+  {
+   "term": "Epic Games"
+  },
+  {
+   "term": "PlayStation"
+  },
+  {
+   "term": "Switch"
+  },
+  {
+   "term": "Xbox"
+  }
+ ]
+}

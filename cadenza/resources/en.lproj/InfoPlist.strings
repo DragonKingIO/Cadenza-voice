@@ -1,4 +1,5 @@
 "CFBundleName" = "Cadenza";
 "CFBundleDisplayName" = "Cadenza";
+"NSBluetoothAlwaysUsageDescription" = "Cadenza uses Bluetooth to connect your voice remote so you can dictate with its microphone button.";
 "NSMicrophoneUsageDescription" = "Cadenza uses the microphone to turn your speech into text.";
 "NSSpeechRecognitionUsageDescription" = "Cadenza uses speech recognition to turn your speech into text.";

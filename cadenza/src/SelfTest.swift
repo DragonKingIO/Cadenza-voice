@@ -41,6 +41,7 @@ enum SelfTest {
         TCCFixtures.run(check)
         LLMRefineFixtures.run(check)
         VocabularyFixtures.run(check)
+        HardwareRemoteFixtures.run(check)
         TranslateFixtures.run(check)
         LLMProfilesFixtures.run(check)
         SpeechEnhancerFixtures.run(check)

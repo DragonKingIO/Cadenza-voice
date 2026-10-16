@@ -22,6 +22,8 @@ struct StatusMenuSnapshot {
     /// 截图快捷键的显示文字；空 = 未设置
     var screenshotShortcut="",ocrShortcut=""
     var pinCount=0,pinsHidden=false,pinsClickThrough=false
+    /// A paired hardware device (the voice remote) and its state, shown as one row that opens its settings; nil = none.
+    var hardware:(title:String,status:String)?
     /// A newer release the app has found and the person has not skipped; the menu offers to open its page.
     var update:UpdateInfo? = UpdateChecker.shared.available
     var canRecord:Bool {switch phase {case .idle,.previousError,.recording:return true;default:return false}}
@@ -75,7 +77,6 @@ enum StatusMenuController {
         if case .recording(let seconds)=s.phase {recordingTitle=L10n.format("menu.stop",String(format:"%02d:%02d",max(0,seconds)/60,max(0,seconds)%60))}
         else {recordingTitle=L10n.tr("menu.start")}
         menu.addItem(item("record",recordingTitle,"menuRecording",enabled:s.canRecord))
-        menu.addItem(item("pause",L10n.tr(s.phase == .paused ? "menu.resume":"menu.pause"),"toggleEnabled",enabled:!s.busy))
         menu.addItem(.separator())
         func submenu(_ id:String,_ title:String,_ entries:[StatusMenuSnapshot.Entry],_ selected:String,_ selector:String)->NSMenu {
             let top=item(id,title),sub=NSMenu();sub.autoenablesItems=false
@@ -121,6 +122,14 @@ enum StatusMenuController {
             pins.submenu=pinMenu;menu.addItem(pins)
         }
         menu.addItem(.separator())
+        // Everything about the app itself sits in the last group: pause, the connected remote, settings.
+        menu.addItem(item("pause",L10n.tr(s.phase == .paused ? "menu.resume":"menu.pause"),"toggleEnabled",enabled:!s.busy))
+        if let hardware=s.hardware {
+            let i=item("hardware",hardware.title,"showHardwareSettings")
+            i.setSubtitle(hardware.status)
+            i.image=NSImage(systemSymbolName:"av.remote",accessibilityDescription:nil)
+            menu.addItem(i)
+        }
         menu.addItem(item("settings",L10n.tr("menu.settings"),"showSettings",key:","))
         menu.addItem(item("about",L10n.format("ui.0bf588b9906c",String(describing:Brand.name)),"showAbout"))
         let quit=item("quit",L10n.format("ui.86a56484fcd8",Brand.name),"terminate:",key:"q");quit.target=NSApplication.shared;menu.addItem(quit)

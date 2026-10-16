@@ -1,0 +1,47 @@
+name: Vocabulary term (词条提交)
+description: Suggest a term, and how recognizers really write it wrong, for the shared vocabulary packs
+labels: ["vocabulary"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We only collect **words and spellings**: a product name, a code name, a piece of jargon, and the wrong spellings you have really seen a recognizer produce. Please do not paste sentences, transcripts, recordings, screenshots or personal names. 只收词和写法，不收句子、识别原文、录音或截图。
+
+        You can also open a pull request that edits a file in `cadenza/vocab` (see its README); no code is needed.
+  - type: input
+    id: term
+    attributes:
+      label: Term as it should be written (正确写法)
+      placeholder: "GitHub"
+    validations: { required: true }
+  - type: textarea
+    id: aliases
+    attributes:
+      label: Wrong spellings you have really seen (见过的错误写法，每行一个)
+      description: One per line, at most 12. Leave empty if there are none; do not guess.
+      placeholder: "git hub"
+  - type: dropdown
+    id: pack
+    attributes:
+      label: Which pack fits best (放在哪个词库包)
+      options:
+        - Developer (developer)
+        - AI and machine learning (ai-ml)
+        - Apple (apple)
+        - Cloud and DevOps (cloud-devops)
+        - Apps and software (apps)
+        - Business and marketing, Chinese (business-zh)
+        - Medical, Chinese (medical-zh)
+        - A new pack
+    validations: { required: true }
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation (确认)
+      options:
+        - label: It is a public name or term, not a private product, a person's name or an advertisement.
+          required: true
+        - label: I may release this list under CC0-1.0 (public domain dedication).
+          required: true
+        - label: This issue contains no sentence, transcript, recording or personal information.
+          required: true
