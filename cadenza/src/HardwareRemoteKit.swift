@@ -523,10 +523,17 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
         self.pipeline = pipeline
         refreshPermissions()
         setupHIDManager()
+        // Bluetooth (and its permission prompt) is only touched once a remote is set up, or when the person opens
+        // the Hardware page to look for one.
+        if config.isPaired { startDiscovery() }
+        Log.write("hardware-remote-center started paired=\(config.isPaired) seize=\(config.seizeHID)")
+    }
+
+    /// Starts Bluetooth discovery of the remote (asks for the Bluetooth permission the first time).
+    func startDiscovery() {
         if central == nil {
             central = CBCentralManager(delegate: self, queue: .main)
         }
-        Log.write("hardware-remote-center started paired=\(config.isPaired) seize=\(config.seizeHID)")
     }
 
     func refreshPermissions() {
@@ -1714,6 +1721,7 @@ struct HardwareRemoteSettingsPage: View {
                 }
             }
         }
+        .onAppear { center.startDiscovery() }
         .onDisappear { center.keyTestMode = false }
     }
 
