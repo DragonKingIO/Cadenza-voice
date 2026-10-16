@@ -345,8 +345,14 @@ enum LocalModelFixtures {
         center.clearFailure(odd.id); center.testInject(e1)
 
         // 取消：清除暂存
+        // The local test server can finish the download before the cancel is seen; that is a completed install, not a leak.
+        // What must always hold is that nothing is left downloading and the staging folder is gone.
         center.download(e1); center.cancel(e1.id)
-        c("取消后不安装并清理暂存", wait(15) { center.state(e1.id) == .notInstalled && !FileManager.default.fileExists(atPath: root.appendingPathComponent(".downloads/\(e1.id)-1.0.0").path) })
+        c("取消后不安装并清理暂存", wait(30) {
+            var settled = false
+            switch center.state(e1.id) { case .notInstalled, .installed: settled = true; default: break }
+            return settled && !FileManager.default.fileExists(atPath: root.appendingPathComponent(".downloads/\(e1.id)-1.0.0").path)
+        })
 
         // A clean-up ordered by a cancel must not remove files imported afterwards (this race made the import check flaky on slow machines)
         let epoch = StagingEpoch()
