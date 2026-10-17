@@ -6,6 +6,7 @@ import CoreBluetooth
 import Foundation
 import IOKit
 import IOKit.hid
+import IOKit.pwr_mgt
 import Observation
 import Speech
 import SwiftUI
@@ -273,54 +274,187 @@ enum HardwareRemoteKey: String, CaseIterable, Codable, Identifiable {
         case (0x07, 0x35): return .tv
         case (0x07, 0x80), (0x0C, 0x00E9): return .volumeUp
         case (0x07, 0x81), (0x0C, 0x00EA): return .volumeDown
-        case (0x07, 0x66): return .power
+        case (0x07, 0x66), (0x0C, 0x0030), (0x0C, 0x0032), (0x01, 0x0081), (0x01, 0x0082): return .power
         default: return nil
         }
     }
 }
 
-enum HardwareRemoteAction: String, CaseIterable, Codable, Identifiable {
-    // 仅限【语音键 (🎤)】使用的语音专属动作
-    case holdToTalk          // 按住说话，松开上屏（硬件麦克风专属）
-    case toggleVoice         // 单击开始 / 再按停止语音输入（硬件麦克风专属）
+enum HardwareRemotePreset: String, CaseIterable, Identifiable {
+    case assistant, editing, media
+    var id: String { rawValue }
+    var title: String { L10n.tr("hardware.preset.\(rawValue)") }
+}
 
-    // 其余 12 个按键可自由调整的全部非语音动作
-    case confirmReturn       // 立即完成录音并发送回车 (Return ↵)
-    case cancelOrBackspace   // 录音中取消；非录音时发送退格删除 (Backspace ⌫)
-    case cancelOrEscape      // 录音中取消；非录音时发送 Esc (⎋)
-    case arrowUp             // 光标上移 (↑)
-    case arrowDown           // 光标下移 (↓)
-    case arrowLeft           // 光标左移 (←)
-    case arrowRight          // 光标右移 (→)
-    case space               // 发送空格 (Space)
-    case tab                 // 发送制表符 (Tab ⇥)
-    case copyShortcut        // 复制选中内容 (⌘C)
-    case pasteShortcut       // 粘贴 (⌘V)
-    case undoShortcut        // 撤销 (⌘Z)
-    case copyLastResult      // 复制最近一次语音识别结果
-    case openSettings        // 打开随言设置窗口
-    case startScreenshot     // 开始随言区域截图
-    case startDirectOCR      // 开始随言截图取字 (OCR)
-    case systemVolumeUp      // 调高系统音量
-    case systemVolumeDown    // 调低系统音量
-    case systemMute          // 系统静音切换
-    case customShortcut      // 自定义键盘快捷键 (HotkeySpec)
-    case disabled            // 静默屏蔽（不向系统发送按键）
+enum RemoteActionGroup: CaseIterable, Identifiable {
+    case voice, edit, navigate, scroll, media, window, app, other
+    var id: Self { self }
+    var title: String { L10n.tr("hardware.group.\(self)") }
+}
+
+/// A key press the remote can send, and whether holding the key repeats it like a real keyboard does.
+struct RemoteKeySpec {
+    let code: Int
+    let mods: UInt32
+    let repeats: Bool
+}
+
+enum HardwareRemoteAction: String, CaseIterable, Codable, Identifiable {
+    // 仅限语音键 (🎤) 使用的语音动作
+    case holdToTalk
+    case toggleVoice
+    case holdToTranslate
+    // 其余按键可自由选择的非语音动作
+    case confirmReturn
+    case cancelOrBackspace
+    case cancelOrEscape
+    case arrowUp
+    case arrowDown
+    case arrowLeft
+    case arrowRight
+    case space
+    case tab
+    case copyShortcut
+    case pasteShortcut
+    case undoShortcut
+    case copyLastResult
+    case openSettings
+    case startScreenshot
+    case startDirectOCR
+    case systemVolumeUp
+    case systemVolumeDown
+    case systemMute
+    case customShortcut
+    case disabled
+    case selectAll
+    case cutShortcut
+    case redoShortcut
+    case forwardDelete
+    case selectLeft
+    case selectRight
+    case selectUp
+    case selectDown
+    case wordLeft
+    case wordRight
+    case selectWordLeft
+    case selectWordRight
+    case lineStart
+    case lineEnd
+    case selectToLineStart
+    case selectToLineEnd
+    case docTop
+    case docBottom
+    case pageUp
+    case pageDown
+    case keyHome
+    case keyEnd
+    case playPause
+    case nextTrack
+    case previousTrack
+    case brightnessUp
+    case brightnessDown
+    case missionControl
+    case spotlight
+    case switchInputSource
+    case lockScreen
+    case systemScreenshot
+    case closeWindow
+    case newTab
+    case nextTab
+    case previousTab
+    case saveFile
+    case findText
+    case reloadPage
+    case toggleVoiceInput
+    case startFullScreenshot
+    case repeatScreenshot
 
     var id: String { rawValue }
 
-    var isVoiceAction: Bool {
-        self == .holdToTalk || self == .toggleVoice
-    }
+    var isVoiceAction: Bool { self == .holdToTalk || self == .toggleVoice || self == .holdToTranslate }
 
     /// 语音键 (🎤) 专属可选动作
-    static var voiceKeyOptions: [HardwareRemoteAction] {
-        [.holdToTalk, .toggleVoice]
+    static var voiceKeyOptions: [HardwareRemoteAction] { [.holdToTalk, .holdToTranslate, .toggleVoice] }
+
+    /// 其余按键可选动作（不含语音动作，只有语音键能触发语音）
+    static var nonVoiceKeyOptions: [HardwareRemoteAction] { allCases.filter { !$0.isVoiceAction } }
+
+    var group: RemoteActionGroup {
+        switch self {
+        case .holdToTalk, .toggleVoice, .holdToTranslate: return .voice
+        case .confirmReturn, .cancelOrBackspace, .cancelOrEscape, .space, .tab, .copyShortcut, .pasteShortcut, .undoShortcut, .selectAll, .cutShortcut, .redoShortcut, .forwardDelete: return .edit
+        case .arrowUp, .arrowDown, .arrowLeft, .arrowRight, .selectLeft, .selectRight, .selectUp, .selectDown, .wordLeft, .wordRight, .selectWordLeft, .selectWordRight, .lineStart, .lineEnd, .selectToLineStart, .selectToLineEnd, .docTop, .docBottom: return .navigate
+        case .copyLastResult, .openSettings, .startScreenshot, .startDirectOCR, .toggleVoiceInput, .startFullScreenshot, .repeatScreenshot: return .app
+        case .systemVolumeUp, .systemVolumeDown, .systemMute, .playPause, .nextTrack, .previousTrack, .brightnessUp, .brightnessDown: return .media
+        case .customShortcut, .disabled: return .other
+        case .pageUp, .pageDown, .keyHome, .keyEnd: return .scroll
+        case .missionControl, .spotlight, .switchInputSource, .lockScreen, .systemScreenshot, .closeWindow, .newTab, .nextTab, .previousTab, .saveFile, .findText, .reloadPage: return .window
+        }
     }
 
-    /// 其余 12 个按键可选动作（严禁包含语音动作，确保只有语音键触发语音）
-    static var nonVoiceKeyOptions: [HardwareRemoteAction] {
-        allCases.filter { !$0.isVoiceAction }
+    /// The key press this action sends; nil for actions that do something else.
+    var keySpec: RemoteKeySpec? {
+        switch self {
+        case .arrowUp: return RemoteKeySpec(code: Int(kVK_UpArrow), mods: 0, repeats: true)
+        case .arrowDown: return RemoteKeySpec(code: Int(kVK_DownArrow), mods: 0, repeats: true)
+        case .arrowLeft: return RemoteKeySpec(code: Int(kVK_LeftArrow), mods: 0, repeats: true)
+        case .arrowRight: return RemoteKeySpec(code: Int(kVK_RightArrow), mods: 0, repeats: true)
+        case .space: return RemoteKeySpec(code: Int(kVK_Space), mods: 0, repeats: true)
+        case .tab: return RemoteKeySpec(code: Int(kVK_Tab), mods: 0, repeats: false)
+        case .copyShortcut: return RemoteKeySpec(code: Int(kVK_ANSI_C), mods: UInt32(cmdKey), repeats: false)
+        case .pasteShortcut: return RemoteKeySpec(code: Int(kVK_ANSI_V), mods: UInt32(cmdKey), repeats: false)
+        case .undoShortcut: return RemoteKeySpec(code: Int(kVK_ANSI_Z), mods: UInt32(cmdKey), repeats: false)
+        case .selectAll: return RemoteKeySpec(code: Int(kVK_ANSI_A), mods: UInt32(cmdKey), repeats: false)
+        case .cutShortcut: return RemoteKeySpec(code: Int(kVK_ANSI_X), mods: UInt32(cmdKey), repeats: false)
+        case .redoShortcut: return RemoteKeySpec(code: Int(kVK_ANSI_Z), mods: UInt32(cmdKey) | UInt32(shiftKey), repeats: false)
+        case .forwardDelete: return RemoteKeySpec(code: Int(kVK_ForwardDelete), mods: 0, repeats: true)
+        case .selectLeft: return RemoteKeySpec(code: Int(kVK_LeftArrow), mods: UInt32(shiftKey), repeats: true)
+        case .selectRight: return RemoteKeySpec(code: Int(kVK_RightArrow), mods: UInt32(shiftKey), repeats: true)
+        case .selectUp: return RemoteKeySpec(code: Int(kVK_UpArrow), mods: UInt32(shiftKey), repeats: true)
+        case .selectDown: return RemoteKeySpec(code: Int(kVK_DownArrow), mods: UInt32(shiftKey), repeats: true)
+        case .wordLeft: return RemoteKeySpec(code: Int(kVK_LeftArrow), mods: UInt32(optionKey), repeats: true)
+        case .wordRight: return RemoteKeySpec(code: Int(kVK_RightArrow), mods: UInt32(optionKey), repeats: true)
+        case .selectWordLeft: return RemoteKeySpec(code: Int(kVK_LeftArrow), mods: UInt32(optionKey) | UInt32(shiftKey), repeats: true)
+        case .selectWordRight: return RemoteKeySpec(code: Int(kVK_RightArrow), mods: UInt32(optionKey) | UInt32(shiftKey), repeats: true)
+        case .lineStart: return RemoteKeySpec(code: Int(kVK_LeftArrow), mods: UInt32(cmdKey), repeats: false)
+        case .lineEnd: return RemoteKeySpec(code: Int(kVK_RightArrow), mods: UInt32(cmdKey), repeats: false)
+        case .selectToLineStart: return RemoteKeySpec(code: Int(kVK_LeftArrow), mods: UInt32(cmdKey) | UInt32(shiftKey), repeats: false)
+        case .selectToLineEnd: return RemoteKeySpec(code: Int(kVK_RightArrow), mods: UInt32(cmdKey) | UInt32(shiftKey), repeats: false)
+        case .docTop: return RemoteKeySpec(code: Int(kVK_UpArrow), mods: UInt32(cmdKey), repeats: false)
+        case .docBottom: return RemoteKeySpec(code: Int(kVK_DownArrow), mods: UInt32(cmdKey), repeats: false)
+        case .pageUp: return RemoteKeySpec(code: Int(kVK_PageUp), mods: 0, repeats: true)
+        case .pageDown: return RemoteKeySpec(code: Int(kVK_PageDown), mods: 0, repeats: true)
+        case .keyHome: return RemoteKeySpec(code: Int(kVK_Home), mods: 0, repeats: false)
+        case .keyEnd: return RemoteKeySpec(code: Int(kVK_End), mods: 0, repeats: false)
+        case .missionControl: return RemoteKeySpec(code: Int(kVK_UpArrow), mods: UInt32(controlKey), repeats: false)
+        case .spotlight: return RemoteKeySpec(code: Int(kVK_Space), mods: UInt32(cmdKey), repeats: false)
+        case .switchInputSource: return RemoteKeySpec(code: Int(kVK_Space), mods: UInt32(controlKey), repeats: false)
+        case .lockScreen: return RemoteKeySpec(code: Int(kVK_ANSI_Q), mods: UInt32(cmdKey) | UInt32(controlKey), repeats: false)
+        case .systemScreenshot: return RemoteKeySpec(code: Int(kVK_ANSI_4), mods: UInt32(cmdKey) | UInt32(shiftKey), repeats: false)
+        case .closeWindow: return RemoteKeySpec(code: Int(kVK_ANSI_W), mods: UInt32(cmdKey), repeats: false)
+        case .newTab: return RemoteKeySpec(code: Int(kVK_ANSI_T), mods: UInt32(cmdKey), repeats: false)
+        case .nextTab: return RemoteKeySpec(code: Int(kVK_Tab), mods: UInt32(controlKey), repeats: false)
+        case .previousTab: return RemoteKeySpec(code: Int(kVK_Tab), mods: UInt32(controlKey) | UInt32(shiftKey), repeats: false)
+        case .saveFile: return RemoteKeySpec(code: Int(kVK_ANSI_S), mods: UInt32(cmdKey), repeats: false)
+        case .findText: return RemoteKeySpec(code: Int(kVK_ANSI_F), mods: UInt32(cmdKey), repeats: false)
+        case .reloadPage: return RemoteKeySpec(code: Int(kVK_ANSI_R), mods: UInt32(cmdKey), repeats: false)
+        default: return nil
+        }
+    }
+
+    /// A media key (NX_KEYTYPE_*) this action sends, and whether holding it repeats.
+    var mediaKey: (code: Int32, repeats: Bool)? {
+        switch self {
+        case .systemVolumeUp: return (0, true)
+        case .systemVolumeDown: return (1, true)
+        case .systemMute: return (7, false)
+        case .playPause: return (16, false)
+        case .nextTrack: return (17, false)
+        case .previousTrack: return (18, false)
+        case .brightnessUp: return (2, true)
+        case .brightnessDown: return (3, true)
+        default: return nil
+        }
     }
 
     var displayName: String {
@@ -348,6 +482,49 @@ enum HardwareRemoteAction: String, CaseIterable, Codable, Identifiable {
         case .systemMute: return L10n.tr("hardware.act.sysMute")
         case .customShortcut: return L10n.tr("hardware.act.custom")
         case .disabled: return L10n.tr("hardware.act.disabled")
+        case .holdToTranslate: return L10n.tr("hardware.act.holdToTranslate")
+        case .selectAll: return L10n.tr("hardware.act.selectAll")
+        case .cutShortcut: return L10n.tr("hardware.act.cutShortcut")
+        case .redoShortcut: return L10n.tr("hardware.act.redoShortcut")
+        case .forwardDelete: return L10n.tr("hardware.act.forwardDelete")
+        case .selectLeft: return L10n.tr("hardware.act.selectLeft")
+        case .selectRight: return L10n.tr("hardware.act.selectRight")
+        case .selectUp: return L10n.tr("hardware.act.selectUp")
+        case .selectDown: return L10n.tr("hardware.act.selectDown")
+        case .wordLeft: return L10n.tr("hardware.act.wordLeft")
+        case .wordRight: return L10n.tr("hardware.act.wordRight")
+        case .selectWordLeft: return L10n.tr("hardware.act.selectWordLeft")
+        case .selectWordRight: return L10n.tr("hardware.act.selectWordRight")
+        case .lineStart: return L10n.tr("hardware.act.lineStart")
+        case .lineEnd: return L10n.tr("hardware.act.lineEnd")
+        case .selectToLineStart: return L10n.tr("hardware.act.selectToLineStart")
+        case .selectToLineEnd: return L10n.tr("hardware.act.selectToLineEnd")
+        case .docTop: return L10n.tr("hardware.act.docTop")
+        case .docBottom: return L10n.tr("hardware.act.docBottom")
+        case .pageUp: return L10n.tr("hardware.act.pageUp")
+        case .pageDown: return L10n.tr("hardware.act.pageDown")
+        case .keyHome: return L10n.tr("hardware.act.keyHome")
+        case .keyEnd: return L10n.tr("hardware.act.keyEnd")
+        case .playPause: return L10n.tr("hardware.act.playPause")
+        case .nextTrack: return L10n.tr("hardware.act.nextTrack")
+        case .previousTrack: return L10n.tr("hardware.act.previousTrack")
+        case .brightnessUp: return L10n.tr("hardware.act.brightnessUp")
+        case .brightnessDown: return L10n.tr("hardware.act.brightnessDown")
+        case .missionControl: return L10n.tr("hardware.act.missionControl")
+        case .spotlight: return L10n.tr("hardware.act.spotlight")
+        case .switchInputSource: return L10n.tr("hardware.act.switchInputSource")
+        case .lockScreen: return L10n.tr("hardware.act.lockScreen")
+        case .systemScreenshot: return L10n.tr("hardware.act.systemScreenshot")
+        case .closeWindow: return L10n.tr("hardware.act.closeWindow")
+        case .newTab: return L10n.tr("hardware.act.newTab")
+        case .nextTab: return L10n.tr("hardware.act.nextTab")
+        case .previousTab: return L10n.tr("hardware.act.previousTab")
+        case .saveFile: return L10n.tr("hardware.act.saveFile")
+        case .findText: return L10n.tr("hardware.act.findText")
+        case .reloadPage: return L10n.tr("hardware.act.reloadPage")
+        case .toggleVoiceInput: return L10n.tr("hardware.act.toggleVoiceInput")
+        case .startFullScreenshot: return L10n.format("hardware.act.startFullScreenshot", String(describing: Brand.name))
+        case .repeatScreenshot: return L10n.format("hardware.act.repeatScreenshot", String(describing: Brand.name))
         }
     }
 }
@@ -379,6 +556,25 @@ struct HardwareRemoteConfig: Codable, Equatable {
             HardwareRemoteKey.volumeDown.rawValue: HardwareRemoteAction.systemVolumeDown.rawValue,
             HardwareRemoteKey.power.rawValue: HardwareRemoteAction.disabled.rawValue
         ]
+    }
+
+    static func mappings(for preset: HardwareRemotePreset) -> [String: String] {
+        func m(_ pairs: [(HardwareRemoteKey, HardwareRemoteAction)]) -> [String: String] {
+            Dictionary(uniqueKeysWithValues: pairs.map { ($0.0.rawValue, $0.1.rawValue) })
+        }
+        switch preset {
+        case .assistant: return defaultVoiceAssistantMappings
+        case .editing:
+            return m([(.voice, .holdToTalk), (.ok, .copyShortcut), (.back, .cancelOrBackspace),
+                      (.up, .selectUp), (.down, .selectDown), (.left, .selectLeft), (.right, .selectRight),
+                      (.home, .selectAll), (.menu, .cutShortcut), (.tv, .pasteShortcut),
+                      (.volumeUp, .undoShortcut), (.volumeDown, .redoShortcut), (.power, .disabled)])
+        case .media:
+            return m([(.voice, .holdToTalk), (.ok, .playPause), (.back, .cancelOrEscape),
+                      (.up, .systemVolumeUp), (.down, .systemVolumeDown), (.left, .previousTrack), (.right, .nextTrack),
+                      (.home, .missionControl), (.menu, .spotlight), (.tv, .startScreenshot),
+                      (.volumeUp, .brightnessUp), (.volumeDown, .brightnessDown), (.power, .disabled)])
+        }
     }
 
     func action(for key: HardwareRemoteKey) -> HardwareRemoteAction {
@@ -452,6 +648,8 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
     var keyTestMode = false
     @ObservationIgnored private var testVoiceLatched = false
     @ObservationIgnored private var levelBoostInstalled = false
+    @ObservationIgnored private var levelNormalizer = RemoteLevelNormalizer()
+    @ObservationIgnored private var repeatTimers: [HardwareRemoteKey: Timer] = [:]
     @ObservationIgnored private var lastAudioPacketAt = Date()
     @ObservationIgnored private var streamWatchdog: Timer?
     /// 由 HID/BLE 读到的设备名决定外观（名字含 Pro 为 2 Pro）。
@@ -473,7 +671,8 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
     @ObservationIgnored private var peripheral: CBPeripheral?
     @ObservationIgnored private var hidManager: IOHIDManager?
     /// 按 IOHIDDevice 的 CFHashCode 去重，彻底消除 Stage 0 实测发现的 3 次重复回调
-    @ObservationIgnored private var seizedDeviceHashes: Set<CFHashCode> = []
+    @ObservationIgnored private var hidInterfaces: [UInt64: IOHIDDevice] = [:]
+    @ObservationIgnored private var unknownHIDLogBudget = 40
     @ObservationIgnored private var keyDownState: [HardwareRemoteKey: Bool] = [:]
     @ObservationIgnored private var shortcutRecordMonitor: Any?
 
@@ -523,17 +722,10 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
         self.pipeline = pipeline
         refreshPermissions()
         setupHIDManager()
-        // Bluetooth (and its permission prompt) is only touched once a remote is set up, or when the person opens
-        // the Hardware page to look for one.
-        if config.isPaired { startDiscovery() }
-        Log.write("hardware-remote-center started paired=\(config.isPaired) seize=\(config.seizeHID)")
-    }
-
-    /// Starts Bluetooth discovery of the remote (asks for the Bluetooth permission the first time).
-    func startDiscovery() {
         if central == nil {
             central = CBCentralManager(delegate: self, queue: .main)
         }
+        Log.write("hardware-remote-center started paired=\(config.isPaired) seize=\(config.seizeHID)")
     }
 
     func refreshPermissions() {
@@ -611,6 +803,11 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
         Log.write("hardware-remote unpaired")
     }
 
+    func applyPreset(_ preset: HardwareRemotePreset) {
+        config.keyMappings = HardwareRemoteConfig.mappings(for: preset)
+        saveConfig()
+    }
+
     func resetDefaultMappings() {
         config.keyMappings = HardwareRemoteConfig.defaultVoiceAssistantMappings
         saveConfig()
@@ -627,7 +824,7 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
             IOHIDManagerClose(existing, IOOptionBits(kIOHIDOptionsTypeNone))
             hidManager = nil
         }
-        seizedDeviceHashes.removeAll()
+        hidInterfaces.removeAll()
         keyDownState.removeAll()
 
         let mgr = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
@@ -675,27 +872,55 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
         return product.contains("remote") || product.contains("遥控") || product.contains("rc00") || product.contains("mi rc")
     }
 
+    private static func registryID(_ device: IOHIDDevice) -> UInt64 {
+        var id: UInt64 = 0
+        IORegistryEntryGetRegistryEntryID(IOHIDDeviceGetService(device), &id)
+        return id
+    }
+
     private func handleHIDDeviceMatched(_ device: IOHIDDevice) {
         guard Self.isRemoteDevice(device) else { return }
-        let hash = CFHash(device)
-        guard !seizedDeviceHashes.contains(hash) else { return }
-        seizedDeviceHashes.insert(hash)
+        let rid = Self.registryID(device)
+        guard hidInterfaces[rid] == nil else { return }
+        hidInterfaces[rid] = device
+        let page = (IOHIDDeviceGetProperty(device, kIOHIDPrimaryUsagePageKey as CFString) as? Int) ?? 0
+        let usage = (IOHIDDeviceGetProperty(device, kIOHIDPrimaryUsageKey as CFString) as? Int) ?? 0
+        let transport = (IOHIDDeviceGetProperty(device, kIOHIDTransportKey as CFString) as? String) ?? "?"
+        Log.write("hardware-remote hid-interface id=\(rid) page=0x\(String(page, radix: 16)) usage=0x\(String(usage, radix: 16)) transport=\(transport)")
 
         if let product = IOHIDDeviceGetProperty(device, kIOHIDProductKey as CFString) as? String, !product.isEmpty {
             config.deviceName = product
         }
+        // 键盘接口独占需要 root（0xE00002C1）；其余接口（多媒体键、系统控制、厂商自定义）尝试独占，
+        // 这样电源键之类走这些接口的按键就不会再被系统直接处理。
+        if !(page == 0x01 && usage == 0x06) { trySeizeInterface(device, id: rid) }
         isHIDConnected = true
         RemoteKeyGate.shared.setRemotePresent(true)
-        Log.write("hardware-remote hid-matched count=\(seizedDeviceHashes.count)")
+        Log.write("hardware-remote hid-matched count=\(hidInterfaces.count)")
         evaluateAutoPairingPrompt()
     }
 
+    private func trySeizeInterface(_ device: IOHIDDevice, id: UInt64) {
+        IOHIDDeviceClose(device, IOOptionBits(kIOHIDOptionsTypeNone))
+        let status = IOHIDDeviceOpen(device, IOOptionBits(kIOHIDOptionsTypeSeizeDevice))
+        if status == kIOReturnSuccess {
+            IOHIDDeviceScheduleWithRunLoop(device, CFRunLoopGetCurrent(), CFRunLoopMode.defaultMode.rawValue)
+            IOHIDDeviceRegisterInputValueCallback(device, { _, _, _, value in
+                HardwareRemoteCenter.shared.handleHIDInputValue(value)
+            }, nil)
+            Log.write("hardware-remote hid-seize-ok id=\(id)")
+        } else {
+            _ = IOHIDDeviceOpen(device, IOOptionBits(kIOHIDOptionsTypeNone))
+            Log.write("hardware-remote hid-seize-failed id=\(id) status=0x\(String(UInt32(bitPattern: status), radix: 16))")
+        }
+    }
+
     private func handleHIDDeviceRemoved(_ device: IOHIDDevice) {
-        let hash = CFHash(device)
-        seizedDeviceHashes.remove(hash)
-        if seizedDeviceHashes.isEmpty {
+        hidInterfaces[Self.registryID(device)] = nil
+        if hidInterfaces.isEmpty {
             isHIDConnected = false
             RemoteKeyGate.shared.setRemotePresent(false)
+            repeatTimers.values.forEach { $0.invalidate() }; repeatTimers.removeAll()
             keyDownState.removeAll()
             Log.write("hardware-remote hid-removed-all")
         }
@@ -707,10 +932,17 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
         let page = IOHIDElementGetUsagePage(element)
         let usage = IOHIDElementGetUsage(element)
         guard page != 0, usage != 0, usage != 0xFFFFFFFF else { return }
-        guard let key = HardwareRemoteKey.fromHID(page: page, usage: usage) else { return }
+        guard let key = HardwareRemoteKey.fromHID(page: page, usage: usage) else {
+            if unknownHIDLogBudget > 0, usage != 0xFFFFFFFF {
+                unknownHIDLogBudget -= 1
+                Log.write("hardware-remote hid-unmapped page=0x\(String(page, radix: 16)) usage=0x\(String(usage, radix: 16)) value=\(IOHIDValueGetIntegerValue(value))")
+            }
+            return
+        }
 
         let isDown = (IOHIDValueGetIntegerValue(value) != 0)
         RemoteKeyGate.shared.note(page: page, usage: usage, isDown: isDown)
+        if key == .power { RemoteKeyGate.shared.notePower(isDown: isDown) }
         // 过滤物理按键连发与多重 HID 接口重复上报（彻底抑制 F5 ^[[15~ 连发污染）
         if keyDownState[key] == isDown { return }
         keyDownState[key] = isDown
@@ -735,30 +967,63 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
             return
         }
 
+        // 电源键若无法在 HID 层拦住，系统会自己关屏：它被设为「静默屏蔽」时，立即声明用户活动把屏幕叫醒。
+        if key == .power && isDown && config.action(for: .power) == .disabled { wakeDisplayAfterPowerKey() }
         // 按键测试中只亮灯；试说卡片打开时语音键仍然正常工作。
         if keyTestMode && !pairingPanel.isShowingTrialStep { return }
         let action = config.action(for: key)
         dispatchKeyAction(action, key: key, isDown: isDown)
     }
 
+    private func wakeDisplayAfterPowerKey() {
+        for delay in [0.0, 0.35, 1.0] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                var id: IOPMAssertionID = 0
+                IOPMAssertionDeclareUserActivity("Cadenza remote power key" as CFString, kIOPMUserActiveLocal, &id)
+            }
+        }
+        Log.write("hardware-remote power-key wake-display")
+    }
+
     private func dispatchKeyAction(_ action: HardwareRemoteAction, key: HardwareRemoteKey, isDown: Bool) {
         // 安全护栏：语音动作仅允许物理语音键 (🎤) 触发
-        if action.isVoiceAction && !key.isDedicatedVoiceKey {
-            return
+        if action.isVoiceAction && !key.isDedicatedVoiceKey { return }
+
+        if !isDown {
+            stopRepeat(for: key)
+            // 只有「按住」类语音动作需要松手事件
+            if action != .holdToTalk && action != .holdToTranslate { return }
+        }
+
+        // 发送按键的动作：按住时像真键盘一样连发
+        if isDown {
+            var spec = action.keySpec
+            if action == .customShortcut, let custom = config.customShortcut(for: key) {
+                spec = RemoteKeySpec(code: Int(custom.keyCode), mods: custom.modifiers, repeats: Self.repeatableKeyCodes.contains(Int(custom.keyCode)))
+            }
+            if let spec {
+                sendKey(spec, label: "remote-\(action.rawValue)", repeated: false)
+                if spec.repeats { startRepeat(for: key) { [weak self] in self?.sendKey(spec, label: "", repeated: true) } }
+                return
+            }
+            if let media = action.mediaKey {
+                postSystemMediaKey(media.code)
+                if media.repeats { startRepeat(for: key) { [weak self] in self?.postSystemMediaKey(media.code) } }
+                return
+            }
         }
 
         switch action {
-        case .holdToTalk:
+        case .holdToTalk, .holdToTranslate:
             if isDown {
-                // Stage 0 铁证指导：握手包已启用 HTT 模式，遥控器按下语音键会主动发 0x04 开始推流；
-                // 此处仅启动随言外部录音会话，绝不重复向 BLE 发送 [0x0C, 0x00]，防止触发 3 次 0x04 重置流吞字！
+                // 握手包已启用 HTT 模式，遥控器按下语音键会主动发 0x04 开始推流；
+                // 这里只启动随言外部录音会话，绝不重复向 BLE 发送 [0x0C, 0x00]，防止遥控器重置音频流吞字。
                 startRemoteVoiceSession(triggerSource: "hid-hold-down", sendBLEMicOpen: false)
             } else {
                 stopRemoteVoiceSession(triggerSource: "hid-hold-up")
             }
 
         case .toggleVoice:
-            guard isDown else { return }
             if isStreamingVoice {
                 stopRemoteVoiceSession(triggerSource: "hid-toggle-stop")
             } else {
@@ -766,98 +1031,92 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
             }
 
         case .confirmReturn:
-            guard isDown else { return }
             if isStreamingVoice {
                 stopRemoteVoiceSession(triggerSource: "hid-ok-confirm")
             } else {
-                KeyEventPoster.post(HotkeySpec(keyCode: UInt32(kVK_Return), modifiers: 0), label: "remote-ok-return")
+                sendKey(RemoteKeySpec(code: Int(kVK_Return), mods: 0, repeats: false), label: "remote-ok-return", repeated: false)
             }
 
         case .cancelOrBackspace:
-            guard isDown else { return }
             if isStreamingVoice || pipeline?.hasActiveSession == true {
                 cancelRemoteVoiceSession(reason: "remote-back-cancel")
             } else {
-                KeyEventPoster.post(HotkeySpec(keyCode: UInt32(kVK_Delete), modifiers: 0), label: "remote-backspace")
+                let spec = RemoteKeySpec(code: Int(kVK_Delete), mods: 0, repeats: true)
+                sendKey(spec, label: "remote-backspace", repeated: false)
+                startRepeat(for: key) { [weak self] in self?.sendKey(spec, label: "", repeated: true) }
             }
 
         case .cancelOrEscape:
-            guard isDown else { return }
             if isStreamingVoice || pipeline?.hasActiveSession == true {
                 cancelRemoteVoiceSession(reason: "remote-esc-cancel")
             } else {
-                KeyEventPoster.post(HotkeySpec(keyCode: UInt32(kVK_Escape), modifiers: 0), label: "remote-escape")
+                sendKey(RemoteKeySpec(code: Int(kVK_Escape), mods: 0, repeats: false), label: "remote-escape", repeated: false)
             }
 
-        case .arrowUp:
-            guard isDown else { return }
-            KeyEventPoster.post(HotkeySpec(keyCode: UInt32(kVK_UpArrow), modifiers: 0), label: "remote-up")
-        case .arrowDown:
-            guard isDown else { return }
-            KeyEventPoster.post(HotkeySpec(keyCode: UInt32(kVK_DownArrow), modifiers: 0), label: "remote-down")
-        case .arrowLeft:
-            guard isDown else { return }
-            KeyEventPoster.post(HotkeySpec(keyCode: UInt32(kVK_LeftArrow), modifiers: 0), label: "remote-left")
-        case .arrowRight:
-            guard isDown else { return }
-            KeyEventPoster.post(HotkeySpec(keyCode: UInt32(kVK_RightArrow), modifiers: 0), label: "remote-right")
-
-        case .space:
-            guard isDown else { return }
-            KeyEventPoster.post(HotkeySpec(keyCode: UInt32(kVK_Space), modifiers: 0), label: "remote-space")
-
-        case .tab:
-            guard isDown else { return }
-            KeyEventPoster.post(HotkeySpec(keyCode: UInt32(kVK_Tab), modifiers: 0), label: "remote-tab")
-
-        case .copyShortcut:
-            guard isDown else { return }
-            KeyEventPoster.post(HotkeySpec(keyCode: UInt32(kVK_ANSI_C), modifiers: UInt32(cmdKey)), label: "remote-cmd-c")
-
-        case .pasteShortcut:
-            guard isDown else { return }
-            KeyEventPoster.post(HotkeySpec(keyCode: UInt32(kVK_ANSI_V), modifiers: UInt32(cmdKey)), label: "remote-cmd-v")
-
-        case .undoShortcut:
-            guard isDown else { return }
-            KeyEventPoster.post(HotkeySpec(keyCode: UInt32(kVK_ANSI_Z), modifiers: UInt32(cmdKey)), label: "remote-cmd-z")
-
         case .copyLastResult:
-            guard isDown, let text = pipeline?.lastTranscript, !text.isEmpty else { return }
+            guard let text = pipeline?.lastTranscript, !text.isEmpty else { return }
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(text, forType: .string)
 
-        case .openSettings:
-            guard isDown else { return }
-            NSApp.sendAction(Selector(("showSettings")), to: nil, from: nil)
+        case .openSettings: NSApp.sendAction(Selector(("showSettings")), to: nil, from: nil)
+        case .startScreenshot: NSApp.sendAction(Selector(("startScreenshot")), to: nil, from: nil)
+        case .startDirectOCR: NSApp.sendAction(Selector(("startDirectOCR")), to: nil, from: nil)
+        case .startFullScreenshot: NSApp.sendAction(Selector(("startFullScreenshot")), to: nil, from: nil)
+        case .repeatScreenshot: NSApp.sendAction(Selector(("repeatScreenshot")), to: nil, from: nil)
+        case .toggleVoiceInput: NSApp.sendAction(Selector(("toggleEnabled")), to: nil, from: nil)
 
-        case .startScreenshot:
-            guard isDown else { return }
-            NSApp.sendAction(Selector(("startScreenshot")), to: nil, from: nil)
-
-        case .startDirectOCR:
-            guard isDown else { return }
-            NSApp.sendAction(Selector(("startDirectOCR")), to: nil, from: nil)
-
-        case .systemVolumeUp:
-            guard isDown else { return }
-            postSystemMediaKey(Int32(NX_KEYTYPE_SOUND_UP))
-
-        case .systemVolumeDown:
-            guard isDown else { return }
-            postSystemMediaKey(Int32(NX_KEYTYPE_SOUND_DOWN))
-
-        case .systemMute:
-            guard isDown else { return }
-            postSystemMediaKey(Int32(NX_KEYTYPE_MUTE))
-
-        case .customShortcut:
-            guard isDown, let spec = config.customShortcut(for: key) else { return }
-            KeyEventPoster.post(spec, label: "remote-custom-\(key.rawValue)")
-
-        case .disabled:
-            break
+        default:
+            break   // disabled，以及已在上面按键/媒体键分支处理的动作
         }
+    }
+
+    // MARK: 按键发送与长按连发（遥控器按键被拦截后，系统不再替我们连发）
+
+    static let repeatableKeyCodes: Set<Int> = [
+        Int(kVK_LeftArrow), Int(kVK_RightArrow), Int(kVK_UpArrow), Int(kVK_DownArrow),
+        Int(kVK_Delete), Int(kVK_ForwardDelete), Int(kVK_PageUp), Int(kVK_PageDown), Int(kVK_Space),
+    ]
+
+    private func sendKey(_ spec: RemoteKeySpec, label: String, repeated: Bool) {
+        var flags: CGEventFlags = []
+        if spec.mods & UInt32(controlKey) != 0 { flags.insert(.maskControl) }
+        if spec.mods & UInt32(optionKey) != 0 { flags.insert(.maskAlternate) }
+        if spec.mods & UInt32(shiftKey) != 0 { flags.insert(.maskShift) }
+        if spec.mods & UInt32(cmdKey) != 0 { flags.insert(.maskCommand) }
+        guard let down = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(spec.code), keyDown: true),
+              let up = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(spec.code), keyDown: false) else { return }
+        down.flags = flags
+        up.flags = flags
+        if repeated { down.setIntegerValueField(.keyboardEventAutorepeat, value: 1) }
+        if !repeated { Log.write("\(label) keyCode=\(spec.code) flags=0x\(String(flags.rawValue, radix: 16))") }
+        down.post(tap: .cghidEventTap)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.008) { up.post(tap: .cghidEventTap) }
+    }
+
+    /// 系统「按键重复」设置（单位 15ms）；读不到时用系统默认值。
+    private static func systemKeyRepeat() -> (initial: TimeInterval, interval: TimeInterval) {
+        func read(_ key: String, _ fallback: Int) -> Int {
+            (CFPreferencesCopyAppValue(key as CFString, kCFPreferencesAnyApplication) as? Int) ?? fallback
+        }
+        return (TimeInterval(max(1, read("InitialKeyRepeat", 25))) * 0.015, TimeInterval(max(1, read("KeyRepeat", 6))) * 0.015)
+    }
+
+    private func startRepeat(for key: HardwareRemoteKey, fire: @escaping () -> Void) {
+        stopRepeat(for: key)
+        let timing = Self.systemKeyRepeat()
+        repeatTimers[key] = Timer.scheduledTimer(withTimeInterval: timing.initial, repeats: false) { [weak self] _ in
+            guard let self, self.keyDownState[key] == true else { return }
+            fire()
+            self.repeatTimers[key] = Timer.scheduledTimer(withTimeInterval: timing.interval, repeats: true) { [weak self] timer in
+                guard let self, self.keyDownState[key] == true else { timer.invalidate(); return }
+                fire()
+            }
+        }
+    }
+
+    private func stopRepeat(for key: HardwareRemoteKey) {
+        repeatTimers[key]?.invalidate()
+        repeatTimers[key] = nil
     }
 
     private func postSystemMediaKey(_ key: Int32) {
@@ -1075,7 +1334,7 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
                     RemoteKeyGate.shared.setVoiceStreaming(false)
                     if !isStreamingVoice { return }
                 }
-                if isStreamingVoice && config.action(for: .voice) == .holdToTalk {
+                if isStreamingVoice && (config.action(for: .voice) == .holdToTalk || config.action(for: .voice) == .holdToTranslate) {
                     stopRemoteVoiceSession(triggerSource: "ble-0x00")
                 }
 
@@ -1096,7 +1355,8 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
             lastAudioPacketAt = Date()
             // 遥控器麦克风音量偏小：显示用的电平放大后再交给录音条，否则低于波形噪声下限，条上看不到起伏。
             if let source = activePCMSource, !levelBoostInstalled, let base = source.onLevel {
-                source.onLevel = { v in base(min(1, v * 5)) }
+                let normalizer = levelNormalizer
+                source.onLevel = { v in base(normalizer.normalized(v)) }
                 levelBoostInstalled = true
             }
             let pcm = decoder.decode(adpcmData: data, gain: config.micGain)
@@ -1125,6 +1385,7 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
         guard !isStreamingVoice else { return }
         isStreamingVoice = true
         levelBoostInstalled = false
+        levelNormalizer = RemoteLevelNormalizer()
         RemoteKeyGate.shared.setVoiceStreaming(true)
         decoder.reset()
         // 兜底：遥控器停止推流（松手、断连）后 1.5 秒内没有新音频，就结束这段录音，不会一直卡在录音状态。
@@ -1174,7 +1435,8 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
         }
 
         let isTrialInCard = pairingPanel.isShowingTrialStep
-        pipeline.holdStarted(source: isTrialInCard ? .button : .hotkey, localOnly: isTrialInCard)
+        pipeline.holdStarted(source: isTrialInCard ? .button : .hotkey, localOnly: isTrialInCard,
+                             translate: !isTrialInCard && config.action(for: .voice) == .holdToTranslate)
         Log.write("hardware-remote voice-start source=\(triggerSource) trial=\(isTrialInCard)")
     }
 
@@ -1182,6 +1444,7 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
         guard isStreamingVoice else { return }
         isStreamingVoice = false
         streamWatchdog?.invalidate(); streamWatchdog = nil
+        Log.write(levelNormalizer.summary)
         RemoteKeyGate.shared.setVoiceStreaming(false)
         liveAudioLevel = 0
         pairingPanel.updateWaveform(level: 0)
@@ -1612,9 +1875,7 @@ struct HardwareRemoteSettingsSection: View {
                             }
                         )
                     ) {
-                        ForEach(HardwareRemoteAction.voiceKeyOptions) { action in
-                            Text(action.displayName).tag(action)
-                        }
+                        RemoteActionOptions(options: HardwareRemoteAction.voiceKeyOptions)
                     }
                     .labelsHidden()
                     .frame(width: 240)
@@ -1646,9 +1907,7 @@ struct HardwareRemoteSettingsSection: View {
                                     }
                                 )
                             ) {
-                                ForEach(HardwareRemoteAction.nonVoiceKeyOptions) { action in
-                                    Text(action.displayName).tag(action)
-                                }
+                                RemoteActionOptions(options: HardwareRemoteAction.nonVoiceKeyOptions)
                             }
                             .labelsHidden()
                             .frame(width: 240)
@@ -1680,8 +1939,12 @@ struct HardwareRemoteSettingsSection: View {
                 }
                 HStack {
                     Spacer()
-                    Button(L10n.tr("hardware.reset")) { center.resetDefaultMappings() }
-                        .buttonStyle(.bordered)
+                    Menu(L10n.tr("hardware.preset.menu")) {
+                        ForEach(HardwareRemotePreset.allCases) { preset in
+                            Button(preset.title) { center.applyPreset(preset) }
+                        }
+                    }
+                    .fixedSize()
                 }
             } header: {
                 Text(L10n.tr("hardware.keysHeader"))
@@ -1721,7 +1984,6 @@ struct HardwareRemoteSettingsPage: View {
                 }
             }
         }
-        .onAppear { center.startDiscovery() }
         .onDisappear { center.keyTestMode = false }
     }
 
@@ -1791,6 +2053,29 @@ final class RemoteKeyGate {
         cond.unlock()
     }
 
+    private var powerHeld = false
+    private var powerReleasedAt: CFAbsoluteTime = 0
+    private var systemLogBudget = 30
+
+    /// 遥控器电源键按下/松开（HID 层）；其间及松开后 0.6s 内的系统事件（电源键、休眠）属于它。
+    func notePower(isDown: Bool) {
+        cond.lock()
+        if powerHeld && !isDown { powerReleasedAt = CFAbsoluteTimeGetCurrent() }
+        powerHeld = isDown
+        cond.unlock()
+    }
+
+    fileprivate func shouldSwallowSystemDefined(subtype: Int) -> Bool {
+        cond.lock(); defer { cond.unlock() }
+        guard present, subtype != 8 else { return false }   // 8 = 媒体键（含我们自己合成的），不动
+        let inWindow = powerHeld || CFAbsoluteTimeGetCurrent() - powerReleasedAt < 0.6
+        if inWindow, systemLogBudget > 0 {
+            systemLogBudget -= 1
+            Log.write("hardware-remote key-gate system-defined subtype=\(subtype) swallowed=true")
+        }
+        return inWindow
+    }
+
     func setRemotePresent(_ value: Bool) {
         cond.lock(); present = value; if !value { held.removeAll() }; cond.unlock()
     }
@@ -1815,6 +2100,7 @@ final class RemoteKeyGate {
         let thread = Thread { [weak self] in
             guard let self else { return }
             let mask = (CGEventMask(1) << CGEventType.keyDown.rawValue) | (CGEventMask(1) << CGEventType.keyUp.rawValue)
+                | (CGEventMask(1) << 14)   // NX_SYSDEFINED：电源键、媒体键
             let callback: CGEventTapCallBack = { _, type, event, refcon in
                 guard let refcon else { return Unmanaged.passUnretained(event) }
                 let gate = Unmanaged<RemoteKeyGate>.fromOpaque(refcon).takeUnretainedValue()
@@ -1822,6 +2108,10 @@ final class RemoteKeyGate {
                     gate.cond.lock(); let port = gate.tap; gate.cond.unlock()
                     if let port { CGEvent.tapEnable(tap: port, enable: true) }
                     return Unmanaged.passUnretained(event)
+                }
+                if type.rawValue == 14 {
+                    let subtype = NSEvent(cgEvent: event).map { Int($0.subtype.rawValue) } ?? -1
+                    return gate.shouldSwallowSystemDefined(subtype: subtype) ? nil : Unmanaged.passUnretained(event)
                 }
                 // 软件合成的事件（包括随言自己发出的 Return/方向键）来源进程号非 0，一律放行。
                 let sourcePID = event.getIntegerValueField(.eventSourceUnixProcessID)
@@ -2033,5 +2323,41 @@ struct XiaomiRemoteFigure: View {
 
         c.draw(Text("xiaomi").font(.system(size: 7, weight: .medium)).foregroundColor(Color(white: 0.45)),
                at: CGPoint(x: 50, y: 280))
+    }
+}
+
+
+/// The remote's microphone is quiet, so raw peaks sit below the bar's noise floor. The bar gets the peak relative to the
+/// recent loudest, so speech always moves it; recognition still receives the original audio.
+final class RemoteLevelNormalizer {
+    private var reference: Float = 0.02
+    private var rawMax: Float = 0
+    private var rawSum: Float = 0
+    private var count = 0
+
+    func normalized(_ raw: Float) -> Float {
+        rawMax = max(rawMax, raw); rawSum += raw; count += 1
+        reference = max(0.02, reference * 0.995, raw)
+        return min(1, raw / reference)
+    }
+
+    var summary: String {
+        String(format: "hardware-remote audio-level packets=%d raw-peak=%.4f raw-mean-peak=%.4f", count, rawMax, count > 0 ? rawSum / Float(count) : 0)
+    }
+}
+
+
+/// The actions of a picker, grouped under headings so a long list stays readable.
+struct RemoteActionOptions: View {
+    let options: [HardwareRemoteAction]
+    var body: some View {
+        ForEach(RemoteActionGroup.allCases) { group in
+            let items = options.filter { $0.group == group }
+            if !items.isEmpty {
+                Section(group.title) {
+                    ForEach(items) { Text($0.displayName).tag($0) }
+                }
+            }
+        }
     }
 }
