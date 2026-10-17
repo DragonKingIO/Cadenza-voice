@@ -29,8 +29,8 @@ Nothing goes through the local API, and nothing new leaves the Mac.
   of a keyboard-class HID device (the system answers `kIOReturnNotPrivileged`), so the app instead drops, with an event tap,
   the key events that the remote itself is holding. A keyboard is never touched, and events synthesised by software
   (including the app's own) are never dropped. This needs the Accessibility permission.
-- Keys other than the voice key can be remapped (arrows, Return, Esc, copy, paste, system volume, screenshot, OCR, a custom
-  shortcut). Only the voice key can start dictation. A *Key test* switch shows which key arrives without running anything.
+- Keys other than the voice key can be remapped to any of 66 actions (arrows and text selection, Return, Esc, edit shortcuts,
+  page keys, media and system keys, screenshot, OCR, a custom shortcut), with three presets. Only the voice key can start dictation. A *Key test* switch shows which key arrives without running anything.
 
 ## How hardware reaches the app
 

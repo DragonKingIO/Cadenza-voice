@@ -20,6 +20,11 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
+### Added
+- **Voice remote: 66 key actions in groups and three presets.** Each non-voice key can now do any of 66 actions (selecting and moving by character, word, line or document, cut, redo, page keys, media and brightness keys, Mission Control, Spotlight, tab and window shortcuts, full-screen and repeated screenshots, and more), grouped in the picker, with three presets: *Voice assistant*, *Select and edit* and *Media and system*. Holding an arrow, page or volume key repeats it at your system's key-repeat speed. The voice key can also *hold to talk and translate*.
+- The remote's level bar adapts to its quiet microphone; a remote recording that delivers no audio for 1.5 seconds ends by itself; the key test no longer starts recognition.
+- The power key is handled too: its HID interfaces are listed one by one, non-keyboard interfaces are seized where macOS allows it, the system-defined power event is dropped when the key is set to *Ignore*, and the display is woken in that case.
+
 ## [1.3.0] - 2026-10-16
 
 Still an **early preview**.

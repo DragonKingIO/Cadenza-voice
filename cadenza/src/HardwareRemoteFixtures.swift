@@ -34,6 +34,22 @@ enum HardwareRemoteFixtures {
         config.keyMappings[HardwareRemoteKey.tv.rawValue] = "not-an-action"
         c("config: an unknown stored action falls back to the key's default", config.action(for: .tv) == .startDirectOCR && config.action(for: .power) == .disabled)
         c("config: every key has a default action", HardwareRemoteKey.allCases.allSatisfy { HardwareRemoteConfig.defaultVoiceAssistantMappings[$0.rawValue] != nil })
+
+        // 66 actions in groups, three presets, repeat behaviour and the level bar.
+        c("actions: every action belongs to a group with a title", HardwareRemoteAction.allCases.allSatisfy { !$0.group.title.isEmpty && !$0.displayName.isEmpty })
+        c("actions: the voice actions are the only ones in the voice group", HardwareRemoteAction.allCases.filter { $0.group == .voice } .allSatisfy { $0.isVoiceAction } && HardwareRemoteAction.voiceKeyOptions.contains(.holdToTranslate))
+        for preset in HardwareRemotePreset.allCases {
+            let m = HardwareRemoteConfig.mappings(for: preset)
+            c("preset \(preset.rawValue): maps every key to a real action and only the voice key to a voice action",
+              HardwareRemoteKey.allCases.allSatisfy { key in
+                  guard let raw = m[key.rawValue], let act = HardwareRemoteAction(rawValue: raw) else { return false }
+                  return act.isVoiceAction == key.isDedicatedVoiceKey
+              } && !preset.title.isEmpty)
+        }
+        var applied = HardwareRemoteConfig(); applied.keyMappings = HardwareRemoteConfig.mappings(for: .editing)
+        c("preset editing: arrows select text", applied.action(for: .up) == .selectUp && applied.action(for: .menu) == .cutShortcut)
+        let normalizer = RemoteLevelNormalizer()
+        c("level bar: a quiet voice still moves the bar and the peak is 1", normalizer.normalized(0.005) == 0.25 && normalizer.normalized(0.02) == 1 && normalizer.normalized(0) == 0)
         let decoded = (try? JSONDecoder().decode(HardwareRemoteConfig.self, from: JSONEncoder().encode(config)))
         c("config: survives encoding", decoded == config)
     }
