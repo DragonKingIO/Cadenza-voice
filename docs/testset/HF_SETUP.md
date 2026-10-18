@@ -27,6 +27,6 @@ A gated dataset still lets every approved user download everything in it. Option
 
 ## Before you announce
 
-- Create a dedicated forwarding address (not your personal one) and replace every `{{CONTACT_EMAIL}}` in `docs/testset/` and in the recorder page.
+- Create a dedicated forwarding address (not your personal one) and replace every `{{CONTACT_EMAIL}}` in `docs/testset/`. The recorder page already carries its own contact address, because it has to show one; change it there too if you switch.
 - Replace `{{HF_DATASET_URL}}` in the recorder page with the public dataset URL.
 - Decide whether to accept submissions through Hugging Face pull requests. Pull request content on a public dataset may be visible to others, so the recorder only suggests that route for option A.
