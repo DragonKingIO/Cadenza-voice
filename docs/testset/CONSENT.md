@@ -24,7 +24,7 @@ A voice is personal data. Please record alone, do not say anything private, and 
 
 ## Deletion
 
-Email {{CONTACT_EMAIL}} with your participant ID (it is in `manifest.json` and in the zip file name). For option B we delete your files and confirm within 30 days. For option A we remove your files from the dataset and ask people with access to do the same, but we cannot guarantee that copies already downloaded are deleted.
+Email evendstate@gmail.com with your participant ID (it is in `manifest.json` and in the zip file name). For option B we delete your files and confirm within 30 days. For option A we remove your files from the dataset and ask people with access to do the same, but we cannot guarantee that copies already downloaded are deleted.
 
 ## Taking part is voluntary
 

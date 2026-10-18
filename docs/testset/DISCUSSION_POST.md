@@ -14,7 +14,7 @@ If you can spare 10–15 minutes, you can help:
 **What we use it for:** measuring and fixing recognition accuracy. We do not train models on it.
 **What we collect:** your recordings, a random ID, accent or region, microphone type, and optionally gender and age range. No name, account or location.
 **Nothing is uploaded by the page.** The recordings stay in your browser until you send the zip file.
-**Delete anytime:** email {{CONTACT_EMAIL}} with your participant ID.
+**Delete anytime:** email evendstate@gmail.com with your participant ID.
 
 The script and consent form are in the repository under `docs/testset/`. You do not need a Mac to take part: any modern browser with a microphone works, and Mandarin speakers of every accent are welcome.
 
