@@ -233,30 +233,57 @@ enum WaveformAppearance {
 }
 
 final class WaveformView: NSView {
-    var levels: [CGFloat] = Array(repeating: 0, count: 21) { didSet { needsDisplay = true } }
+    var levels: [CGFloat] = Array(repeating: 0, count: 21) { didSet { apply(animated: animateNext); animateNext = false } }
     var barColor = DesignTokens.accent
+    private var bars: [CALayer] = []
+    private var animateNext = false
+
+    override init(frame: NSRect) { super.init(frame: frame); setup() }
+    required init?(coder: NSCoder) { super.init(coder: coder); setup() }
+
+    /// The bars are layers, not drawing: when a sample arrives each bar's height eases to its neighbour's over a short time,
+    /// which the system renders on its own, so the wave stays smooth even when the main thread is busy for a moment.
+    private func setup() {
+        wantsLayer = true
+        layer?.masksToBounds = false
+        bars = (0..<levels.count).map { _ in let l = CALayer(); l.actions = ["bounds": NSNull(), "position": NSNull(), "opacity": NSNull(), "backgroundColor": NSNull()]; layer?.addSublayer(l); return l }
+    }
 
     func push(_ v: CGFloat) {
+        animateNext = true
         levels.removeFirst()
         levels.append(max(0, min(1, v)))
     }
 
-    override func draw(_ dirtyRect: NSRect) {
-        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
+    override func layout() { super.layout(); apply(animated: false) }
+    override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); apply(animated: false) }
+
+    private func apply(animated: Bool) {
+        guard bounds.width > 0, bars.count == levels.count else { return }
         let n = levels.count
         let slot = bounds.width / CGFloat(n)
         let barW = max(2.4, slot * 0.5)
         let centre = CGFloat(n - 1) / 2
         // Decided from the app's appearance, like the bar behind it, so the wave is never light-on-light or dark-on-dark.
-        let accent = NSApp.effectiveAppearance.bestMatch(from:[.darkAqua,.aqua]) == .darkAqua ? NSColor(srgbRed:161/255,green:215/255,blue:186/255,alpha:1):DesignTokens.jade
+        let accent = effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(srgbRed: 161/255, green: 215/255, blue: 186/255, alpha: 1) : DesignTokens.jade
+        CATransaction.begin()
+        if animated {
+            CATransaction.setDisableActions(false)
+            CATransaction.setAnimationDuration(0.07)
+            CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .linear))
+        } else { CATransaction.setDisableActions(true) }
         for (i, v) in levels.enumerated() {
+            let bar = bars[i]
+            let h = max(barW, v * bounds.height * 0.92)
             // Bars fade toward both ends, so the wave looks like it rises out of the glass instead of ending abruptly.
             let fade = 1 - 0.35 * abs(CGFloat(i) - centre) / centre
-            ctx.setFillColor(accent.withAlphaComponent(fade).cgColor)
-            let h = max(barW, CGFloat(v) * bounds.height * 0.92)
-            let rect = NSRect(x: CGFloat(i) * slot + (slot - barW) / 2, y: bounds.midY - h / 2, width: barW, height: h)
-            NSBezierPath(roundedRect: rect, xRadius: barW / 2, yRadius: barW / 2).fill()
+            if animated { bar.actions = ["bounds": CABasicAnimation(keyPath: "bounds")] } else { bar.actions = nil }
+            bar.bounds = CGRect(x: 0, y: 0, width: barW, height: h)
+            bar.position = CGPoint(x: CGFloat(i) * slot + slot / 2, y: bounds.midY)
+            bar.cornerRadius = barW / 2
+            bar.backgroundColor = accent.withAlphaComponent(fade).cgColor
         }
+        CATransaction.commit()
     }
 }
 

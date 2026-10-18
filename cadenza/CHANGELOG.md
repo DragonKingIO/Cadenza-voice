@@ -20,6 +20,13 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-10-18
+
+Still an **early preview**.
+
+### Fixed
+- **Smoother recording bar.** The wave in the recording bar no longer stutters while you speak: its bars are now system-rendered layers that ease to each new level, instead of being redrawn on every sample, so a busy moment on the main thread no longer drops frames.
+
 ## [1.3.1] - 2026-10-17
 
 Still an **early preview**.
