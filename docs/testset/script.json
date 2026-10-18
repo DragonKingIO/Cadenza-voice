@@ -1,0 +1,464 @@
+{
+ "version": 1,
+ "language": "zh-CN",
+ "categories": {
+  "short": "短句(≤6字)",
+  "medium": "中句",
+  "long": "长句(30-80字)",
+  "mixed": "中英夹杂",
+  "particles": "语气词与疑问",
+  "numbers": "数字和日期"
+ },
+ "sentences": [
+  {
+   "id": "s01",
+   "category": "short",
+   "reference": "好的。"
+  },
+  {
+   "id": "s02",
+   "category": "short",
+   "reference": "谢谢。"
+  },
+  {
+   "id": "s03",
+   "category": "short",
+   "reference": "没问题。"
+  },
+  {
+   "id": "s04",
+   "category": "short",
+   "reference": "我马上到。"
+  },
+  {
+   "id": "s05",
+   "category": "short",
+   "reference": "你在哪？"
+  },
+  {
+   "id": "s06",
+   "category": "short",
+   "reference": "现在几点？"
+  },
+  {
+   "id": "s07",
+   "category": "short",
+   "reference": "太好了！"
+  },
+  {
+   "id": "s08",
+   "category": "short",
+   "reference": "稍等一下。"
+  },
+  {
+   "id": "s09",
+   "category": "short",
+   "reference": "明天见。"
+  },
+  {
+   "id": "s10",
+   "category": "short",
+   "reference": "可以开始吗？"
+  },
+  {
+   "id": "s11",
+   "category": "short",
+   "reference": "收到。"
+  },
+  {
+   "id": "s12",
+   "category": "short",
+   "reference": "我知道了。"
+  },
+  {
+   "id": "s13",
+   "category": "short",
+   "reference": "不用了。"
+  },
+  {
+   "id": "s14",
+   "category": "short",
+   "reference": "请再说一遍。"
+  },
+  {
+   "id": "s15",
+   "category": "short",
+   "reference": "为什么？"
+  },
+  {
+   "id": "s16",
+   "category": "short",
+   "reference": "马上发给你。"
+  },
+  {
+   "id": "s17",
+   "category": "short",
+   "reference": "辛苦了。"
+  },
+  {
+   "id": "s18",
+   "category": "short",
+   "reference": "先这样吧。"
+  },
+  {
+   "id": "s19",
+   "category": "short",
+   "reference": "真的假的？"
+  },
+  {
+   "id": "s20",
+   "category": "short",
+   "reference": "今天周五。"
+  },
+  {
+   "id": "m01",
+   "category": "medium",
+   "reference": "我下午三点要和产品经理开个会。"
+  },
+  {
+   "id": "m02",
+   "category": "medium",
+   "reference": "麻烦把会议纪要整理好发给大家。"
+  },
+  {
+   "id": "m03",
+   "category": "medium",
+   "reference": "这个功能下周一之前需要上线。"
+  },
+  {
+   "id": "m04",
+   "category": "medium",
+   "reference": "我刚才在地铁上收到了一条通知。"
+  },
+  {
+   "id": "m05",
+   "category": "medium",
+   "reference": "请问你们公司的报销流程是怎样的？"
+  },
+  {
+   "id": "m06",
+   "category": "medium",
+   "reference": "帮我订一张明天去上海的高铁票。"
+  },
+  {
+   "id": "m07",
+   "category": "medium",
+   "reference": "周末我打算去公园散步，顺便拍几张照片。"
+  },
+  {
+   "id": "m08",
+   "category": "medium",
+   "reference": "客户希望我们尽快给出一个报价方案。"
+  },
+  {
+   "id": "m09",
+   "category": "medium",
+   "reference": "这份文档还需要再检查一遍格式。"
+  },
+  {
+   "id": "m10",
+   "category": "medium",
+   "reference": "他昨天晚上加班到很晚才回家。"
+  },
+  {
+   "id": "m11",
+   "category": "medium",
+   "reference": "我们把预算调整一下，再看看。"
+  },
+  {
+   "id": "m12",
+   "category": "medium",
+   "reference": "电脑最近运行得有点慢，需要重启一下。"
+  },
+  {
+   "id": "m13",
+   "category": "medium",
+   "reference": "请在周三下班前提交本周的工作总结。"
+  },
+  {
+   "id": "m14",
+   "category": "medium",
+   "reference": "我觉得这个方案的风险比较大。"
+  },
+  {
+   "id": "m15",
+   "category": "medium",
+   "reference": "冰箱里还有两个鸡蛋和一些蔬菜。"
+  },
+  {
+   "id": "m16",
+   "category": "medium",
+   "reference": "会议室已经预订好了，大家准时参加。"
+  },
+  {
+   "id": "m17",
+   "category": "medium",
+   "reference": "这个问题我们回头再详细讨论。"
+  },
+  {
+   "id": "m18",
+   "category": "medium",
+   "reference": "下个月公司要组织一次团队聚餐。"
+  },
+  {
+   "id": "m19",
+   "category": "medium",
+   "reference": "能不能把声音调小一点？"
+  },
+  {
+   "id": "m20",
+   "category": "medium",
+   "reference": "你今天有没有时间一起吃午饭？"
+  },
+  {
+   "id": "l01",
+   "category": "long",
+   "reference": "我昨天下午和设计团队开了一个很长的会，主要讨论了新版本首页的改版方案，大家都觉得需要先把流程简化。"
+  },
+  {
+   "id": "l02",
+   "category": "long",
+   "reference": "如果明天上午的天气不太好的话，我们就把户外的活动改到室内，同时提前通知所有参加的同事，免得大家白跑一趟。"
+  },
+  {
+   "id": "l03",
+   "category": "long",
+   "reference": "这个季度的销售数据已经整理完了，整体比上个季度有所增长，但是有几个地区的表现不太理想，需要重点跟进。"
+  },
+  {
+   "id": "l04",
+   "category": "long",
+   "reference": "我最近在学习如何更高效地安排时间，比如每天早上先列出最重要的三件事，做完之后再去处理其他零碎的事情。"
+  },
+  {
+   "id": "l05",
+   "category": "long",
+   "reference": "周末我和朋友约好去郊外徒步，我们打算早上七点出发，中午在山顶简单吃点东西，下午太阳落山之前赶回市区。"
+  },
+  {
+   "id": "l06",
+   "category": "long",
+   "reference": "关于新员工的入职培训，我建议把流程分成三个阶段，第一周熟悉公司制度，第二周跟着老员工学习业务，第三周独立完成一个小项目。"
+  },
+  {
+   "id": "l07",
+   "category": "long",
+   "reference": "请你把上个月所有的报销单据重新核对一遍，特别是金额比较大的那几笔，确认发票和实际支付记录是一致的，然后发给财务部门。"
+  },
+  {
+   "id": "l08",
+   "category": "long",
+   "reference": "我家附近新开了一家咖啡店，环境很安静，咖啡的味道也不错，价格比市中心便宜不少，以后可以在那里写文章或者开线上会议。"
+  },
+  {
+   "id": "l09",
+   "category": "long",
+   "reference": "昨天晚上下了一场很大的雨，今天早上路面上还有很多积水，上班路上堵了将近一个小时，所以我可能会比平时晚一点到公司。"
+  },
+  {
+   "id": "l10",
+   "category": "long",
+   "reference": "这份项目计划书里关于时间安排的部分还需要再修改，尤其是测试和上线之间的缓冲时间太短了，万一出现问题就来不及处理。"
+  },
+  {
+   "id": "x01",
+   "category": "mixed",
+   "reference": "我把代码推到GitHub上了，你帮我看一下。"
+  },
+  {
+   "id": "x02",
+   "category": "mixed",
+   "reference": "这个PR已经合并到主分支了。"
+  },
+  {
+   "id": "x03",
+   "category": "mixed",
+   "reference": "先commit一下，再push上去。"
+  },
+  {
+   "id": "x04",
+   "category": "mixed",
+   "reference": "这个API返回的数据格式不太对。"
+  },
+  {
+   "id": "x05",
+   "category": "mixed",
+   "reference": "我用Python写了一个小脚本处理数据。"
+  },
+  {
+   "id": "x06",
+   "category": "mixed",
+   "reference": "你可以问问ChatGPT这个问题怎么解决。"
+  },
+  {
+   "id": "x07",
+   "category": "mixed",
+   "reference": "我最近一直在用Claude写代码。"
+  },
+  {
+   "id": "x08",
+   "category": "mixed",
+   "reference": "公司给我配了一台Mac mini。"
+  },
+  {
+   "id": "x09",
+   "category": "mixed",
+   "reference": "会议室的Wi-Fi连不上。"
+  },
+  {
+   "id": "x10",
+   "category": "mixed",
+   "reference": "明天的PPT你准备好了吗？"
+  },
+  {
+   "id": "x11",
+   "category": "mixed",
+   "reference": "帮我把这个Excel表格按日期排序。"
+  },
+  {
+   "id": "x12",
+   "category": "mixed",
+   "reference": "这个bug我已经复现了。"
+  },
+  {
+   "id": "x13",
+   "category": "mixed",
+   "reference": "项目的deadline是下周五。"
+  },
+  {
+   "id": "x14",
+   "category": "mixed",
+   "reference": "请把Issue链接发给我一下。"
+  },
+  {
+   "id": "x15",
+   "category": "mixed",
+   "reference": "我在本地跑通了单元测试。"
+  },
+  {
+   "id": "x16",
+   "category": "mixed",
+   "reference": "这个接口需要加上token验证。"
+  },
+  {
+   "id": "x17",
+   "category": "mixed",
+   "reference": "你把仓库clone下来，再切换到新分支。"
+  },
+  {
+   "id": "x18",
+   "category": "mixed",
+   "reference": "服务器上的Docker容器又挂了。"
+  },
+  {
+   "id": "x19",
+   "category": "mixed",
+   "reference": "这个需求要在今天的standup上同步一下。"
+  },
+  {
+   "id": "x20",
+   "category": "mixed",
+   "reference": "我打算用Notion整理会议记录。"
+  },
+  {
+   "id": "p01",
+   "category": "particles",
+   "reference": "你今天吃饭了吗？"
+  },
+  {
+   "id": "p02",
+   "category": "particles",
+   "reference": "这个方案怎么样？"
+  },
+  {
+   "id": "p03",
+   "category": "particles",
+   "reference": "我们明天几点出发？"
+  },
+  {
+   "id": "p04",
+   "category": "particles",
+   "reference": "你为什么不早点告诉我？"
+  },
+  {
+   "id": "p05",
+   "category": "particles",
+   "reference": "那你呢？"
+  },
+  {
+   "id": "p06",
+   "category": "particles",
+   "reference": "他是不是已经到了？"
+  },
+  {
+   "id": "p07",
+   "category": "particles",
+   "reference": "你说得对吧？"
+  },
+  {
+   "id": "p08",
+   "category": "particles",
+   "reference": "你知道会议在哪儿开吗？"
+  },
+  {
+   "id": "p09",
+   "category": "particles",
+   "reference": "就这么定了吧。"
+  },
+  {
+   "id": "p10",
+   "category": "particles",
+   "reference": "这不是挺简单的嘛。"
+  },
+  {
+   "id": "p11",
+   "category": "particles",
+   "reference": "他还在开会呢。"
+  },
+  {
+   "id": "p12",
+   "category": "particles",
+   "reference": "嗯，这个我来处理。"
+  },
+  {
+   "id": "p13",
+   "category": "particles",
+   "reference": "我知道了哦。"
+  },
+  {
+   "id": "p14",
+   "category": "particles",
+   "reference": "你快点把文件发给我吧。"
+  },
+  {
+   "id": "p15",
+   "category": "particles",
+   "reference": "我不知道为什么。"
+  },
+  {
+   "id": "n01",
+   "category": "numbers",
+   "reference": "会议定在10月20日下午3点半。"
+  },
+  {
+   "id": "n02",
+   "category": "numbers",
+   "reference": "这个月的预算是5万8千块。"
+  },
+  {
+   "id": "n03",
+   "category": "numbers",
+   "reference": "我的工号是3721。"
+  },
+  {
+   "id": "n04",
+   "category": "numbers",
+   "reference": "项目将在2026年12月31日前完成。"
+  },
+  {
+   "id": "n05",
+   "category": "numbers",
+   "reference": "一共有123个文件需要处理。"
+  }
+ ]
+}
