@@ -46,7 +46,7 @@ A small sample of volunteers, read speech rather than spontaneous speech, record
 
 ## Removal
 
-Participants can ask for their files to be removed at any time: email evendstate@gmail.com with the participant ID. Copies already downloaded cannot be recalled.
+Participants can ask for their files to be removed at any time: email {{CONTACT_EMAIL}} with the participant ID. Copies already downloaded cannot be recalled.
 
 ## License
 
