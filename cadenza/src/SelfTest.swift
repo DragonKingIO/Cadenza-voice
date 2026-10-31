@@ -43,6 +43,7 @@ enum SelfTest {
         VocabularyFixtures.run(check)
         HardwareRemoteFixtures.run(check)
         TranslateFixtures.run(check)
+        NumberStyleFixtures.run(check)
         LLMProfilesFixtures.run(check)
         SpeechEnhancerFixtures.run(check)
         testConfigValidation()

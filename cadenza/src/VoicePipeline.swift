@@ -89,7 +89,9 @@ final class VoicePipeline {
         let r = tidied.report
         let engine = config.engine == "local" ? "local/" + config.localModel.primaryModelID : config.engine
         Log.write("polish engine=\(engine) level=\(config.polish.level.rawValue) hesitations=\(r.hesitations) repeats=\(r.repeats) connectors=\(r.connectors) paragraphs=\(r.paragraphs) changed=\(r.changed) chars=\(raw.count)->\(tidied.text.count)")
-        return LocalASRCorrection.apply(vocabulary(tidied.text), maps: config.localASRMappings)
+        let mapped = LocalASRCorrection.apply(vocabulary(tidied.text), maps: config.localASRMappings)
+        // Local engine only: a number the model wrote half in digits and half in numerals is written in digits (NumberStyle).
+        return config.engine == "local" ? NumberStyle.apply(mapped) : mapped
     }
 
     /// Fixes mis-recognized terms from the vocabulary (the person's own and the packs they switched on).

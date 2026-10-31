@@ -20,12 +20,13 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
-## [1.3.2] - 2026-10-18
+## [1.3.2] - 2026-11-01
 
 Still an **early preview**.
 
 ### Fixed
 - **Smoother recording bar.** The wave in the recording bar no longer stutters while you speak: its bars are now system-rendered layers that ease to each new level, instead of being redrawn on every sample, so a busy moment on the main thread no longer drops frames.
+- **Numbers written half in digits.** With the local engine, a number the model writes half in digits and half in Chinese numerals (for example `十0本` or `二0次`) now uses digits throughout (`10本`, `20次`). Words such as `一个`, `一下`, `第二章` and `百分之百` are never changed. Cloud and Apple recognition are unaffected.
 
 ## [1.3.1] - 2026-10-17
 
