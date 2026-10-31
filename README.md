@@ -74,8 +74,8 @@ A copy you built yourself opens normally. Releases are signed ad hoc and **not n
 
 ## Status
 
-Early preview. It is used every day on the maintainer's Mac (Apple silicon, macOS 26) but has not been tested on many setups. The package is tested by CI on Apple silicon with macOS 14, 15 and 26 and on Intel with macOS 15 and 26 (the self-test suites, on GitHub's
-machines); nobody has used it by hand on an Intel Mac or on macOS 14 or 15 yet, and compatibility with
+Early preview. It is used every day on the maintainer's Mac (Apple silicon, macOS 26) but has not been tested on many setups. The package is tested by CI on Apple silicon with macOS 15 and 26 and on Intel with macOS 15 and 26 (the self-test suites, on GitHub's
+machines). macOS 14 is still the declared minimum but is no longer tested in CI, because GitHub is retiring its macOS 14 runner image; nobody has used it by hand on an Intel Mac or on macOS 14 or 15 yet, and compatibility with
 every app is not verified. Local recognition with SenseVoice is covered by the benchmark and daily use. Of the cloud providers,
 iFLYTEK and Deepgram were tested online with synthesized speech; the others only with fake transports. Provider names are
 descriptive labels, not endorsements, and Cadenza is not affiliated with them. Only macOS is supported

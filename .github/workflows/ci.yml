@@ -41,14 +41,15 @@ jobs:
       - name: Trigger state machine
         run: ./cadenza/trigger-state-machine/run-tests.sh
 
-  # The same package, run on the other kinds of Mac the project says it supports: Intel, and macOS 14 and 15 on Apple silicon.
+  # The same package, run on the other kinds of Mac the project says it supports: Intel, and macOS 15 on Apple silicon.
+  # macOS 14 is not tested here: GitHub retires the macos-14 image on 2026-11-02 (actions/runner-images#13518). It is still the declared minimum.
   # Apple's runners are real machines (or VMs of them), so this checks the claims in the README on actual systems.
   compatibility:
     needs: build-and-test
     strategy:
       fail-fast: false
       matrix:
-        runner: [macos-14, macos-15, macos-15-intel, macos-26-intel]
+        runner: [macos-15, macos-15-intel, macos-26-intel]
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
