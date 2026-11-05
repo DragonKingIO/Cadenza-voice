@@ -197,6 +197,8 @@ final class VoicePipeline {
             notifyUI();return
         }
         if session?.state == .awaitingConfirm {
+            // The toggle shortcut finished this recording. Pressed again while its text is recognized, it waits for that text.
+            if source == .toggle { Log.write("HOLD-ignored toggle-while-recognizing"); return }
             forceEnd(reason: L10n.tr("ui.7900a992fafc"))
         }
         if session?.state == .voiceStarted, session?.source == .toggle { holdEnded();return }
