@@ -19,7 +19,6 @@ struct LocalModelInstalled: Codable, Equatable {
     var installedAt: Date
 }
 
-@Observable
 /// Tells a late clean-up whether the staging folder of a model has been used again since the clean-up was ordered.
 /// Cancelling a download removes its staging folder now and again once the downloader has stopped. If the person imports the
 /// model's files in between, that second removal would delete what was just imported.
@@ -40,6 +39,7 @@ final class StagingEpoch {
     }
 }
 
+@Observable
 final class LocalModelCenter {
     static let shared = LocalModelCenter()
 
