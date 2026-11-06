@@ -8,7 +8,7 @@ enum PrivacyFixtures {
         func hasChinese(_ s: String) -> Bool { s.unicodeScalars.contains { $0.value >= 0x4E00 && $0.value <= 0x9FFF } }
 
         // MARK: Language
-        let defaults = UserDefaults.standard
+        let defaults = DataDirectory.defaults
         let savedLanguage = defaults.object(forKey: "appLanguage")
         var notifications = 0
         let token = NotificationCenter.default.addObserver(forName: .appLanguageChanged, object: nil, queue: nil) { _ in notifications += 1 }

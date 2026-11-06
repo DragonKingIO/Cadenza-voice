@@ -8,8 +8,8 @@ enum IndicatorStyle: String {
     case waveform, character
     private static let key = "recordingIndicatorStyle"
     static var current: IndicatorStyle {
-        get { UserDefaults.standard.string(forKey: key).flatMap(IndicatorStyle.init(rawValue:)) ?? .waveform }
-        set { UserDefaults.standard.set(newValue.rawValue, forKey: key); if newValue == .character { CharacterAssets.prewarm() } }
+        get { DataDirectory.defaults.string(forKey: key).flatMap(IndicatorStyle.init(rawValue:)) ?? .waveform }
+        set { DataDirectory.defaults.set(newValue.rawValue, forKey: key); if newValue == .character { CharacterAssets.prewarm() } }
     }
 }
 

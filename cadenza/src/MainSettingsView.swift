@@ -138,7 +138,7 @@ final class SettingsModel {
         llmProfiles=cfg.llmProfiles
         engine = ASREngine(rawValue: cfg.engine) ?? .apple
         localOnlyOn = LocalOnlyMode.enabled
-        if engine != .apple && engine != .local { UserDefaults.standard.set(engine.rawValue, forKey: Self.lastCloudKey) }
+        if engine != .apple && engine != .local { DataDirectory.defaults.set(engine.rawValue, forKey: Self.lastCloudKey) }
         allowCloud = cfg.allowCloudRecognition
         localSettings = cfg.localModel
         consent = cfg.options(engine).consent
@@ -303,7 +303,7 @@ final class SettingsModel {
     var localOnlyMessage = ""
     private static let lastCloudKey = "lastCloudEngine"
     var lastCloudEngine: ASREngine? {
-        UserDefaults.standard.string(forKey: Self.lastCloudKey).flatMap(ASREngine.init(rawValue:)).flatMap { $0 != .apple && $0 != .local ? $0 : nil }
+        DataDirectory.defaults.string(forKey: Self.lastCloudKey).flatMap(ASREngine.init(rawValue:)).flatMap { $0 != .apple && $0 != .local ? $0 : nil }
     }
     func chooseScope(_ s: EngineScope) {
         if LocalOnlyMode.enabled && s != .local { return } // locked to local recognition
@@ -457,6 +457,15 @@ struct ProviderRow: View {
 
 // MARK: - 主视图（NavigationSplitView 左侧栏）
 
+/// Shows the `--data-dir` folder name as the window subtitle. The page title replaces the window title, so the name cannot
+/// go there. Without `--data-dir` the window has no subtitle, as before.
+private struct DataDirectorySubtitle: ViewModifier {
+    let name: String?
+    @ViewBuilder func body(content: Content) -> some View {
+        if let name { content.navigationSubtitle(name) } else { content }
+    }
+}
+
 struct MainSettingsView: View {
     @Bindable var model: SettingsModel
     @State private var parentHeight:CGFloat=560
@@ -475,6 +484,7 @@ struct MainSettingsView: View {
         } detail: {
             detailPage
                 .navigationTitle(model.tab.title)
+                .modifier(DataDirectorySubtitle(name: DataDirectory.displayName()))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
         }
