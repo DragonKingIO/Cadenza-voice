@@ -52,18 +52,20 @@ fi
 # Each architecture is compiled for the oldest supported macOS; the result is merged with lipo.
 MIN_MACOS="14.0"
 ARCHS="${CADENZA_ARCHS:-arm64 x86_64}"
+# Without -j, swiftc compiles one file at a time on a single core.
+JOBS="$(sysctl -n hw.ncpu)"
 SLICES=()
 RC=0
 : > build/swiftc.log
 set +e
 for ARCH in $ARCHS; do
-    swiftc -target "$ARCH-apple-macosx$MIN_MACOS" -swift-version 5 -O src/*.swift trigger-state-machine/Sources/TriggerCore/TriggerStateMachine.swift -lz ${SHERPA_FLAGS[@]+"${SHERPA_FLAGS[@]}"} -o "$BIN.$ARCH" >> build/swiftc.log 2>&1
+    swiftc -target "$ARCH-apple-macosx$MIN_MACOS" -swift-version 5 -O -j "$JOBS" src/*.swift trigger-state-machine/Sources/TriggerCore/TriggerStateMachine.swift -lz ${SHERPA_FLAGS[@]+"${SHERPA_FLAGS[@]}"} -o "$BIN.$ARCH" >> build/swiftc.log 2>&1
     SLICE_RC=$?
     [ "$SLICE_RC" -ne 0 ] && RC=$SLICE_RC
     SLICES+=("$BIN.$ARCH")
 done
 set -e
-echo "swiftc-exit=$RC archs=$ARCHS min-macos=$MIN_MACOS"
+echo "swiftc-exit=$RC archs=$ARCHS min-macos=$MIN_MACOS jobs=$JOBS"
 if [ "$RC" -ne 0 ]; then
     echo "--- swiftc.log (tail) ---"
     tail -40 build/swiftc.log
