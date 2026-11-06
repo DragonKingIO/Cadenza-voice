@@ -1,6 +1,7 @@
 import Foundation
 import Network
 import CryptoKit
+import Observation
 
 // 本地模型自检：全部使用构造数据与本机 127.0.0.1 测试服务器，不联网、不下载真实模型、不用麦克风。
 enum LocalModelFixtures {
@@ -302,7 +303,11 @@ enum LocalModelFixtures {
         func inject(_ e: LocalModelEntry) { center.testInject(e) }
         inject(e1)
         c("初始为未安装", center.state(e1.id) == .notInstalled)
+        // The model rows redraw only through Observation; without it the download button stays put until the install ends.
+        let redrawn = Box<Bool>()
+        withObservationTracking { _ = center.state(e1.id) } onChange: { redrawn.value = true }
         center.download(e1)
+        c("开始下载时界面能收到状态变化", redrawn.value == true)
         c("下载安装成功并进入已安装状态", wait(30) { if case .installed = center.state(e1.id) { return true }; return false })
         c("安装目录含全部必需文件", center.modelDir(e1.id).map { dir in e1.requiredFiles.allSatisfy { FileManager.default.fileExists(atPath: dir.appendingPathComponent($0).path) } } == true)
         c("暂存目录已清理", !FileManager.default.fileExists(atPath: root.appendingPathComponent(".downloads/\(e1.id)-1.0.0").path))
