@@ -475,6 +475,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
 
     /// An editor owns keyboard input until save or cancel. Suspend every shortcut, including translation.
     func setShortcutRecordingPaused(_ paused: Bool) {
+        Log.write("shortcut-recording paused=\(paused)")
         if paused {hotkey.unregister();listenTrigger.stop();translateTrigger.stop();screenshotHotkey.unregister();ocrHotkey.unregister()}
         else {applyHotkey()}
     }

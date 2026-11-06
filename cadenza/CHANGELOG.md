@@ -20,6 +20,18 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
+## [1.3.4] - 2026-11-06
+
+Still an **early preview**.
+
+### Fixed
+- **The keyboard shortcut no longer stops working after you use the voice remote.** After a hold on the Xiaomi remote, the Mac could keep treating one of its keys as held down, so the Left Option shortcut would not start dictation again until Cadenza was restarted. A key release is now always passed on when its press was.
+- **Local model downloads show their progress again** (#56, thanks `@Wenke-D`).
+
+### Changed
+- The keyboard shortcut listener now writes when it starts and stops, why a start failed, and a heartbeat every 10 minutes to the optional diagnostic log. It records counts only, never which keys you pressed.
+- `build.sh` compiles the Swift sources on all CPU cores (#55, thanks `@Wenke-D`).
+
 ## [1.3.3] - 2026-11-06
 
 Still an **early preview**.
