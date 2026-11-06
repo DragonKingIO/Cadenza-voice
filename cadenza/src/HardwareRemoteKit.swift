@@ -2244,7 +2244,17 @@ final class RemoteKeyGate {
         Log.write("hardware-remote key-gate stopped")
     }
 
+    private var releasePairing = KeyReleasePairing()
     fileprivate func shouldSwallow(code: Int64, isDown: Bool, repeated: Bool) -> Bool {
+        let swallow = decideSwallow(code: code, isDown: isDown, repeated: repeated)
+        cond.lock()
+        let decided = releasePairing.decide(code: code, isDown: isDown, repeated: repeated, swallow: swallow)
+        cond.unlock()
+        if swallow && !decided { Log.write("hardware-remote key-gate passed-release code=\(code) reason=press-was-passed") }
+        return decided
+    }
+
+    private func decideSwallow(code: Int64, isDown: Bool, repeated: Bool) -> Bool {
         guard Set(Self.usageToKeyCode.values).contains(code) else { return false }
         cond.lock()
         defer { cond.unlock() }
@@ -2422,6 +2432,20 @@ struct XiaomiRemoteFigure: View {
 
 /// The remote's microphone is quiet, so raw peaks sit below the bar's noise floor. The bar gets the peak relative to the
 /// recent loudest, so speech always moves it; recognition still receives the original audio.
+/// A key-up follows its key-down. Once the system has seen a press, swallowing the release leaves macOS reporting
+/// the key held forever (measured 2026-11-06: F5 stuck in the session key table after a remote hold, which kept the
+/// left-Option dictation shortcut from starting "alone" until the app restarted).
+struct KeyReleasePairing {
+    private(set) var passed: Set<Int64> = []
+    mutating func decide(code: Int64, isDown: Bool, repeated: Bool, swallow: Bool) -> Bool {
+        if isDown {
+            if !repeated { if swallow { passed.remove(code) } else { passed.insert(code) } }
+            return swallow
+        }
+        return passed.remove(code) != nil ? false : swallow
+    }
+}
+
 final class RemoteLevelNormalizer {
     private var reference: Float = 0.02
     private var recent: [Float] = []

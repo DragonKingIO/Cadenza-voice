@@ -96,8 +96,8 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <key>CFBundleIconFile</key><string>Cadenza</string>
     <key>CFBundleExecutable</key><string>Cadenza</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>1.3.3</string>
-    <key>CFBundleVersion</key><string>11</string>
+    <key>CFBundleShortVersionString</key><string>1.3.4</string>
+    <key>CFBundleVersion</key><string>12</string>
     <key>LSUIElement</key><false/>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>

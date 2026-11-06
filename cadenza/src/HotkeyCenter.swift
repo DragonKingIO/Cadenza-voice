@@ -178,6 +178,7 @@ final class ListenTrigger {
     private var cycle:VoiceShortcutCycle?
     private var router:CoordinatedShortcutRouter?
     private var generation=0
+    private var pollTicks=0, lastHeartbeat:Double=0
     private(set) var spec:HotkeySpec?
     private(set) var kind:Kind = .keyDownCombo
     private(set) var status=L10n.tr("ui.e6fc5eb8c3b8")
@@ -217,7 +218,7 @@ final class ListenTrigger {
     func startBindings(hold:HotkeySpec?,toggle:HotkeySpec?,retry:Bool=false,coordinated:Bool=false,translation:HotkeySpec?=nil)->Bool {
         stop()
         guard hold != nil || toggle != nil || translation != nil else {status=L10n.tr("ui.b80d8b6934e5");return true}
-        guard TCC.listenAllowed() else {status=L10n.tr("ui.4a4068c85293");return false}
+        guard TCC.listenAllowed() else {status=L10n.tr("ui.4a4068c85293");Log.write("listener-start-failed reason=listen-not-allowed generation=\(generation)");return false}
         self.spec=hold;if let hold=hold {kind=Self.classify(hold)};if coordinated {router=CoordinatedShortcutRouter(primary:hold,secondary:toggle)}else{cycle=VoiceShortcutCycle(hold:hold,toggle:toggle,translation:translation)}
         let currentGeneration=generation
         let mask:NSEvent.EventTypeMask=[.keyDown,.keyUp,.flagsChanged]
@@ -233,17 +234,20 @@ final class ListenTrigger {
                 self.stop();self.status=L10n.tr("shortcut.capture.unavailable");self.onSleep?()
                 Log.write("voice-shortcut tap-disabled listening-stopped=true keyboard-passthrough=true")
             })
-            guard tap.start() else {stop();status=L10n.tr("shortcut.capture.unavailable");return false}
+            guard tap.start() else {stop();status=L10n.tr("shortcut.capture.unavailable");Log.write("listener-start-failed reason=tap-unavailable generation=\(generation)");return false}
             keyTap=tap
         } else {
             globalMon=NSEvent.addGlobalMonitorForEvents(matching:mask) { [weak self] e in guard let self=self, self.generation == currentGeneration else { return }; self.handle(e) }
             localMon=NSEvent.addLocalMonitorForEvents(matching:mask) { [weak self] e in if let self=self, self.generation == currentGeneration { self.handle(e) }; return e }
-            guard globalMon != nil,localMon != nil else { stop();status=L10n.tr("ui.dee94e2b4b44");return false }
+            guard globalMon != nil,localMon != nil else { stop();status=L10n.tr("ui.dee94e2b4b44");Log.write("listener-start-failed reason=monitor-unavailable generation=\(generation)");return false }
         }
         watchdog=Timer.scheduledTimer(withTimeInterval:coordinated || cycle?.needsPrefixWait == true ? 0.02:0.2,repeats:true) { [weak self] _ in
             guard let self=self,self.generation == currentGeneration else{return}
             let physical=Self.downKeys(),captured=self.capturedKeys?.augment(physical) ?? physical
             let time=ProcessInfo.processInfo.systemUptime
+            self.pollTicks += 1
+            // Diagnostic only: proves the poll timer is still alive. Counts, never key identities.
+            if time-self.lastHeartbeat >= 600 {self.lastHeartbeat=time;Log.write("listener-heartbeat generation=\(currentGeneration) polls=\(self.pollTicks) modifier-events=\(self.modifierEvents) tap=\(self.keyTap != nil)")}
             let confirmed=self.pollGrace.confirmedPhysical(captured,flags:CGEventSource.flagsState(.combinedSessionState))
             // A pending prefix must still be physically held to confirm. The
             // release grace only protects a recording that already started.
@@ -257,6 +261,8 @@ final class ListenTrigger {
         RunLoop.main.add(watchdog!,forMode:.common)
         sleepObserver=NSWorkspace.shared.notificationCenter.addObserver(forName:NSWorkspace.willSleepNotification,object:nil,queue:.main) { [weak self] _ in if let self=self, self.generation == currentGeneration { self.cancelCycle();self.onSleep?() } }
         status=L10n.tr("ui.361095049006")
+        pollTicks=0;lastHeartbeat=ProcessInfo.processInfo.systemUptime
+        Log.write("listener-started generation=\(currentGeneration) path=\(combos.isEmpty ? "monitor":"tap") hold=\(hold != nil) toggle=\(toggle != nil) translation=\(translation != nil)")
         return true
     }
     private func deliver(_ action:DualShortcutCycle.Action) {
@@ -276,6 +282,7 @@ final class ListenTrigger {
         if before != nil,cycle?.pendingPrefixAt == nil,!actions.contains(.holdStart) {onPrefixCaptureDiscard?()}
     }
     func stop() {
+        if watchdog != nil {Log.write("listener-stopped generation=\(generation) polls=\(pollTicks)")}
         generation += 1
         onPrefixCaptureDiscard?()
         keyTap?.stop();keyTap=nil
