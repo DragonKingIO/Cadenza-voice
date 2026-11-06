@@ -20,6 +20,15 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-11-06
+
+Still an **early preview**.
+
+### Fixed
+- **Sentence endings are cut less often with the voice remote.** The remote stops sending sound slightly before you let go of the key, which could clip the last word of a fast sentence. The Mac microphone now listens from the start of the hold and fills that gap, then keeps listening for 0.3 seconds after you release the key. (It is not used with a Bluetooth microphone, and a hold longer than the remote's 21-second stream limit ends as before.)
+- **The keyboard shortcut keeps listening for 0.3 seconds after you release it** with the local engine, so the last syllable of a quick sentence is no longer lost.
+- **The remote's recording wave no longer freezes after a click at the start.** The click of pressing the key could flatten the bar for the rest of the sentence; it now follows your voice again.
+
 ## [1.3.2] - 2026-11-01
 
 Still an **early preview**.

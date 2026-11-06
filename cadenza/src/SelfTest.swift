@@ -41,6 +41,7 @@ enum SelfTest {
         TCCFixtures.run(check)
         LLMRefineFixtures.run(check)
         VocabularyFixtures.run(check)
+        TailSpliceFixtures.run(check)
         HardwareRemoteFixtures.run(check)
         TranslateFixtures.run(check)
         NumberStyleFixtures.run(check)
