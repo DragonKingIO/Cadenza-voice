@@ -4,6 +4,7 @@ import AVFoundation
 import Carbon.HIToolbox
 import Speech
 
+DataDirectory.setUp() // first: every later step reads AppPaths, and a --data-dir that cannot be used stops the app here
 QuietWindows.installIfNeeded() // self-tests and previews never show windows on screen
 
 fputs("[cadenza] main-enter\n", stderr)

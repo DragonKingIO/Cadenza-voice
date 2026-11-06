@@ -341,8 +341,13 @@ struct BridgeConfig: Codable {
 }
 
 enum AppPaths {
-    static let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("Cadenza", isDirectory: true)   // settings, models and logs; the old folder is moved here once by LegacyMigration
+    /// The standard folder for settings, models and logs. LegacyMigration moves the old folder into it once.
+    static let standardSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("Cadenza", isDirectory: true)
+    /// The folder for settings, models and logs: `customFolder` when one is given with `--data-dir`, else the standard one.
+    static func supportDir(customFolder: URL?) -> URL { customFolder ?? standardSupportDir }
+    /// The folder this process uses.
+    static let supportDir = supportDir(customFolder: DataDirectory.customURL)
     static let configFile = supportDir.appendingPathComponent("config.json")
     static let logFile = supportDir.appendingPathComponent("log.txt")
     static let testField = supportDir.appendingPathComponent("test-field.html")

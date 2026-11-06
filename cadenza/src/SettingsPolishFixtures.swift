@@ -28,6 +28,10 @@ enum SettingsPolishFixtures {
         }
         controller.showSwift(.shortcuts)
         controller.window?.ignoresMouseEvents=true
+        let folderName=DataDirectory.customURL?.lastPathComponent ?? ""
+        let titleDeadline=Date().addingTimeInterval(2)
+        while Date()<titleDeadline && (controller.window?.title != MainTab.shortcuts.title || controller.window?.subtitle != folderName) {RunLoop.current.run(until:Date().addingTimeInterval(0.05))}
+        check("window shows the page title, and the --data-dir folder name as subtitle only with --data-dir",controller.window?.title == MainTab.shortcuts.title && controller.window?.subtitle == folderName)
         let before=try? Data(contentsOf:root.appendingPathComponent("config.json"))
         controller.settingsModel?.onEditShortcut?("hold")
         controller.window?.attachedSheet?.ignoresMouseEvents=true

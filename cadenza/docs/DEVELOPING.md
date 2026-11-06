@@ -28,6 +28,34 @@ T=$(mktemp -d) && unzip -q cadenza/build/stage.noindex/Cadenza.app.zip -d "$T"
 "$T"/*.app/Contents/MacOS/Cadenza --selftest
 ```
 
+### Run a staged build next to the installed app
+
+A staged build and the installed app use the same data folder, `~/Library/Application Support/Cadenza`. To run a staged
+build while the installed app runs, give the staged build its own folder with `--data-dir`. Also start it with
+`--inspect-page=N`: this mode opens page `N` of the settings window, never asks macOS for permissions and keeps
+credentials in memory (see [Test](#test)).
+
+```sh
+"$T"/*.app/Contents/MacOS/Cadenza --data-dir="$HOME/Library/Application Support/Cadenza-dev" --inspect-page=1
+```
+
+- `--data-dir=<path>` moves the files of this process into `<path>`: the settings (`config.json`), the models, the logs
+  and the other data files. A new folder has no models, so download them again in that copy.
+- The path must be absolute. Write `$HOME` instead of `~`: the app refuses a relative path and a path that starts with
+  `~`.
+- When the folder does not exist, the app creates it with mode 0700. When the app refuses the path, it writes the reason
+  to stderr and stops with exit code 64. When it cannot create the folder or write to it, it does the same with exit
+  code 73. It never uses the standard folder instead.
+- The settings window shows the last part of the path under the page title, for example `Cadenza-dev`, so that you can
+  tell the two copies apart. Without `--data-dir`, nothing shows there. The window does not show the full path, so that
+  a screenshot does not show your user name.
+- The app does not move the data of the old product name (`Yansui`) into this folder. Only the standard folder gets it
+  (see `LegacyMigration.swift`).
+- To start again with an empty folder, quit that copy and delete the folder.
+- `--data-dir` does not keep the permissions apart. macOS keeps one permission record for each Bundle ID. When a copy
+  with another signature, such as a staged build, asks for a permission, the installed app can lose its grants. Thus
+  always start a staged build with `--inspect-page=N`.
+
 ### Names you will see in the code
 
 The product is **Cadenza** (English) and **随言** (Simplified Chinese); user-visible names always come from `Brand.name`.
