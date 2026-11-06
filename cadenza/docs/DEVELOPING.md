@@ -55,6 +55,10 @@ credentials in memory (see [Test](#test)).
   (see `LegacyMigration.swift`).
 - A process with `--data-dir` keeps credentials (cloud keys) in memory, also without `--inspect-page`. It never reads or
   changes the credentials of the installed app in the Keychain. Credentials that you enter in it are lost when it quits.
+- Each copy uses the settings of its own folder, and the folder keeps them from one run to the next. When the folder has
+  no `config.json` yet, the app writes one with all global shortcuts off. The local API is off until you turn it on in
+  that copy. If you turn on the same shortcut in both copies, both copies react to it. Only one copy can listen on a
+  given local API port.
 - To start again with an empty folder, quit that copy and delete the folder. This also removes its preferences.
 - `--data-dir` does not keep the permissions apart. macOS keeps one permission record for each Bundle ID. When a copy
   with another signature, such as a staged build, asks for a permission, the installed app can lose its grants. Thus

@@ -875,7 +875,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
 
 // MARK: - 程序引导
 LegacyMigration.runFileAndPreferenceMigration()   // 必须在读取设置之前：把改名前的文件夹和偏好设置搬过来
-let configStore = ConfigStore()
+let configStore = ConfigStore(initial: .initial(customFolder: DataDirectory.customURL))
 let input = InputSourceController()
 let hotkey = HotkeyCenter()
 let listenTrigger = ListenTrigger()

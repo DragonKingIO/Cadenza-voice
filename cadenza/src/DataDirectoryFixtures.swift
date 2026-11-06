@@ -52,6 +52,15 @@ enum DataDirectoryFixtures {
           KeychainStore.keepsInMemory(isolated: false, customFolder: root) && KeychainStore.keepsInMemory(isolated: true, customFolder: nil)
             && !KeychainStore.keepsInMemory(isolated: false, customFolder: nil))
 
+        let fresh = BridgeConfig.initial(customFolder: root)
+        c("快捷键：新的 --data-dir 目录不开任何全局快捷键",
+          !fresh.anyShortcutOn && fresh.translate.trigger == nil && fresh.screenshot.trigger == nil && fresh.screenshot.ocrTrigger == nil && BridgeConfig.validate(fresh).isEmpty)
+        c("快捷键：标准目录仍默认开启按住说话", BridgeConfig.initial(customFolder: nil).holdShortcutEnabled)
+        let configFile = root.appendingPathComponent("config/config.json")
+        let written = ConfigStore(fileURL: configFile, initial: fresh).config.holdShortcutEnabled
+        c("快捷键：新目录第一次启动时写出关闭的设置，之后按这个目录自己的设置", !written && !ConfigStore(fileURL: configFile).config.holdShortcutEnabled)
+        c("Local API：新目录默认关闭", !LocalAPIStore(directory: root).settings.enabled)
+
         c("旧版迁移：只在标准目录下进行", LegacyMigration.applies(customFolder: nil) && !LegacyMigration.applies(customFolder: root))
     }
 }
