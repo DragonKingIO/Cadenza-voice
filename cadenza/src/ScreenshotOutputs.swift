@@ -20,7 +20,7 @@ enum ScreenshotOutputs {
     }
 
     static var defaultFolder: URL {
-        if let path = UserDefaults.standard.string(forKey: lastFolderKey), FileManager.default.fileExists(atPath: path) { return URL(fileURLWithPath: path, isDirectory: true) }
+        if let path = DataDirectory.defaults.string(forKey: lastFolderKey), FileManager.default.fileExists(atPath: path) { return URL(fileURLWithPath: path, isDirectory: true) }
         return FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first ?? FileManager.default.homeDirectoryForCurrentUser
     }
 
@@ -36,7 +36,7 @@ enum ScreenshotOutputs {
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
         guard let png = ScreenshotRenderer.pngData(image) else { throw CocoaError(.fileWriteUnknown) }
         try png.write(to: url, options: .atomic)
-        UserDefaults.standard.set(url.deletingLastPathComponent().path, forKey: lastFolderKey)
+        DataDirectory.defaults.set(url.deletingLastPathComponent().path, forKey: lastFolderKey)
         return url
     }
 

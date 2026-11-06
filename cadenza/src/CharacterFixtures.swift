@@ -13,7 +13,7 @@ enum CharacterFixtures {
         c("副屏坐标居中并保持底部间距",externalOrigin.x+64 == external.midX && externalOrigin.y == 80)
         let previousWidth:CGFloat=96
         c("角色缩小四分之一且Retina无需放大位图",CharacterAssets.displaySize == previousWidth*0.75 && CGFloat(CharacterAssets.pixelSize)*392/512 >= CharacterAssets.displaySize*3)
-        let defaults = UserDefaults.standard, key = "recordingIndicatorStyle"
+        let defaults = DataDirectory.defaults, key = "recordingIndicatorStyle"
         let saved = defaults.object(forKey: key)
         defer { if let saved = saved { defaults.set(saved, forKey: key) } else { defaults.removeObject(forKey: key) } }
 

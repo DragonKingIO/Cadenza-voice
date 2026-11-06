@@ -41,6 +41,8 @@ credentials in memory (see [Test](#test)).
 
 - `--data-dir=<path>` moves the files of this process into `<path>`: the settings (`config.json`), the models, the logs
   and the other data files. A new folder has no models, so download them again in that copy.
+  It also moves the few settings that the app keeps as macOS preferences, such as the language and the recording
+  indicator. They go into `preferences.plist` in that folder, not into `~/Library/Preferences`.
 - The path must be absolute. Write `$HOME` instead of `~`: the app refuses a relative path and a path that starts with
   `~`.
 - When the folder does not exist, the app creates it with mode 0700. When the app refuses the path, it writes the reason
@@ -51,7 +53,7 @@ credentials in memory (see [Test](#test)).
   a screenshot does not show your user name.
 - The app does not move the data of the old product name (`Yansui`) into this folder. Only the standard folder gets it
   (see `LegacyMigration.swift`).
-- To start again with an empty folder, quit that copy and delete the folder.
+- To start again with an empty folder, quit that copy and delete the folder. This also removes its preferences.
 - `--data-dir` does not keep the permissions apart. macOS keeps one permission record for each Bundle ID. When a copy
   with another signature, such as a staged build, asks for a permission, the installed app can lose its grants. Thus
   always start a staged build with `--inspect-page=N`.

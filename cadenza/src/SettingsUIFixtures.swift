@@ -96,7 +96,7 @@ enum SettingsUIFixtures {
         settings.listening = false
         settings.scope = .system
         // "Only recognize on this Mac" lock
-        let lockDefaults = UserDefaults.standard, savedLock = lockDefaults.object(forKey: "localOnlyMode")
+        let lockDefaults = DataDirectory.defaults, savedLock = lockDefaults.object(forKey: "localOnlyMode")
         defer { if let savedLock = savedLock { lockDefaults.set(savedLock, forKey: "localOnlyMode") } else { lockDefaults.removeObject(forKey: "localOnlyMode") } }
         lockDefaults.removeObject(forKey: "localOnlyMode")
         check("lock: off by default", !LocalOnlyMode.enabled && !settings.localOnlyOn)
@@ -129,7 +129,7 @@ enum SettingsUIFixtures {
         _ = store.mutate { $0.engine = ASREngine.apple.rawValue }; _ = store.save(); settings.sync(); settings.scope = .system
 
         // First-run wizard model
-        let wizardDefaults = UserDefaults.standard
+        let wizardDefaults = DataDirectory.defaults
         let savedTerms = wizardDefaults.object(forKey: "acceptedLegalVersion"), savedLanguage = wizardDefaults.object(forKey: "appLanguage")
         defer {
             if let savedTerms = savedTerms { wizardDefaults.set(savedTerms, forKey: "acceptedLegalVersion") } else { wizardDefaults.removeObject(forKey: "acceptedLegalVersion") }

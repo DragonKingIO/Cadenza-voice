@@ -34,9 +34,9 @@ enum DeveloperPageVisibility {
     private static let key = "showDeveloperOptions"
     static func resolve(stored: Bool?, hasUsedInterface: Bool) -> Bool { stored ?? hasUsedInterface }
     static var current: Bool {
-        resolve(stored: UserDefaults.standard.object(forKey: key) as? Bool, hasUsedInterface: FileManager.default.fileExists(atPath: LocalAPIStore.standard.tokenURL.path))
+        resolve(stored: DataDirectory.defaults.object(forKey: key) as? Bool, hasUsedInterface: FileManager.default.fileExists(atPath: LocalAPIStore.standard.tokenURL.path))
     }
-    static func set(_ on: Bool) { UserDefaults.standard.set(on, forKey: key) }
+    static func set(_ on: Bool) { DataDirectory.defaults.set(on, forKey: key) }
 }
 
 enum DeveloperDocument {

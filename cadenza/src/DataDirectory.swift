@@ -1,7 +1,7 @@
 import Foundation
 
 /// The data folder of this process. `--data-dir=<absolute path>` points one process at its own folder, so that a staged build
-/// that runs next to the installed app shares no settings, models or logs with it.
+/// that runs next to the installed app shares no settings, models, logs or preferences with it.
 enum DataDirectory {
     static let argument = "--data-dir"
 
@@ -68,6 +68,16 @@ enum DataDirectory {
         fputs("[cadenza] \(failure.message)\n", stderr)
         exit(code)
     }
+
+    /// Preferences stored in `preferences.plist` inside `folder`, so that removing the folder removes them too. A suite name
+    /// that is an absolute path makes macOS keep the file there, not in ~/Library/Preferences. Without a folder, the standard
+    /// domain.
+    static func preferences(in folder: URL?) -> UserDefaults {
+        folder.flatMap { UserDefaults(suiteName: $0.appendingPathComponent("preferences").path) } ?? .standard
+    }
+
+    /// The preferences of this process. App settings use it instead of `UserDefaults.standard`.
+    static let defaults = preferences(in: customURL)
 
     /// The name that the settings window shows under the page title when the process uses its own folder, so that two running
     /// copies look different. Only the last part of the path, so that a screenshot of the window does not show the user name.

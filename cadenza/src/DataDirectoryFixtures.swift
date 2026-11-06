@@ -29,6 +29,16 @@ enum DataDirectoryFixtures {
         let blocked = locked.appendingPathComponent("dev", isDirectory: true)
         if case .notCreated(let path, _) = DataDirectory.prepare(blocked) { c("创建目录：创建失败时报错", path == blocked.path) } else { c("创建目录：创建失败时报错", false) }
 
+        let key = "dataDirFixture-\(UUID().uuidString)"
+        let preferences = DataDirectory.preferences(in: nested)
+        preferences.set("value", forKey: key)
+        preferences.synchronize()
+        c("偏好设置：存进数据目录里的 preferences.plist",
+          fm.fileExists(atPath: nested.appendingPathComponent("preferences.plist").path) && DataDirectory.preferences(in: nested).string(forKey: key) == "value")
+        c("偏好设置：不写进标准偏好域", UserDefaults.standard.object(forKey: key) == nil)
+        c("偏好设置：没有数据目录时就是标准偏好域", DataDirectory.preferences(in: nil) === UserDefaults.standard)
+        c("偏好设置：本进程的偏好跟着 --data-dir 走", (DataDirectory.defaults === UserDefaults.standard) == (DataDirectory.customURL == nil))
+
         c("路径派生：给了 --data-dir 时 supportDir 就是那个目录", AppPaths.supportDir(customFolder: root) == root)
         let files = [AppPaths.configFile, AppPaths.logFile, AppPaths.testField, LocalAPIStore.standard.settingsURL, LocalAPIStore.standard.tokenURL,
                      LocalModelCenter.shared.root, VocabularyStore().userFile]
