@@ -53,8 +53,11 @@ enum KeychainStore {
     static let service = "Cadenza"
     private(set) static var lastStatus: OSStatus = errSecSuccess
 
-    /// Self-tests and previews never touch the real Keychain: a read of an item made by another build can stop on a system
-    /// prompt that nobody sees, and a write would change the person's saved credentials. They get a private in-memory store.
+    /// Self-tests, previews and a process with its own `--data-dir` never touch the real Keychain: a read of an item made by
+    /// another build can stop on a system prompt that nobody sees, and a write would change the credentials of the installed
+    /// app. They get a private in-memory store, which is empty at each launch.
+    static func keepsInMemory(isolated: Bool, customFolder: URL?) -> Bool { isolated || customFolder != nil }
+    static let inMemory = keepsInMemory(isolated: TCC.isolated, customFolder: DataDirectory.customURL)
     private static let memoryLock = NSLock()
     private static var memory: [String: String] = [:]
 
@@ -69,7 +72,7 @@ enum KeychainStore {
 
     @discardableResult
     static func set(_ value: String, for key: String) -> Bool {
-        if TCC.isolated { memoryLock.lock(); memory[key] = value; memoryLock.unlock(); lastStatus = errSecSuccess; return true }
+        if inMemory { memoryLock.lock(); memory[key] = value; memoryLock.unlock(); lastStatus = errSecSuccess; return true }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -94,7 +97,7 @@ enum KeychainStore {
     /// Removes one stored item. A missing item counts as removed.
     @discardableResult
     static func delete(_ key: String) -> Bool {
-        if TCC.isolated { memoryLock.lock(); memory[key] = nil; memoryLock.unlock(); lastStatus = errSecSuccess; return true }
+        if inMemory { memoryLock.lock(); memory[key] = nil; memoryLock.unlock(); lastStatus = errSecSuccess; return true }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -106,7 +109,7 @@ enum KeychainStore {
     }
 
     private static func read(_ key: String) -> String? {
-        if TCC.isolated { memoryLock.lock(); defer { memoryLock.unlock() }; return memory[key] }
+        if inMemory { memoryLock.lock(); defer { memoryLock.unlock() }; return memory[key] }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -125,7 +128,7 @@ enum KeychainStore {
     /// Attribute-only migration. Never change secrets, ACLs or prompt for authentication.
     @discardableResult
     static func migrateLegacyLabels() -> (renamed: Int, pending: Int) {
-        if TCC.isolated { return (0, 0) }
+        if inMemory { return (0, 0) }
         var renamed=0, pending=0
         for engine in ASREngine.allCases {
             for field in engine.credentialFields {
@@ -138,7 +141,7 @@ enum KeychainStore {
 
     @discardableResult
     private static func migrateLegacyLabel(for key: String) -> Int {
-        if TCC.isolated { return 0 }
+        if inMemory { return 0 }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -166,7 +169,7 @@ enum KeychainStore {
     /// Only human-readable descriptions change; trusted apps, authorizations,
     /// partition entries and prompt flags are preserved exactly.
     static func migrateAccessDescriptions() -> (renamed:Int,pending:Int) {
-        if TCC.isolated { return (0, 0) }
+        if inMemory { return (0, 0) }
         var allowed:DarwinBoolean=false
         guard SecKeychainGetUserInteractionAllowed(&allowed) == errSecSuccess else{return(0,1)}
         guard SecKeychainSetUserInteractionAllowed(false) == errSecSuccess else{return(0,1)}
@@ -207,7 +210,7 @@ enum KeychainStore {
     }
 
     static func has(_ key: String) -> Bool {
-        if TCC.isolated { memoryLock.lock(); defer { memoryLock.unlock() }; return memory[key] != nil }
+        if inMemory { memoryLock.lock(); defer { memoryLock.unlock() }; return memory[key] != nil }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,

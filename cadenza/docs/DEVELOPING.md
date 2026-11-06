@@ -53,6 +53,8 @@ credentials in memory (see [Test](#test)).
   a screenshot does not show your user name.
 - The app does not move the data of the old product name (`Yansui`) into this folder. Only the standard folder gets it
   (see `LegacyMigration.swift`).
+- A process with `--data-dir` keeps credentials (cloud keys) in memory, also without `--inspect-page`. It never reads or
+  changes the credentials of the installed app in the Keychain. Credentials that you enter in it are lost when it quits.
 - To start again with an empty folder, quit that copy and delete the folder. This also removes its preferences.
 - `--data-dir` does not keep the permissions apart. macOS keeps one permission record for each Bundle ID. When a copy
   with another signature, such as a staged build, asks for a permission, the installed app can lose its grants. Thus

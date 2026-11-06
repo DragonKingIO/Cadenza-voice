@@ -48,6 +48,10 @@ enum DataDirectoryFixtures {
         c("窗口副标题：标准目录时没有", DataDirectory.displayName(nil) == nil)
         c("窗口副标题：只有目录名的最后一段，不带上级路径", DataDirectory.displayName(URL(fileURLWithPath: "/Users/example/dev-data", isDirectory: true)) == "dev-data")
 
+        c("钥匙串：给了 --data-dir 时即使不隔离也只用内存",
+          KeychainStore.keepsInMemory(isolated: false, customFolder: root) && KeychainStore.keepsInMemory(isolated: true, customFolder: nil)
+            && !KeychainStore.keepsInMemory(isolated: false, customFolder: nil))
+
         c("旧版迁移：只在标准目录下进行", LegacyMigration.applies(customFolder: nil) && !LegacyMigration.applies(customFolder: root))
     }
 }
