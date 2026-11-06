@@ -32,6 +32,21 @@ enum Microphones {
         }
     }
 
+    /// True when the microphone that would be opened (the chosen one, else the system default) is a Bluetooth headset:
+    /// opening it only to listen ahead would switch the headset to its low-quality call profile.
+    static func isBluetoothInput(uid: String) -> Bool {
+        var id = AudioDeviceID(0)
+        if uid.isEmpty {
+            var a = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultInputDevice, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+            var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+            guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &a, 0, nil, &size, &id) == noErr else { return false }
+        } else if let found = devices().first(where: { $0.uid == uid })?.id { id = found } else { return false }
+        var t = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyTransportType, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+        var type = UInt32(0), size = UInt32(MemoryLayout<UInt32>.size)
+        guard AudioObjectGetPropertyData(id, &t, 0, nil, &size, &type) == noErr else { return false }
+        return type == kAudioDeviceTransportTypeBluetooth || type == kAudioDeviceTransportTypeBluetoothLE
+    }
+
     static func configure(_ engine: AVAudioEngine, uid: String) -> String? {
         guard !uid.isEmpty else { return nil }
         guard var device = devices().first(where: { $0.uid == uid })?.id else { return L10n.tr("ui.d07d15b0cb01") }

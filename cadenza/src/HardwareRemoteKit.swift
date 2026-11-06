@@ -651,6 +651,13 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
     @ObservationIgnored private var levelNormalizer = RemoteLevelNormalizer()
     @ObservationIgnored private var repeatTimers: [HardwareRemoteKey: Timer] = [:]
     @ObservationIgnored private var lastAudioPacketAt = Date()
+    /// Tail rescue (see TailSplicer): the Mac microphone listens from the start of the hold into a ring and is spliced in at AUDIO_STOP.
+    @ObservationIgnored private var tailMic: CloudPCMCapture?
+    @ObservationIgnored private var tailSplicer: TailSplicer?
+    @ObservationIgnored private var tailStopTimer: Timer?
+    @ObservationIgnored private var receivedAudioPacketsInSession = 0
+    @ObservationIgnored private var lastBLEPacketUptime = 0.0
+    @ObservationIgnored private var voiceKeyUpUptime: Double?
     @ObservationIgnored private var streamWatchdog: Timer?
     /// 由 HID/BLE 读到的设备名决定外观（名字含 Pro 为 2 Pro）。
     var remoteModel: XiaomiRemoteModel { XiaomiRemoteModel.detect(config.deviceName) }
@@ -1020,7 +1027,16 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
                 // 这里只启动随言外部录音会话，绝不重复向 BLE 发送 [0x0C, 0x00]，防止遥控器重置音频流吞字。
                 startRemoteVoiceSession(triggerSource: "hid-hold-down", sendBLEMicOpen: false)
             } else {
-                stopRemoteVoiceSession(triggerSource: "hid-hold-up")
+                voiceKeyUpUptime = ProcessInfo.processInfo.systemUptime
+                if tailSplicer?.live == true {
+                    // The Mac microphone already carries the speech after AUDIO_STOP: keep it until 300 ms after the release.
+                    scheduleStopRemoteVoiceSession(triggerSource: "hid-hold-up", delay: Double(TailPolicy.remoteExtraMs) / 1000)
+                } else if tailMic != nil {
+                    // AUDIO_STOP normally arrives just before the key-up; allow for it arriving a moment after.
+                    scheduleStopRemoteVoiceSession(triggerSource: "hid-hold-up", delay: 0.18)
+                } else {
+                    stopRemoteVoiceSession(triggerSource: "hid-hold-up")
+                }
             }
 
         case .toggleVoice:
@@ -1335,7 +1351,12 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
                     if !isStreamingVoice { return }
                 }
                 if isStreamingVoice && (config.action(for: .voice) == .holdToTalk || config.action(for: .voice) == .holdToTranslate) {
-                    stopRemoteVoiceSession(triggerSource: "ble-0x00")
+                    if let splicer = tailSplicer, tailMic != nil, splicer.hasMic, receivedAudioPacketsInSession > 0,
+                       receivedAudioPacketsInSession < TailPolicy.firmwareLimitPackets {
+                        if !splicer.live { spliceTailMic(splicer) }
+                    } else {
+                        stopRemoteVoiceSession(triggerSource: "ble-0x00")
+                    }
                 }
 
             default:
@@ -1352,6 +1373,9 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
                 if keyTestMode && !pairingPanel.isShowingTrialStep { return }
                 startRemoteVoiceSession(triggerSource: "ble-audio-packet", sendBLEMicOpen: false)
             }
+            if tailSplicer?.live == true { return }   // the Mac microphone carries the audio after AUDIO_STOP; a late packet would double it
+            receivedAudioPacketsInSession += 1
+            lastBLEPacketUptime = ProcessInfo.processInfo.systemUptime
             lastAudioPacketAt = Date()
             // 遥控器麦克风音量偏小：显示用的电平放大后再交给录音条，否则低于波形噪声下限，条上看不到起伏。
             if let source = activePCMSource, !levelBoostInstalled, let base = source.onLevel {
@@ -1360,7 +1384,13 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
                 levelBoostInstalled = true
             }
             let pcm = decoder.decode(adpcmData: data, gain: config.micGain)
-            activePCMSource?.push(pcm)
+            if let splicer = tailSplicer {
+                // The newest 10 ms are held back to be cross-faded with the microphone at the splice.
+                let ready = splicer.pushBLE(TailSplicer.samples(pcm), arrival: ProcessInfo.processInfo.systemUptime)
+                if !ready.isEmpty { activePCMSource?.push(TailSplicer.data(ready)) }
+            } else {
+                activePCMSource?.push(pcm)
+            }
             if !pcm.isEmpty {
                 var sum: Float = 0
                 for v in pcm { let f = Float(v) / 32768; sum += f * f }
@@ -1369,6 +1399,64 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
                 pairingPanel.updateWaveform(level: level)
             }
             return
+        }
+    }
+
+    // MARK: - Tail rescue
+
+    /// Drops the ring. The BLE audio held back for the cross-fade is sent on first, so nothing of the hold is lost.
+    private func stopTailMic() {
+        tailStopTimer?.invalidate(); tailStopTimer = nil
+        if let splicer = tailSplicer {
+            let rest = splicer.finish()
+            if !rest.isEmpty { activePCMSource?.push(TailSplicer.data(rest)) }
+        }
+        tailMic?.stop()
+        tailMic = nil
+        tailSplicer = nil
+    }
+
+    private func scheduleStopRemoteVoiceSession(triggerSource: String, delay: TimeInterval) {
+        guard isStreamingVoice else { return }
+        tailStopTimer?.invalidate()
+        tailStopTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
+            guard let self else { return }
+            self.tailStopTimer = nil
+            self.stopRemoteVoiceSession(triggerSource: triggerSource)
+        }
+    }
+
+    /// Start the Mac microphone with the hold, into the ring only. Not started for a Bluetooth microphone (it would drop to the call profile).
+    private func startTailRing() {
+        voiceKeyUpUptime = nil
+        guard TailPolicy.remoteTailRescueEnabled, !isTrialCardActive, HoldNativeEngine.micAuthorized() else { return }
+        guard config.action(for: .voice) == .holdToTalk || config.action(for: .voice) == .holdToTranslate else { return }
+        let uid = pipeline?.configStore.config.microphoneUID ?? ""
+        guard !Microphones.isBluetoothInput(uid: uid) else { Log.write("hardware-remote tail-ring-skipped bluetooth-input"); return }
+        let splicer = TailSplicer(), mic = CloudPCMCapture()
+        mic.onPCM = { [weak self] data in
+            let arrival = ProcessInfo.processInfo.systemUptime
+            DispatchQueue.main.async {
+                guard let self, self.tailMic === mic, self.isStreamingVoice, let live = splicer.appendMic(TailSplicer.samples(data), arrival: arrival) else { return }
+                self.lastAudioPacketAt = Date()
+                if !live.isEmpty { self.activePCMSource?.push(TailSplicer.data(live)) }
+            }
+        }
+        if mic.start(uid: uid) {
+            tailSplicer = splicer; tailMic = mic
+        } else { Log.write("hardware-remote tail-ring-unavailable mic-start-failed") }
+    }
+
+    /// AUDIO_STOP: push the Mac microphone audio from the end of the last BLE packet, then keep it live until key-up + 300 ms.
+    private func spliceTailMic(_ splicer: TailSplicer) {
+        let now = ProcessInfo.processInfo.systemUptime
+        let backlog = splicer.splice(lastBLEArrival: lastBLEPacketUptime)
+        if !backlog.isEmpty { activePCMSource?.push(TailSplicer.data(backlog)) }
+        lastAudioPacketAt = Date()
+        Log.write("hardware-remote tail-splice backlog=\(backlog.count) gain=\(String(format: "%.2f", splicer.gain)) lastBLEAgoMs=\(Int((now - lastBLEPacketUptime) * 1000)) keyHeld=\(keyDownState[.voice] == true)")
+        if keyDownState[.voice] != true, let up = voiceKeyUpUptime {
+            // Key already released: stop 300 ms after it, but not sooner than the audio just spliced in.
+            scheduleStopRemoteVoiceSession(triggerSource: "ble-0x00-tail", delay: max(0.05, up + Double(TailPolicy.remoteExtraMs) / 1000 - now))
         }
     }
 
@@ -1388,6 +1476,9 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
         levelNormalizer = RemoteLevelNormalizer()
         RemoteKeyGate.shared.setVoiceStreaming(true)
         decoder.reset()
+        receivedAudioPacketsInSession = 0
+        stopTailMic()
+        startTailRing()
         // 兜底：遥控器停止推流（松手、断连）后 1.5 秒内没有新音频，就结束这段录音，不会一直卡在录音状态。
         lastAudioPacketAt = Date()
         streamWatchdog?.invalidate()
@@ -1444,6 +1535,7 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
         guard isStreamingVoice else { return }
         isStreamingVoice = false
         streamWatchdog?.invalidate(); streamWatchdog = nil
+        stopTailMic()
         Log.write(levelNormalizer.summary)
         RemoteKeyGate.shared.setVoiceStreaming(false)
         liveAudioLevel = 0
@@ -1476,6 +1568,7 @@ final class HardwareRemoteCenter: NSObject, CBCentralManagerDelegate, CBPeripher
     func cancelRemoteVoiceSession(reason: String) {
         isStreamingVoice = false
         streamWatchdog?.invalidate(); streamWatchdog = nil
+        stopTailMic()
         RemoteKeyGate.shared.setVoiceStreaming(false)
         liveAudioLevel = 0
         activePCMSource = nil
@@ -2331,13 +2424,21 @@ struct XiaomiRemoteFigure: View {
 /// recent loudest, so speech always moves it; recognition still receives the original audio.
 final class RemoteLevelNormalizer {
     private var reference: Float = 0.02
+    private var recent: [Float] = []
     private var rawMax: Float = 0
     private var rawSum: Float = 0
     private var count = 0
 
+    /// The third-largest of the last six peaks: a key click lasting one or two packets cannot raise the reference, speech
+    /// that stays loud for three packets still does. The click itself may flash the bar, but cannot flatten the speech after it.
+    private static func robust(_ window: [Float]) -> Float {
+        window.count >= 3 ? window.sorted()[window.count - 3] : 0
+    }
+
     func normalized(_ raw: Float) -> Float {
         rawMax = max(rawMax, raw); rawSum += raw; count += 1
-        reference = max(0.02, reference * 0.995, raw)
+        recent.append(raw); if recent.count > 6 { recent.removeFirst() }
+        reference = max(0.02, reference * 0.995, Self.robust(recent))
         return min(1, raw / reference)
     }
 

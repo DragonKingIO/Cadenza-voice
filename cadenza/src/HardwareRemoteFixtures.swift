@@ -50,6 +50,15 @@ enum HardwareRemoteFixtures {
         c("preset editing: arrows select text", applied.action(for: .up) == .selectUp && applied.action(for: .menu) == .cutShortcut)
         let normalizer = RemoteLevelNormalizer()
         c("level bar: a quiet voice still moves the bar and the peak is 1", normalizer.normalized(0.005) == 0.25 && normalizer.normalized(0.02) == 1 && normalizer.normalized(0) == 0)
+        let clickNorm = RemoteLevelNormalizer()
+        _ = clickNorm.normalized(0.57); _ = clickNorm.normalized(0.4)
+        var speech: [Float] = []
+        for _ in 0..<10 { speech.append(clickNorm.normalized(0.01)) }
+        c("level bar: a start click does not flatten the speech after it", speech.last! > 0.08 && speech.contains { $0 > 0.08 })
+        let loudNorm = RemoteLevelNormalizer()
+        var loud: [Float] = []
+        for _ in 0..<40 { loud.append(loudNorm.normalized(0.3)) }
+        c("level bar: sustained loud speech raises the reference so the bar is not pinned", loud.last! == 1)
         let decoded = (try? JSONDecoder().decode(HardwareRemoteConfig.self, from: JSONEncoder().encode(config)))
         c("config: survives encoding", decoded == config)
     }

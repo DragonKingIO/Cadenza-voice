@@ -153,6 +153,8 @@ final class VoicePipeline {
 
     private var recorder: HoldRecordingSession?
     var shortcutPrefixCapture: ShortcutPrefixCapture?
+    /// Milliseconds to keep capturing after the hotkey is released (see TailPolicy). Set per hold, reset when the session ends.
+    var releaseHoldExtraMs = 0
     private var pollTimer: Timer?
     private var config: BridgeConfig { configStore.config }
 
@@ -247,6 +249,7 @@ final class VoicePipeline {
             guard let model=FallbackPolicy.resolvePrimary(settings:config.localModel,ready:ready,recognitionLocale:config.recognitionLocale) else{lastResult=L10n.tr(ready.isEmpty ? "local.err.notInstalled":"local.err.noLanguageModel");lastIsError=true;notifyUI();return}
             let capture: CloudPCMCapturing
             if !translate, let prefix { capture = prefix } else { capture = CloudPCMCapture() }
+            releaseHoldExtraMs = source == .hotkey ? TailPolicy.keyboardProductionExtraMs : 0
             sessionRecorder=LocalASRRecorder(modelID:model.id,capture:capture,options:config.localModel.recognition.resolved(forLanguages:[config.recognitionLocale]))
         } else if let provider=ASREngine(rawValue:config.engine),provider != .apple {
             guard config.options(provider).consent else{lastResult=L10n.tr("ui.eadd4394cde5");lastIsError=true;notifyUI();return}
@@ -392,7 +395,14 @@ final class VoicePipeline {
         Log.write("HOLD-END")
         s.state = .awaitingConfirm
         recognizingSince = now()
-        recorder?.end()
+        if releaseHoldExtraMs > 0, let held = recorder {
+            // Keep capturing a little longer, then end as usual. The session id guards against a cancel in between.
+            let sid = s.id
+            DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(releaseHoldExtraMs)) { [weak self] in
+                guard let self, self.session?.id == sid, self.recorder === held else { return }
+                self.recorder?.end()
+            }
+        } else { recorder?.end() }
         notifyUI()
     }
 
@@ -537,6 +547,7 @@ final class VoicePipeline {
         recorder?.onLevel = nil
         recorder?.abort()
         recorder = nil
+        releaseHoldExtraMs = 0
         _ = recordingAccessibility?.restore();recordingAccessibility=nil
         lastPartial = ""
         recognizingSince = nil
