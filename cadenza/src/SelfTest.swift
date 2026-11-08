@@ -33,6 +33,7 @@ enum SelfTest {
         LocalAPIFixtures.run(check)
         LocalAPIAudioFixtures.run(check)
         CharacterFixtures.run(check)
+        CapsuleWaitingFixtures.run(check)
         PrivacyFixtures.run(check)
         LegacyMigrationFixtures.run(check)
         DataDirectoryFixtures.run(check)

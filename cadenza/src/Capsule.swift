@@ -1,5 +1,6 @@
 import AppKit
 import QuartzCore
+import CoreImage
 import AVFoundation
 import Speech
 import Security
@@ -404,6 +405,12 @@ final class CapsuleWindowController:NSObject {
     private enum Mode {case hidden,record,recognize,error}
     private var mode:Mode = .hidden
     private var panel:NSPanel?,content:CapsuleContentView?,waveform:WaveformView?,character:CharacterView?,chrome:NSView?
+    /// While the final text is recognized, the waveform is blurred under a spinner.
+    private var spinner:NSProgressIndicator?
+    private static let waitingBlur=CIFilter(name:"CIGaussianBlur",parameters:[kCIInputRadiusKey:2.5])
+    private func stopWaiting(){spinner?.stopAnimation(nil);spinner?.isHidden=true;waveform?.contentFilters=[]}
+    /// Whether the waiting spinner shows and the waveform is blurred, for the layout checks.
+    var inspectionWaiting:(spinner:Bool,blurred:Bool) {(spinner?.isHidden == false,!(waveform?.contentFilters.isEmpty ?? true))}
     private var anchorScreen:NSScreen?
     private var characterControls:NSView?
     private var statusCaption:NSTextField?,captionBackground:NSVisualEffectView?
@@ -452,6 +459,10 @@ final class CapsuleWindowController:NSObject {
         panel?.setContentSize(size);panel?.hasShadow = !useCharacter;content?.layer?.cornerRadius=20
         chrome?.isHidden=useCharacter;chrome?.frame=NSRect(x:0,y:useCharacter ? 4:0,width:size.width,height:40)
         waveform?.frame=NSRect(x:24,y:9,width:96,height:22);waveform?.isHidden=hovered || useCharacter
+        if mode == .recognize && !useCharacter && !hovered {
+            waveform?.contentFilters=Self.waitingBlur.map{[$0]} ?? []
+            spinner?.frame=NSRect(x:64,y:12,width:16,height:16);spinner?.isHidden=false;spinner?.startAnimation(nil)
+        } else {stopWaiting()}
         character?.frame=NSRect(x:(size.width-CharacterAssets.displaySize)/2,y:36,width:CharacterAssets.displaySize,height:CharacterAssets.displaySize);character?.isHidden = !useCharacter
         statusCaption?.stringValue=L10n.tr(mode == .record ? "indicator.state.recording":"indicator.state.recognizing")
         captionBackground?.frame=NSRect(x:8,y:4,width:112,height:24)
@@ -553,10 +564,11 @@ final class CapsuleWindowController:NSObject {
     var inspectionContentView:NSView? {panel?.contentView}
     var suppressPresentation=false
     func hideIfExpired(){if mode == .error,Date()>=hideAt {hide()}}
-    func hide(){character?.stop();levelTimer?.invalidate();levelTimer=nil;hideTimer?.invalidate();hideTimer=nil;latest=0;smooth=0;waveform?.levels=Array(repeating:0,count:21);waveform?.layer?.removeAllAnimations();content?.layer?.removeAllAnimations();mode = .hidden;anchorScreen=nil;panel?.orderOut(nil)}
+    func hide(){character?.stop();levelTimer?.invalidate();levelTimer=nil;hideTimer?.invalidate();hideTimer=nil;latest=0;smooth=0;waveform?.levels=Array(repeating:0,count:21);waveform?.layer?.removeAllAnimations();content?.layer?.removeAllAnimations();stopWaiting();mode = .hidden;anchorScreen=nil;panel?.orderOut(nil)}
     @discardableResult private func prepare(_ next:Mode)->Bool {if panel == nil {build()};let changed=mode != next
         if changed {hideTimer?.invalidate();hideTimer=nil;waveform?.layer?.removeAllAnimations();hovered=false;waveform?.levels=Array(repeating:0,count:21);content?.setAccessibilityCustomActions(nil)}
         if next != .record {levelTimer?.invalidate();levelTimer=nil;latest=0;smooth=0}
+        if next != .recognize {stopWaiting()}
         if mode == .hidden {
             anchorScreen=NSScreen.screens.first(where:{$0.frame.contains(NSEvent.mouseLocation)}) ?? NSScreen.main
         }
@@ -568,7 +580,8 @@ final class CapsuleWindowController:NSObject {
     @objc private func cancel(){onCancel?()}
     private func build(){let p=NSPanel(contentRect:NSRect(origin:.zero,size:waveSize),styleMask:[.borderless,.nonactivatingPanel],backing:.buffered,defer:false);p.isOpaque=false;p.backgroundColor = .clear;p.level = .floating;p.collectionBehavior=[.canJoinAllSpaces,.fullScreenAuxiliary];p.becomesKeyOnlyIfNeeded=true
         let c=CapsuleContentView(frame:NSRect(origin:.zero,size:waveSize));c.wantsLayer=true;c.layer?.cornerRadius=20;c.onHover={[weak self] hover in self?.hovered=hover;self?.layoutWave()};c.setAccessibilityElement(true);c.setAccessibilityRole(.group)
-        let wf=WaveformView(frame:NSRect(x:24,y:9,width:96,height:22));wf.wantsLayer=true;wf.setAccessibilityElement(false);c.addSubview(wf);waveform=wf
+        let wf=WaveformView(frame:NSRect(x:24,y:9,width:96,height:22));wf.wantsLayer=true;wf.setAccessibilityElement(false);c.addSubview(wf);waveform=wf;wf.layerUsesCoreImageFilters=true
+        let sp=NSProgressIndicator(frame:NSRect(x:64,y:12,width:16,height:16));sp.style = .spinning;sp.controlSize = .small;sp.isDisplayedWhenStopped=false;sp.isHidden=true;sp.setAccessibilityElement(false);c.addSubview(sp);spinner=sp
         let stop=NSButton(title:L10n.tr("ui.ca4d973c0b00"),target:self,action:#selector(performAction));stop.isBordered=false;stop.contentTintColor=DesignTokens.accent;stop.isHidden=true;c.addSubview(stop);stopButton=stop
         let cancel=NSButton(title:L10n.tr("ui.2cd0f3be8738"),target:self,action:#selector(cancel));cancel.isBordered=false;cancel.contentTintColor=DesignTokens.accent;cancel.isHidden=true;c.addSubview(cancel);cancelButton=cancel
         let label=NSTextField(labelWithString:"");label.font = .systemFont(ofSize:12);label.lineBreakMode = .byTruncatingTail;label.isHidden=true;c.addSubview(label);reasonLabel=label
