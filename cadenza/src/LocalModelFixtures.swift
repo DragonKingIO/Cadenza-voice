@@ -10,8 +10,9 @@ enum LocalModelFixtures {
     /// 在等待期间继续处理主线程队列（安装流程会回到主线程）
     static func wait(_ timeout: TimeInterval = 15, until condition: () -> Bool) -> Bool {
         let end = Date().addingTimeInterval(timeout)
-        while !condition() && Date() < end { RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.02)) }
-        return condition()
+        var ok = condition()
+        while !ok && Date() < end { RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.02)); ok = condition() }
+        return ok
     }
 
     static func tempDir(_ name: String) -> URL {
@@ -358,6 +359,17 @@ enum LocalModelFixtures {
             switch center.state(e1.id) { case .notInstalled, .installed: settled = true; default: break }
             return settled && !FileManager.default.fileExists(atPath: root.appendingPathComponent(".downloads/\(e1.id)-1.0.0").path)
         })
+
+        // Right after a cancel the staging folder must never reappear (a start block still queued used to recreate it)
+        center.download(e1); center.cancel(e1.id)
+        let stagingPath = root.appendingPathComponent(".downloads/\(e1.id)-1.0.0").path
+        var reappeared = false
+        let sampleEnd = Date().addingTimeInterval(0.5)
+        while Date() < sampleEnd {
+            if FileManager.default.fileExists(atPath: stagingPath) { reappeared = true }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.02))
+        }
+        c("取消后暂存目录不会被排队中的启动重新创建", !reappeared)
 
         // A clean-up ordered by a cancel must not remove files imported afterwards (this race made the import check flaky on slow machines)
         let epoch = StagingEpoch()
