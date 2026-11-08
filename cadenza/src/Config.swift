@@ -200,6 +200,14 @@ struct BridgeConfig: Codable {
         )
     }
 
+    /// The configuration that a new data folder starts with. A folder given with `--data-dir` starts with the hold shortcut
+    /// off, so that a copy that runs next to the installed app does not also record when the person holds the same key.
+    static func initial(customFolder: URL?) -> BridgeConfig {
+        var c = BridgeConfig.default()
+        if customFolder != nil { c.holdShortcutEnabled = false }
+        return c
+    }
+
     /// F 键与扩展键（含 F13–F20、Launchpad/DVR 等扩展键码）无修饰键也可作触发键
     static func isExtendedKey(_ code: UInt32) -> Bool {
         let k = Int(code)
@@ -341,8 +349,13 @@ struct BridgeConfig: Codable {
 }
 
 enum AppPaths {
-    static let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("Cadenza", isDirectory: true)   // settings, models and logs; the old folder is moved here once by LegacyMigration
+    /// The standard folder for settings, models and logs. LegacyMigration moves the old folder into it once.
+    static let standardSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("Cadenza", isDirectory: true)
+    /// The folder for settings, models and logs: `customFolder` when one is given with `--data-dir`, else the standard one.
+    static func supportDir(customFolder: URL?) -> URL { customFolder ?? standardSupportDir }
+    /// The folder this process uses.
+    static let supportDir = supportDir(customFolder: DataDirectory.customURL)
     static let configFile = supportDir.appendingPathComponent("config.json")
     static let logFile = supportDir.appendingPathComponent("log.txt")
     static let testField = supportDir.appendingPathComponent("test-field.html")
@@ -356,7 +369,8 @@ final class ConfigStore {
     private let writeFile:(Data,URL)throws->Void
 
     private static let isolatedSelfTestFile=FileManager.default.temporaryDirectory.appendingPathComponent("trigger-regression-"+UUID().uuidString).appendingPathComponent("config.json")
-    init(fileURL requestedFileURL:URL=AppPaths.configFile,writeFile:@escaping(Data,URL)throws->Void={data,url in try data.write(to:url,options:.atomic)}) {
+    /// `initial` is the configuration that the store writes when the file does not exist yet.
+    init(fileURL requestedFileURL:URL=AppPaths.configFile,initial:BridgeConfig = .default(),writeFile:@escaping(Data,URL)throws->Void={data,url in try data.write(to:url,options:.atomic)}) {
         // Every self-test suite works on a scratch config; only "--selftest" used to, so the others read and could pick up the person's own settings.
         let fileURL=CommandLine.arguments.contains(where:{$0.hasPrefix("--selftest")}) && requestedFileURL == AppPaths.configFile ? Self.isolatedSelfTestFile:requestedFileURL
         self.fileURL=fileURL;self.writeFile=writeFile
@@ -375,6 +389,7 @@ final class ConfigStore {
             if FileManager.default.fileExists(atPath: fileURL.path) {
                 validationErrors = ["配置文件解析失败，已用内置默认"]
             } else {
+                config = initial
                 save() // 首次运行写出有效默认配置，保证菜单编辑/重载路径可用
                 Log.write("first-run default-config-written")
             }

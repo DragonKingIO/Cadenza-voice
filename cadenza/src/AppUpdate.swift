@@ -134,14 +134,14 @@ final class UpdateChecker {
     /// Self-tests and previews must not read or change what the person's installed app has remembered.
     private static let inspectionRun = ProcessInfo.processInfo.arguments.contains { $0.hasPrefix("--selftest") || $0.hasPrefix("--preview") || $0.hasPrefix("--check-") }
     init(defaults: UserDefaults? = nil) {
-        self.defaults = defaults ?? (Self.inspectionRun ? UserDefaults(suiteName: "local.cadenza.inspection.\(ProcessInfo.processInfo.processIdentifier)") ?? .standard : .standard)
+        self.defaults = defaults ?? (Self.inspectionRun ? UserDefaults(suiteName: "local.cadenza.inspection.\(ProcessInfo.processInfo.processIdentifier)") ?? DataDirectory.defaults : DataDirectory.defaults)
         restore()
     }
 
     /// Automatic checks are opt-in. The setup wizard asks once; nothing is requested until the answer is yes.
     static var autoCheck: Bool {
-        get { UserDefaults.standard.object(forKey: autoKey) as? Bool ?? false }
-        set { UserDefaults.standard.set(newValue, forKey: autoKey) }
+        get { DataDirectory.defaults.object(forKey: autoKey) as? Bool ?? false }
+        set { DataDirectory.defaults.set(newValue, forKey: autoKey) }
     }
 
     private func isShowable(_ info: UpdateInfo) -> Bool {

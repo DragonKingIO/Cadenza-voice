@@ -4,6 +4,7 @@ import AVFoundation
 import Carbon.HIToolbox
 import Speech
 
+DataDirectory.setUp() // first: every later step reads AppPaths, and a --data-dir that cannot be used stops the app here
 QuietWindows.installIfNeeded() // self-tests and previews never show windows on screen
 
 fputs("[cadenza] main-enter\n", stderr)
@@ -874,7 +875,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
 
 // MARK: - 程序引导
 LegacyMigration.runFileAndPreferenceMigration()   // 必须在读取设置之前：把改名前的文件夹和偏好设置搬过来
-let configStore = ConfigStore()
+let configStore = ConfigStore(initial: .initial(customFolder: DataDirectory.customURL))
 let input = InputSourceController()
 let hotkey = HotkeyCenter()
 let listenTrigger = ListenTrigger()

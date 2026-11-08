@@ -99,6 +99,6 @@ enum LegacyMigrationFixtures {
         c("迁移钥匙串：达到次数后不再启动时尝试", !LegacyMigration.keychainAttemptAllowed(attempts))
 
         // 新标识
-        c("新标识：钥匙串服务与支持文件夹都使用当前名称", KeychainStore.service == "Cadenza" && AppPaths.supportDir.lastPathComponent == "Cadenza")
+        c("新标识：钥匙串服务与支持文件夹都使用当前名称", KeychainStore.service == "Cadenza" && AppPaths.standardSupportDir.lastPathComponent == "Cadenza")
     }
 }

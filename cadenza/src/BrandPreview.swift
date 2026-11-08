@@ -52,7 +52,7 @@ enum BrandPreview {
         }
         // Inspection: change the app language while the page is on screen, to prove the page redraws. Restored afterwards.
         if let flag=CommandLine.arguments.first(where:{$0.hasPrefix("--preview-switch-language=")}),let target=AppLanguage(rawValue:String(flag.dropFirst("--preview-switch-language=".count))) {
-            let saved=UserDefaults.standard.object(forKey:"appLanguage")
+            let saved=DataDirectory.defaults.object(forKey:"appLanguage")
             if CommandLine.arguments.contains("--preview-click-segment") {
                 // Drive the real segmented control the way a click does, instead of calling the setter directly.
                 DispatchQueue.main.asyncAfter(deadline:.now()+0.5){
@@ -66,7 +66,7 @@ enum BrandPreview {
                     fflush(stdout)
                 }
             } else {DispatchQueue.main.asyncAfter(deadline:.now()+0.5){AppLanguage.current=target}}
-            defer{if let saved=saved{UserDefaults.standard.set(saved,forKey:"appLanguage")}else{UserDefaults.standard.removeObject(forKey:"appLanguage")}}
+            defer{if let saved=saved{DataDirectory.defaults.set(saved,forKey:"appLanguage")}else{DataDirectory.defaults.removeObject(forKey:"appLanguage")}}
             return renderAfterSwitch(controller:controller,app:app,output:output,store:store)
         }
         if page == "engines-local" {controller.settingsModel?.scope = .local}
@@ -212,12 +212,12 @@ enum BrandPreview {
     static func renderCapsule(stage:String,output:String)->Int32 {
         let app=NSApplication.shared;app.setActivationPolicy(.regular)
         AppearanceController.apply(CommandLine.arguments.contains("--preview-brand-theme=dark") ? "dark":"light")
-        let savedStyle=UserDefaults.standard.object(forKey:"recordingIndicatorStyle")
-        defer{if let savedStyle=savedStyle{UserDefaults.standard.set(savedStyle,forKey:"recordingIndicatorStyle")}else{UserDefaults.standard.removeObject(forKey:"recordingIndicatorStyle")}}
+        let savedStyle=DataDirectory.defaults.object(forKey:"recordingIndicatorStyle")
+        defer{if let savedStyle=savedStyle{DataDirectory.defaults.set(savedStyle,forKey:"recordingIndicatorStyle")}else{DataDirectory.defaults.removeObject(forKey:"recordingIndicatorStyle")}}
         if CommandLine.arguments.contains("--preview-character") {
-            UserDefaults.standard.set("character",forKey:"recordingIndicatorStyle");CharacterAssets.prewarm()
+            DataDirectory.defaults.set("character",forKey:"recordingIndicatorStyle");CharacterAssets.prewarm()
             let end=Date().addingTimeInterval(10);while !CharacterAssets.ready && Date()<end {RunLoop.current.run(until:Date().addingTimeInterval(0.05))}
-        } else {UserDefaults.standard.set("waveform",forKey:"recordingIndicatorStyle")}
+        } else {DataDirectory.defaults.set("waveform",forKey:"recordingIndicatorStyle")}
         let capsule=CapsuleWindowController()
         switch stage {
         case "error": capsule.showError(L10n.tr("ui.79250fdff1f6"),action:.retry)

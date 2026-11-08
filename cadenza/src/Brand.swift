@@ -10,10 +10,10 @@ enum AppLanguage: String, CaseIterable {
     case system, zhHans = "zh-Hans", en
     private static let key = "appLanguage"
     static var current: AppLanguage {
-        get { UserDefaults.standard.string(forKey: key).flatMap(AppLanguage.init(rawValue:)) ?? .system }
+        get { DataDirectory.defaults.string(forKey: key).flatMap(AppLanguage.init(rawValue:)) ?? .system }
         set {
             guard newValue != current else { return }
-            if newValue == .system { UserDefaults.standard.removeObject(forKey: key) } else { UserDefaults.standard.set(newValue.rawValue, forKey: key) }
+            if newValue == .system { DataDirectory.defaults.removeObject(forKey: key) } else { DataDirectory.defaults.set(newValue.rawValue, forKey: key) }
             NotificationCenter.default.post(name: .appLanguageChanged, object: nil)
         }
     }

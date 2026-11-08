@@ -24,8 +24,12 @@ enum LegacyMigration {
         AppPaths.supportDir.deletingLastPathComponent().appendingPathComponent(legacySupportName, isDirectory: true)
     }
 
+    /// Only the standard folder takes over the data of the old name. A folder given with `--data-dir` starts empty.
+    static func applies(customFolder: URL? = DataDirectory.customURL) -> Bool { customFolder == nil }
+
     /// Runs before anything reads settings. Cheap and synchronous; the Keychain part runs later, in the background.
     static func runFileAndPreferenceMigration() {
+        guard applies() else { return }
         let files = moveSupportFolder(from: legacySupportDir, to: AppPaths.supportDir)
         let prefs = migrateDefaults(from: legacyDefaultsDomain, into: UserDefaults.standard)
         if !files.moved.isEmpty || !files.skipped.isEmpty || prefs > 0 {
@@ -138,7 +142,7 @@ enum LegacyMigration {
 
     /// Background, at launch. Safe to call when there is nothing to migrate.
     static func migrateKeychainInBackground() {
-        guard keychainAttemptAllowed() else { return }
+        guard applies(), keychainAttemptAllowed() else { return }
         DispatchQueue.global(qos: .utility).async {
             let result = migrateKeychain(from: legacyKeychainService, to: KeychainStore.service, label: KeychainStore.itemLabel)
             if result.moved > 0 || result.kept > 0 { Log.write("legacy-keychain-migration moved=\(result.moved) kept=\(result.kept)") }

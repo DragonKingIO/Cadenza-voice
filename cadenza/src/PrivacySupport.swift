@@ -6,8 +6,8 @@ import Foundation
 enum DiagnosticLogging {
     private static let key = "diagnosticLoggingEnabled"
     static var enabled: Bool {
-        get { UserDefaults.standard.object(forKey: key) as? Bool ?? true }
-        set { UserDefaults.standard.set(newValue, forKey: key) }
+        get { DataDirectory.defaults.object(forKey: key) as? Bool ?? true }
+        set { DataDirectory.defaults.set(newValue, forKey: key) }
     }
 }
 
@@ -16,8 +16,8 @@ enum DiagnosticLogging {
 enum LocalOnlyMode {
     private static let key = "localOnlyMode"
     static var enabled: Bool {
-        get { UserDefaults.standard.bool(forKey: key) }
-        set { if newValue { UserDefaults.standard.set(true, forKey: key) } else { UserDefaults.standard.removeObject(forKey: key) } }
+        get { DataDirectory.defaults.bool(forKey: key) }
+        set { if newValue { DataDirectory.defaults.set(true, forKey: key) } else { DataDirectory.defaults.removeObject(forKey: key) } }
     }
 }
 
@@ -83,8 +83,8 @@ enum LegalDocument: String, CaseIterable {
 
 enum TermsAcceptance {
     private static let key = "acceptedLegalVersion"
-    static var acceptedVersion: String? { UserDefaults.standard.string(forKey: key) }
+    static var acceptedVersion: String? { DataDirectory.defaults.string(forKey: key) }
     static var accepted: Bool { acceptedVersion == LegalDocument.version }
-    static func accept() { UserDefaults.standard.set(LegalDocument.version, forKey: key) }
-    static func revoke() { UserDefaults.standard.removeObject(forKey: key) }
+    static func accept() { DataDirectory.defaults.set(LegalDocument.version, forKey: key) }
+    static func revoke() { DataDirectory.defaults.removeObject(forKey: key) }
 }

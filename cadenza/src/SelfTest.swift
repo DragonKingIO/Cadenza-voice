@@ -35,6 +35,7 @@ enum SelfTest {
         CharacterFixtures.run(check)
         PrivacyFixtures.run(check)
         LegacyMigrationFixtures.run(check)
+        DataDirectoryFixtures.run(check)
         OCRLocalFixtures.run(check)
         TextPolishFixtures.run(check)
         ClipRecognitionFixtures.run(check)
