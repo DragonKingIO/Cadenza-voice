@@ -17,6 +17,9 @@ final class ResumableDownloader: NSObject, URLSessionDataDelegate {
     private var received: Int64 = 0
     private var expectingRange = false
     private var finished = false, stopping = false
+    /// Set synchronously by `stop`, before its queued block runs, so a `start` block still waiting on the queue can never create the folder afterwards.
+    private let stateLock = NSLock()
+    private var stopRequested = false
     private var pending: Pending = .none
     private var lastError: Error = LocalModelError.network("unknown")
     private var progress: ((Int64) -> Void)?
@@ -41,7 +44,10 @@ final class ResumableDownloader: NSObject, URLSessionDataDelegate {
         queue.async {
             self.progress = progress; self.completion = completion
             if self.stopping { return }
+            self.stateLock.lock()
+            if self.stopRequested { self.stateLock.unlock(); return }
             try? FileManager.default.createDirectory(at: self.partURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+            self.stateLock.unlock()
             self.attemptCurrent()
         }
     }
@@ -49,6 +55,7 @@ final class ResumableDownloader: NSObject, URLSessionDataDelegate {
     /// 暂停/取消：保留 .part，完成回调以 .cancelled 结束
     /// `then` runs on the downloader's queue once it has stopped, so a caller can clean up after the last possible write.
     func stop(then done: (() -> Void)? = nil) {
+        stateLock.lock(); stopRequested = true; stateLock.unlock()
         queue.async {
             defer { done?() }
             guard !self.finished else { return }
