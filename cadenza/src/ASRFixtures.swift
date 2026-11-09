@@ -134,6 +134,12 @@ enum ASRFixtures {
         var converted=Data();var conversionLevel:Float=0
         try! conversion.convert(audio){d,l in converted.append(d);conversionLevel=max(conversionLevel,l)};try! conversion.convert(nil){d,_ in converted.append(d)}
         c("共享AVAudioConverter立体声连续重采样含尾音",abs(converted.count-3200)<=4 && conversionLevel>0 && converted.count%2==0)
+        let arrayFormat=AVAudioFormat(commonFormat:.pcmFormatFloat32,sampleRate:48000,interleaved:false,channelLayout:AVAudioChannelLayout(layoutTag:kAudioChannelLayoutTag_Unknown|3)!)
+        let arrayAudio=AVAudioPCMBuffer(pcmFormat:arrayFormat,frameCapacity:4800)!;arrayAudio.frameLength=4800
+        for channel in 0..<3 {for n in 0..<4800{arrayAudio.floatChannelData![channel][n]=0.1}}
+        var arrayLevel:Float=0
+        try! PCM16Converter(input:arrayFormat)!.convert(arrayAudio){_,l in arrayLevel=max(arrayLevel,l)}
+        c("通话中的三声道麦克风转单声道不是静音",arrayLevel>0)
         testRecorder(c)
     }
     private final class Capture:CloudPCMCapturing {

@@ -147,7 +147,10 @@ protocol CloudPCMCapturing:AnyObject {
 final class PCM16Converter {
     let outputFormat:AVAudioFormat
     private let converter:AVAudioConverter
-    init?(input:AVAudioFormat){guard input.sampleRate>0,let out=AVAudioFormat(commonFormat:.pcmFormatInt16,sampleRate:16000,channels:1,interleaved:true),let converter=AVAudioConverter(from:input,to:out) else{return nil};outputFormat=out;self.converter=converter}
+    init?(input:AVAudioFormat){guard input.sampleRate>0,let out=AVAudioFormat(commonFormat:.pcmFormatInt16,sampleRate:16000,channels:1,interleaved:true),let converter=AVAudioConverter(from:input,to:out) else{return nil}
+        // During a call the built-in microphone delivers three channels without positions, and the default mapping writes silence for them.
+        if input.channelCount>2{converter.channelMap=[0]}
+        outputFormat=out;self.converter=converter}
     func convert(_ input:AVAudioPCMBuffer?,emit:(Data,Float)->Void)throws {
         var supplied=false
         for _ in 0..<16 {
