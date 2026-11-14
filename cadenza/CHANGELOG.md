@@ -20,6 +20,21 @@ Each release is also published, with its package and checksum, on
 
 ## [Unreleased]
 
+## [1.3.5] - 2026-11-14
+
+Still an **early preview**.
+
+### Fixed
+- **Microphones that report three channels record your voice again.** Some audio interfaces and virtual devices report three or more channels with no channel layout; Cadenza recorded silence from them. It now records the first channel (#62, thanks `@Wenke-D`).
+- **Pressing the toggle shortcut again while text is being recognized no longer throws the result away.** Cadenza keeps waiting and inserts the text as usual (#63, thanks `@Wenke-D`).
+- Cancelling a local model download no longer leaves a staging folder that a late download step could create again (#61).
+
+### Changed
+- While text is recognized, the recording bar shows a spinner over a blurred waveform (#63, thanks `@Wenke-D`).
+
+### Added
+- `--data-dir <folder>` starts a Cadenza process that keeps its data and preferences in that folder and its credentials in memory only, never in the Keychain. A new folder starts with the global shortcuts off. This is meant for testing and development (#60, thanks `@Wenke-D`).
+
 ## [1.3.4] - 2026-11-06
 
 Still an **early preview**.
